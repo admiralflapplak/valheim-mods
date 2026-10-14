@@ -1,6 +1,6 @@
 {
   "nick_spyglass": "Fernrohr",
-  "nick_spyglass_desc": "Ein Messingfernrohr, um ferne Küsten, Berge und Monster zu betrachten. Halte es in der Hand, halte dann Blocken gedrückt, um hindurchzusehen, ändere die Vergrößerung mit dem Mausrad und markiere mit der mittleren Maustaste, was du siehst.",
+  "nick_spyglass_desc": "Ein Seemannsglas aus Bronze und Edelholz. Holt das ferne Ufer heran.",
   "nick_spyglass_magnification": "Fernrohr x{0}",
   "nick_spyglass_noping": "Nichts im Blickfeld zum Markieren.",
   "nick_spyglass_broken": "Das Fernrohr ist zu beschädigt, um hindurchzusehen. Repariere es an einer Schmiede."

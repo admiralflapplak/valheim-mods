@@ -1,6 +1,6 @@
 {
   "nick_spyglass": "Spyglass",
-  "nick_spyglass_desc": "A brass telescope for studying far-off shores, mountains and monsters. Hold it in your hand, then hold Block to look through it, use the mouse wheel to change the magnification and the middle mouse button to ping what you see.",
+  "nick_spyglass_desc": "A seafarer's glass of bronze and fine wood. Draws the far shore near.",
   "nick_spyglass_magnification": "Spyglass x{0}",
   "nick_spyglass_noping": "Nothing in view to ping.",
   "nick_spyglass_broken": "The spyglass is too damaged to look through. Mend it at a forge."
