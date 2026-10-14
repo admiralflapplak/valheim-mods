@@ -45,7 +45,7 @@ Everything is in the F1 Configuration Manager. Tick **Advanced settings** to see
 - Raising it and its sounds are shared as one small value on your character. A server without the mod passes it along and nothing else happens.
 - Players without the mod don't see it raised and don't hear it.
 
-## Other mods
+## Other mods and known clashes
 
 - Another mod, Advize's Spyglass, also adds a spyglass. They are separate items with their own names, so both can be installed, but I haven't tested them together: use one at a time.
 - It changes the camera's field of view, the mouse wheel and the player's attack and block inputs while it is raised, as any zoom mod must. If another mod does the same job at the same moment, one of them wins.

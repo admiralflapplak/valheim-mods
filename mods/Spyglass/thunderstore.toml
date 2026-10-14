@@ -1,0 +1,35 @@
+# Thunderstore package for this mod, read by the Thunderstore CLI (tcli build, tcli publish). Made by Claude Tools' modkit package,
+# which keeps versionNumber and the dependencies up to date from the DLL; everything else is yours to edit.
+[config]
+schemaVersion = "0.0.1"
+
+[package]
+namespace = "Flap"
+name = "Flap_Spyglass"
+versionNumber = "1.0.0"
+description = "Craftable brass spyglass (telescope): zoom in on far-off land, ping what you see on the map, use it at the helm, mast and seats. The lens clouds and cracks as it wears. Other players see and hear it. Controller support."
+websiteUrl = "https://github.com/admiralflapplak/valheim-mods"
+containsNsfwContent = false
+
+[package.dependencies]
+denikson-BepInExPack_Valheim = "5.4.2351"
+
+[build]
+icon = "./thunderstore/icon.png"
+readme = "./thunderstore-build/README.md"
+outdir = "./thunderstore-build"
+
+[[build.copy]]
+source = "./bin/Release/net48/Spyglass.dll"
+target = "plugins/Spyglass.dll"
+
+[[build.copy]]
+source = "./CHANGELOG.md"
+target = "CHANGELOG.md"
+
+[publish]
+repository = "https://thunderstore.io"
+communities = [ "valheim" ]
+
+[publish.categories]
+valheim = [ "mods", "gear", "tools", "utility", "client-side", "server-side", "deep-north-update", "ai-generated" ]
