@@ -1,0 +1,820 @@
+# Grudges: every line the mod says.
+#
+# Edit freely. Lines are picked at random from a [section].
+# A section can be made specific to a creature or a cause, e.g. [prefix:Greydwarf] or [taunt-witness:Tree].
+# The specific one is used when it exists; otherwise the general one ([prefix], [taunt-witness]).
+#
+# Placeholders:
+#   {player}  the player's name
+#   {name}    the nemesis's full name, e.g. "Mossjaw the Rot-Tongued"
+#   {short}   just the name, e.g. "Mossjaw"
+#   {species} e.g. "Greydwarf"
+#   {kills}   how many times it has killed this player (a number)
+#   {times}   the same in words: "once", "twice", "4 times"
+#   {cause}   what killed the player in a witnessed death: "a tree", "the ground", "a boar"
+#   {other}   another nemesis (used in challenge messages)
+#
+# Cause keys for specific sections: Tree, Fall, Drowning, Burning, Freezing, Poisoned, Smoke, Boiled,
+# Self, Friend, Cart, Boat, Creature, Other
+
+# ---------------------------------------------------------------------------
+# Names: a prefix and a suffix are joined, e.g. Moss + jaw = Mossjaw.
+# ---------------------------------------------------------------------------
+
+[prefix:Greydwarf]
+Moss
+Bark
+Root
+Rot
+Thorn
+Gnarl
+Sap
+Knot
+Ash
+Fern
+Grub
+Twig
+Briar
+Murk
+Stump
+Bog
+Lichen
+Pine
+Mold
+Burl
+
+[suffix:Greydwarf]
+jaw
+eye
+fang
+maw
+back
+claw
+hide
+gut
+skull
+tooth
+limb
+spine
+beard
+toe
+knuckle
+belly
+nose
+heart
+
+[prefix:Greyling]
+Twig
+Sprout
+Pip
+Moss
+Bud
+Nettle
+Acorn
+Thistle
+Seed
+Burr
+
+[suffix:Greyling]
+let
+ling
+kin
+nub
+toe
+pip
+sprig
+knee
+
+[epithet-kill:Greyling]
+the Ankle-Biter
+the Surprisingly Dangerous
+Who Is Bigger Than He Looks
+the Tiny Terror
+the Little Menace
+
+# ---- Fulings (the Fuling family: Goblin, GoblinBrute, GoblinShaman, GoblinArcher) ----
+
+[prefix:Fuling]
+Grub
+Skab
+Gnash
+Mog
+Snag
+Krik
+Zug
+Grik
+Skrag
+Nub
+Muk
+Zik
+Dreg
+Bog
+
+[suffix:Fuling]
+gut
+fang
+tooth
+ear
+snout
+nik
+gob
+grin
+rib
+scab
+nose
+knuckle
+
+[epithet-kill:Fuling]
+the Beard-Taker
+Who Wears Your Boots
+the Viking-Gutter
+the Shiny-Grabber
+the Village Hero
+Who Counts Your Teeth
+
+[epithet-kill:GoblinBrute]
+the Skull-Splitter
+the Big One
+Who Breaks Things
+the Shield-Eater
+
+[epithet-kill:GoblinShaman]
+the Fire-Caller
+the Bone-Reader
+Who Saw You Coming
+the Smoke-Tongued
+
+[epithet-kill:GoblinArcher]
+the Long-Shot
+Who Never Misses
+the Feather-Fingered
+
+# ---- Skeletons (Skeleton, Skeleton_NoArcher, Skeleton_Poison) and the Charred (Ashlands) ----
+
+[prefix:Skeleton]
+Bone
+Grin
+Rattle
+Hollow
+Marrow
+Skull
+Dust
+Cold
+Knuckle
+Grave
+Rib
+
+[suffix:Skeleton]
+grin
+shank
+rib
+jaw
+knuckle
+marrow
+toe
+skull
+socket
+
+[epithet-kill:Skeleton]
+the Rattling
+Who Does Not Rest
+the Grave-Warden
+the Unburied
+the Long-Dead
+
+[epithet-kill:Skeleton_Poison]
+the Rancid
+the Festering
+Who Drips
+the Bog-Bones
+
+[prefix:Charred]
+Cinder
+Ember
+Soot
+Ash
+Char
+Scorch
+Smoulder
+Blaze
+Kiln
+
+[suffix:Charred]
+bone
+grin
+skull
+brand
+husk
+jaw
+rib
+spine
+
+[epithet-kill:Charred]
+the Unquenched
+Who Burned Once
+the Ever-Smouldering
+the Ash-Walker
+the Kindled
+
+[epithet-kill:Charred_Mage]
+the Flame-Speaker
+the Pyre-Priest
+
+[epithet-kill:Charred_Archer]
+the Burning Shot
+Who Aims From The Smoke
+
+[prefix]
+Grim
+Rot
+Skarn
+Vile
+Murk
+Blight
+
+[suffix]
+jaw
+fang
+maw
+claw
+gut
+skull
+
+# ---------------------------------------------------------------------------
+# Epithets. Kill epithets for creatures that killed someone.
+# Witness epithets for creatures that watched someone die in an embarrassing way.
+# ---------------------------------------------------------------------------
+
+[epithet-kill:Greydwarf]
+the Rot-Tongued
+the Skull-Splitter
+the Bone-Gnawer
+the Stone-Thrower
+Who Planted a Viking
+the Root-Strangler
+the Bark-Hearted
+the Grave-Digger
+of the Hungry Roots
+the Sap-Drinker
+
+[epithet-kill]
+the Grudge-Holder
+the Viking-Bane
+the Unforgiving
+
+[epithet-witness:Tree]
+Who Saw the Tree Fall
+the Timber-Laugher
+Friend of Falling Trees
+Who Yelled Timber Too Late
+
+[epithet-witness:Fall]
+the Cliff-Cackler
+Who Watched You Bounce
+the Gravity-Grinner
+
+[epithet-witness:Drowning]
+the Puddle-Watcher
+Who Saw You Sink
+the Dry-Footed
+
+[epithet-witness:Burning]
+Who Warmed His Hands
+the Smoke-Sniffer
+the Ember-Giggler
+
+[epithet-witness:Freezing]
+the Frost-Grinner
+Who Watched You Shiver
+
+[epithet-witness:Poisoned]
+the Bog-Smirker
+
+[epithet-witness:Creature]
+Who Cheered for the Beast
+the Boar-Friend
+the Gleeful Onlooker
+
+[epithet-witness:Self]
+Who Saw You Do It
+the Unsurprised
+
+[epithet-witness:Friend]
+the Gossip
+Who Saw the Betrayal
+
+[epithet-witness]
+the Laughing
+the Smirking
+the Witness
+the Unhelpful
+
+# ---------------------------------------------------------------------------
+# Scar epithets: replace the old epithet when a nemesis cheats death.
+# ---------------------------------------------------------------------------
+
+[epithet-scar:Fire]
+the Charred
+the Scorched
+the Ember-Scarred
+
+[epithet-scar:Frost]
+the Frostbitten
+the Rimed
+
+[epithet-scar:Lightning]
+the Thunderstruck
+
+[epithet-scar:Poison]
+the Blighted
+
+[epithet-scar:Spirit]
+the Haunted
+
+[epithet-scar:Slash]
+the Scarred
+Many-Scars
+the Stitched
+
+[epithet-scar:Pierce]
+the Pierced
+Arrow-Catcher
+
+[epithet-scar:Blunt]
+the Cracked
+the Dented
+
+# ---------------------------------------------------------------------------
+# Messages shown to the player who died.
+# ---------------------------------------------------------------------------
+
+[msg-promoted-kill]
+{name} has claimed your death. It will remember you.
+The {species} that killed you has a name now: {name}.
+{name} rises from your death. This isn't over.
+
+[msg-promoted-witness]
+A {species} saw that. {name} will never let you forget it.
+Killed by {cause}, and a {species} watched. Meet {name}.
+Somewhere in the trees, {name} is still laughing.
+
+[msg-stronger]
+{name} grows stronger from your death.
+{name} has killed you {times} now. It is getting stronger.
+
+[msg-kill-again]
+{name} has killed you {times}. It can't get much stronger, but it's enjoying itself.
+
+[msg-first-blood]
+{name} finally beat you in a fight. It has learned to shrug off your blows.
+
+[msg-saw-again]
+{name} saw that too. It's adding it to the list.
+Of course {name} was watching.
+
+[msg-challenge-won]
+{name} overthrew {other} to claim your death.
+
+[msg-challenge-lost]
+A {species} tried to claim your death, but {other} crushed it. Your grudge stays with {other}.
+
+[msg-escaped]
+{name} crawls away, scarred by {cause}. It will be back for you.
+You didn't finish the job. {name} escaped.
+
+[msg-returned]
+{name} has come back for you.
+
+[msg-champion]
+{name} is now the Champion of the {cause}.
+The {cause} has a Champion: {name}.
+
+[msg-raid]
+{name} leads the attack on your home!
+{name} has come with the raid. It remembers you, {player}.
+
+[msg-raid-champion]
+The Champion of the {cause}, {name}, leads the raid!
+
+[msg-hunt-warning]
+You hear laughing somewhere behind you. Something has followed you from the {cause}...
+A familiar stink on the wind. You are being hunted.
+Twigs snap behind you. Someone from the {cause} remembers you.
+
+[msg-slain]
+You have slain {name}. The grudge is settled.
+
+[msg-slain-other]
+{player} has slain {name}.
+
+# ---------------------------------------------------------------------------
+# Reveal lines: said on screen right after your death, as the creature becomes
+# (or grows as) a nemesis.
+# ---------------------------------------------------------------------------
+
+[reveal-kill]
+Hah! Remember this face, {player}!
+Another viking for the roots!
+Call me {short}. You'll be seeing me.
+That was fun. Come back soon, {player}.
+
+[reveal-kill:Greyling]
+I did it! I DID IT!
+Small, but deadly, {player}! Hehehe!
+Who's tiny now, {player}?
+
+[reveal-witness]
+HAHAHA! {cause}! I'll tell everyone!
+Beaten by {cause}! Oh, I'm never forgetting this.
+Wait till the others hear about this, {player}!
+
+[reveal-witness:Tree]
+TIMBER! Hahahaha!
+The tree won! The tree won!
+
+[reveal-witness:Fall]
+Splat! Hehehehe!
+Did you forget you can't fly, {player}?
+
+[reveal-witness:Drowning]
+Glub glub, {player}! Hehehe!
+
+[reveal-stronger]
+That's {times} now, {player}!
+Again! AGAIN! Hahaha!
+I grow stronger every time you fall, {player}.
+
+[reveal-returned]
+Remember me, {player}?
+You should have finished me, {player}.
+Did you miss me, {player}?
+
+[reveal-returned:Fire]
+You burned me, {player}. I remember the fire.
+Look what your fire did to me!
+
+[reveal-hunted]
+You thought you could hide in the {cause}, {player}?
+I followed you all this way, {player}!
+Far from home, both of us. Only one of us leaves.
+
+[reveal-saw]
+I saw it! I saw it again!
+Hehehe! Still losing to {cause}, {player}?
+
+# ---------------------------------------------------------------------------
+# Personality lines: [section/Personality] is used for that personality most of
+# the time; the normal section is the fallback.
+# ---------------------------------------------------------------------------
+
+[reveal-kill/Braggart]
+Another one for my collection!
+Did everyone see that? DID YOU SEE THAT?
+They'll sing about me in the forest tonight!
+
+[taunt-killer/Braggart]
+I've killed you {times}, {player}. I tell everyone.
+Look who it is! My favourite victim!
+{player}! Come to add to my legend?
+
+[taunt-stranger/Braggart]
+You've heard of me. Everyone's heard of me. I am {short}!
+
+[reveal-kill/Trickster]
+Hehehe! Too easy! Again, again!
+Oops! Did I do that? Hehehe!
+Tag, {player}! You're dead!
+
+[taunt-killer/Trickster]
+Peekaboo, {player}! Hehehe!
+Want to play again, {player}? I always win!
+I've got a new trick for you, {player}!
+
+[taunt-witness/Trickster]
+{cause}! HAHAHA! I can't stop laughing!
+Do the {cause} thing again, {player}! Please!
+
+[reveal-kill/Brute]
+WEAK.
+Crush. Again.
+Stay down.
+
+[taunt-killer/Brute]
+You again. Good. Crush you again.
+{player}. I break you {times}. I break you more.
+RAAAH!
+
+[taunt-stranger/Brute]
+You. Small. Breakable.
+
+[reveal-kill/Coward]
+I... I did it? I DID IT! Don't hit me!
+Was that... was that me? Run away, run away!
+D-don't tell anyone it was me!
+
+[taunt-killer/Coward]
+D-don't come any closer, {player}! I've killed you before!
+Stay back! I'll... I'll do it again!
+Oh no. Oh no. It's {player}.
+
+[taunt-stranger/Coward]
+Please go away. Please go away. Please go away.
+
+[reveal-kill/Zealot]
+The roots drink deep tonight!
+An offering for the Elder!
+The forest takes what it is owed.
+
+[taunt-killer/Zealot]
+The Elder remembers you, {player}. So do I.
+Your blood fed the roots {times}, {player}. The forest thanks you.
+Kneel before the forest, {player}!
+
+[taunt-stranger/Zealot]
+The Elder sees you, outsider.
+
+[reveal-kill/Glutton]
+Mmm! Viking! My favourite!
+Dinner is served!
+I'll save some for later. Hehe.
+
+[taunt-killer/Glutton]
+{player}! You were delicious last time!
+Here comes second helpings!
+I'm still hungry, {player}.
+
+[taunt-stranger/Glutton]
+You look... tasty.
+
+# ---------------------------------------------------------------------------
+# Taunts: said in a speech bubble when a nemesis spots a player.
+# ---------------------------------------------------------------------------
+
+[taunt-killer]
+{player}! Back for more?
+I have killed you {times}, {player}. I remember every one.
+You again! I hoped you'd come back.
+{short} remembers you, {player}.
+Your bones looked good in my forest, {player}.
+
+[taunt-killer-many]
+{times}, {player}! {times}! Hahahaha!
+Do you ever learn, {player}?
+I should start charging you rent, {player}.
+
+[taunt-witness:Tree]
+Watch out for that tree, {player}! Hehehe!
+TIMBER! Hahaha!
+The trees are on my side, {player}.
+
+[taunt-witness:Fall]
+Mind your step, {player}! Hehe!
+Down you go again, {player}?
+The ground missed you, {player}!
+
+[taunt-witness:Drowning]
+Thirsty, {player}? Hehehe!
+Remember to come up for air, {player}!
+
+[taunt-witness:Burning]
+Feeling warm, {player}?
+Still smoking, {player}? Hehehe!
+
+[taunt-witness:Creature]
+Beaten by {cause}! I saw it, {player}!
+Should I call {cause} back, {player}?
+
+[taunt-witness:Self]
+I saw what you did to yourself, {player}.
+
+[taunt-witness]
+I saw that, {player}. Everyone will know.
+Hehehe! {cause}! Beaten by {cause}!
+{player}! The one who lost to {cause}!
+
+[taunt-scarred]
+You did this to me, {player}!
+I still feel {cause}, {player}.
+You left me alive. Mistake.
+
+[taunt-scarred:Fire]
+No fire this time, {player}?
+You burned me! I remember!
+
+[taunt-champion]
+I am the Champion of the {cause}!
+Kneel, {player}. This is my forest.
+Every {species} here answers to me.
+
+[raid-line]
+Your walls won't save you, {player}!
+I've come for you, {player}!
+Burn it down! Hehehe!
+
+[taunt-stranger]
+You. Tall one. I am {short}.
+Bring me another viking.
+I am {short}. Remember the name.
+
+# ---------------------------------------------------------------------------
+# Fulings. Any section can have a :Fuling version (or :GoblinBrute for just the Berserkers);
+# it's used instead of the plain one for them.
+# ---------------------------------------------------------------------------
+
+[reveal-kill:Fuling]
+Viking go down! Viking STAY down!
+Shiny things all mine now, {player}! Hehehe!
+Tell the others! Tell them {short} did this!
+Hah! Big viking, small brain!
+Your boots. Mine now.
+
+[reveal-kill:GoblinBrute]
+RAAAH! SMASH VIKING!
+Small viking. Small bones. Crunch.
+
+[reveal-kill:GoblinShaman]
+The fire showed me this, {player}. It always shows me.
+Burn bright, viking. Burn out.
+
+[reveal-witness:Fuling]
+HAHAHA! {cause}! Fuling never forget this!
+Viking lose to {cause}? Hehehehe! Wait till village hears!
+Look! LOOK! {cause} got the viking!
+
+[reveal-stronger:Fuling]
+{times}, viking! {short} counting!
+Again! More shiny for {short}!
+
+[reveal-returned:Fuling]
+You leave {short} for dead? {short} not dead!
+Remember {short}, viking? {short} remember YOU.
+
+[taunt-killer:Fuling]
+You back? {short} kill you {times} already!
+Viking come for more? Good. More shiny for {short}.
+Hehe! Remember {short}, {player}?
+{player}! {short} still got your stuff!
+
+[taunt-killer-many:Fuling]
+{times}! {times}, viking! Hahaha!
+Viking never learn! Fuling love viking!
+
+[taunt-stranger:Fuling]
+Viking in Fuling land! Get it!
+Ooh. Shiny viking.
+Me {short}. You dead soon.
+
+[taunt-witness:Fuling]
+Hehehe! {cause}! Viking lose to {cause}!
+{short} saw! {short} tell everyone!
+
+[taunt-scarred:Fuling]
+You hurt {short}! Now {short} hurt you!
+{short} remember {cause}, viking. {short} remember.
+
+[taunt-champion:Fuling]
+Me Champion of the {cause}! Everybody listen to me!
+Kneel, viking. Plains belong to {short}.
+Every Fuling here answer to me.
+
+[raid-line:Fuling]
+Burn the viking house! Hehehe!
+{short} come for your shiny things, {player}!
+
+# Personalities, Fuling style
+
+[reveal-kill/Braggart:Fuling]
+Everybody see? EVERYBODY SEE THAT?
+They sing about {short} at the fire tonight!
+Another viking for {short}'s pile!
+
+[taunt-stranger/Braggart:Fuling]
+You hear of {short}? Everybody hear of {short}!
+
+[reveal-kill/Zealot:Fuling]
+For Yagluth! Burn, viking!
+The Fallen King smiles tonight!
+A gift for the King in the fire!
+
+[taunt-killer/Zealot:Fuling]
+The King remember you, {player}. So do {short}.
+Your bones go on the King's fire, {player}.
+
+[taunt-stranger/Zealot:Fuling]
+The King sees you, viking.
+
+[reveal-kill/Hoarder]
+Mine! All mine! Hehehe!
+Ooh, what's in your pockets, {player}?
+Finders keepers!
+
+[taunt-killer/Hoarder]
+{player}! Bring more shiny! Last time was good!
+Still got your things, {player}. Want them back? NO.
+{times} times you bring presents, {player}!
+
+[taunt-stranger/Hoarder]
+What you got? Give it.
+
+# ---------------------------------------------------------------------------
+# Skeletons: cold, patient, quietly mocking. They have all the time in the world.
+# ---------------------------------------------------------------------------
+
+[reveal-kill:Skeleton]
+Lie down, {player}. Stay a while. Stay forever.
+Your bones will make fine company.
+We were vikings too, once. Now you're one of us.
+*rattle* *rattle*
+
+[reveal-kill:Skeleton_Poison]
+Rot with me, {player}.
+The bog keeps what it takes.
+
+[reveal-witness:Skeleton]
+*clatter* Hah. {cause}. The dead have seen everything, and still that was funny.
+I've been dead a long time, {player}. That was still embarrassing.
+
+[reveal-stronger:Skeleton]
+{times} now. I'm keeping your bones in a pile, {player}.
+Again. I can wait. I can always wait.
+
+[reveal-returned:Skeleton]
+You can't kill what's already dead, {player}.
+I put myself back together. Piece by piece. For you.
+
+[taunt-killer:Skeleton]
+{player}. I have your bones in my collection. {times}.
+Back again? The crypt missed you.
+I remember how you fell, {player}. I remember everything.
+
+[taunt-killer-many:Skeleton]
+{times} times, {player}. You'll join us properly soon.
+
+[taunt-stranger:Skeleton]
+*rattle*
+Warm blood. How I miss it.
+Come closer, living one.
+
+[taunt-witness:Skeleton]
+{cause}? Even I didn't die that stupidly.
+I saw, {player}. The dead always see.
+
+[taunt-scarred:Skeleton]
+You broke me, {player}. I mended. Did you?
+I still feel {cause}. In bones that shouldn't feel.
+
+[taunt-champion:Skeleton]
+All the dead of the {cause} answer to me.
+Kneel, {player}. You'll be lying down soon enough.
+
+[raid-line:Skeleton]
+The dead have come to visit, {player}.
+
+# ---------------------------------------------------------------------------
+# The Charred: burnt, furious, fire everywhere.
+# ---------------------------------------------------------------------------
+
+[reveal-kill:Charred]
+Burn, {player}! Burn like we burned!
+Ash to ash, viking.
+The fire takes everyone in the end.
+
+[reveal-witness:Charred]
+{cause}? You should have tried burning. It's worse.
+Hah! Even the ashes are laughing at you, {player}.
+
+[reveal-returned:Charred]
+I've been burned before, {player}. I came back then too.
+Did you think a little more fire would stop me?
+
+[taunt-killer:Charred]
+{player}! Still not ash? Let me fix that.
+{times} times I've burned you, {player}. The embers remember.
+
+[taunt-stranger:Charred]
+Another one for the pyre.
+You smell of the cold, viking. Let's change that.
+
+[taunt-champion:Charred]
+I am the Champion of the {cause}. Everything here burns for me.
+
+# Personalities for the dead
+
+[reveal-kill/Zealot:Skeleton]
+Another soul for the barrow!
+Rest now, {player}. Forever.
+
+[taunt-killer/Zealot:Skeleton]
+The grave calls you, {player}. I only answer for it.
+
+[reveal-kill/Zealot:Charred]
+For the fire! Always the fire!
+The flames are pleased with you, {player}.
+
+[reveal-kill/Coward:Skeleton]
+I... I'm already dead, you can't hurt me! ...Can you?
+D-don't break me again!
+
+[reveal-kill/Braggart:Skeleton]
+Did you see that? Five hundred years and I've still got it!
+Write that on my tomb!

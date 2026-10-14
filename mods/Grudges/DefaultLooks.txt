@@ -1,0 +1,89 @@
+# Grudges: how nemeses look. Edit freely, then press "Reload looks file" in F1 (10 - Testing).
+#
+# Any section can be overridden for one creature type with [section:Creature], e.g. [props:Greyling],
+# or for a whole family (see [families] at the bottom), e.g. [palettes:Fuling].
+#
+# Colours are three shifts applied to the creature's own skin:  hue / saturation / brightness
+#   hue        turns its colours around the colour wheel (0.5 = halfway round; + and - go opposite ways)
+#   saturation + is more vivid, - is greyer
+#   brightness + is lighter, - is darker
+
+# Colourings a new nemesis can get (each gets one at random, leaning toward its personality's favourites).
+[palettes]
+moss = 0.06/0.25/-0.15
+ash = 0/-0.6/0.05
+rust = -0.12/0.4/-0.1
+bone = 0.02/-0.7/0.3
+blood = -0.28/0.5/-0.3
+shadow = 0/-0.25/-0.45
+sickly = 0.15/0.35/-0.05
+
+# Its skin after a scar (the most recent scar wins). Types not listed keep its palette.
+[scar-skin]
+Fire = -0.3/0.45/-0.45
+Frost = 0.2/-0.25/0.15
+Poison = -0.12/0.35/-0.15
+Lightning = 0.1/-0.3/0.2
+Spirit = 0.15/-0.5/0.1
+
+# The aura for its latest elemental scar: a status effect's look (Burning, Frost...) or vfx:<effect name>.
+[scar-auras]
+Fire = Burning
+Frost = Frost
+Poison = Poison
+Lightning = Lightning
+Spirit = Spirit
+
+# Scar props: which item each is copied from and which bone it sits on.
+#   projectile:<ammo>  = the flying arrow/bolt of that ammo     item:<item> = the item itself
+# Bones: Head, Neck, Chest, UpperChest, Spine, Hips, LeftShoulder, RightShoulder, LeftHand, RightHand
+# Placement is set with the fitting tool (F1 -> 11 - Prop Fitting).
+[props]
+arrow1 = projectile:ArrowWood@UpperChest
+arrow2 = projectile:ArrowWood@RightShoulder
+arrow3 = projectile:ArrowWood@Chest
+axe = item:AxeStone@UpperChest
+ice1 = item:Crystal@LeftShoulder
+ice2 = item:Crystal@RightShoulder
+helmet = @Head
+
+# The trophy a nemesis drops when it dies for good, per creature (creature = trophy item).
+# Creatures not listed drop no named trophy.
+[trophies]
+Greydwarf = TrophyGreydwarf
+Greydwarf_Elite = TrophyGreydwarfBrute
+Greydwarf_Shaman = TrophyGreydwarfShaman
+Greyling = TrophyGreydwarf
+Goblin = TrophyGoblin
+GoblinBrute = TrophyGoblinBrute
+GoblinShaman = TrophyGoblinShaman
+GoblinArcher = TrophyGoblin
+Skeleton = TrophySkeleton
+Skeleton_NoArcher = TrophySkeleton
+Skeleton_Poison = TrophySkeletonPoison
+Charred_Melee = TrophyCharredMelee
+Charred_Archer = TrophyCharredArcher
+Charred_Mage = TrophyCharredMage
+
+# The fitting tool's Try Item list. Add any item names here (comma-separated) and they appear at the top of
+# the dropdown after a restart. Item names: the wiki's "Item IDs" page, or the game's spawn command names.
+[fitting]
+try-items =
+
+# Creature families: types that share names, lines, looks and prop fits. A creature uses its family's sections
+# ([prefix:Fuling], [props:Fuling], Fuling fits...) unless it has its own ([prefix:GoblinBrute]).
+# Creatures not listed are their own family.
+[families]
+Greydwarf_Elite = Greydwarf
+Greydwarf_Shaman = Greydwarf
+Goblin = Fuling
+GoblinBrute = Fuling
+GoblinShaman = Fuling
+GoblinArcher = Fuling
+Skeleton_NoArcher = Skeleton
+Skeleton_Poison = Skeleton
+Charred_Melee = Charred
+Charred_Archer = Charred
+Charred_Mage = Charred
+Charred_Twitcher = Charred
+

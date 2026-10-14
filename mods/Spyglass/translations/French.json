@@ -1,0 +1,7 @@
+{
+  "nick_spyglass": "Longue-vue",
+  "nick_spyglass_desc": "Une longue-vue en laiton pour observer les rivages, montagnes et monstres lointains. Tenez-la en main, maintenez Parer pour regarder à travers, changez le grossissement avec la molette et signalez ce que vous voyez avec le bouton central de la souris.",
+  "nick_spyglass_magnification": "Longue-vue x{0}",
+  "nick_spyglass_noping": "Rien à signaler dans le champ de vision.",
+  "nick_spyglass_broken": "La longue-vue est trop abîmée pour regarder à travers. Réparez-la à une forge."
+}

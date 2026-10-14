@@ -1,0 +1,44 @@
+# ============================================================================
+#  Fuling Heckler: loot table (what he sneaks into your pockets)
+# ============================================================================
+#  One line per item:   item | weight | amount | tier
+#
+#  item    The game's item name. Full list:
+#          https://valheim-modding.github.io/Jotunn/data/objects/item-list.html
+#  weight  How common it is compared to the others. Higher = more common.
+#  amount  How many: "2" or a range like "1-3".
+#  tier    junk, meh, nice or treasure. Only changes what he says as he leaves
+#          (so you know when to check your bag).
+#
+#  Equipment (armour, weapons, capes, shields) is signed "Crafted by" with his name.
+#  Edit freely, then press "Reload loot table" in the F1 menu (7 - Thief & Gifter).
+#  Delete this file to get the defaults back.
+# ============================================================================
+
+# ---- Junk (most of the time) -----------------------------------------------
+Pukeberries        | 25  | 1-3 | junk
+BoneFragments      | 20  | 1-3 | junk
+LeatherScraps      | 15  | 1-2 | junk
+Stone              | 10  | 1-2 | junk
+Raspberry          | 10  | 1-3 | junk
+Wood               | 5   | 1   | junk
+
+# ---- Meh ---------------------------------------------------------------------
+Resin              | 6   | 1-3 | meh
+Feathers           | 5   | 1-3 | meh
+Honey              | 4   | 1   | meh
+Coins              | 5   | 2-5 | meh
+
+# ---- Nice: cheap equipment, signed by him -------------------------------------
+ArmorRagsChest     | 1.2 | 1   | nice
+ArmorRagsLegs      | 1.2 | 1   | nice
+Club               | 1.0 | 1   | nice
+CapeDeerHide       | 0.8 | 1   | nice
+ShieldWood         | 0.6 | 1   | nice
+Amber              | 0.8 | 1   | nice
+Coins              | 0.6 | 15-25 | nice
+
+# ---- Treasure (very rare) -----------------------------------------------------
+Ruby               | 0.25 | 1  | treasure
+AmberPearl         | 0.2  | 1  | treasure
+GoblinTotem        | 0.1  | 1  | treasure

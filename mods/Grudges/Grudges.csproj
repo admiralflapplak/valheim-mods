@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Paths, framework, shared references and deploying to BepInEx/scripts come from ../Directory.Build.props. -->
+  <PropertyGroup>
+    <AssemblyName>Grudges</AssemblyName>
+    <RootNamespace>Grudges</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- tests/ is its own console project (Core.cs checks); never part of the mod -->
+    <Compile Remove="tests/**" />
+    <None Remove="tests/**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="DefaultLines.txt" LogicalName="Grudges.DefaultLines.txt" />
+    <EmbeddedResource Include="DefaultPersonalities.txt" LogicalName="Grudges.DefaultPersonalities.txt" />
+    <EmbeddedResource Include="DefaultLooks.txt" LogicalName="Grudges.DefaultLooks.txt" />
+  </ItemGroup>
+
+  <!-- Unity modules Grudges needs beyond the references in ../Directory.Build.props -->
+  <ItemGroup>
+    <Reference Include="UnityEngine.AnimationModule"><HintPath>$(ManagedDir)/UnityEngine.AnimationModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.ParticleSystemModule"><HintPath>$(ManagedDir)/UnityEngine.ParticleSystemModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.AudioModule"><HintPath>$(ManagedDir)/UnityEngine.AudioModule.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+</Project>

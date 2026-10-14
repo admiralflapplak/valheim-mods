@@ -1,0 +1,136 @@
+# Grudges: personalities.
+#
+# Every new nemesis gets one at random (by weight). Edit freely; new sections become new personalities.
+#
+# Keys (all optional):
+#   weight      how often it's picked compared with the others (1 = normal, 0 = never)
+#   size        nudges its size within the size range: -1 = smallest, 0 = no nudge, 1 = biggest
+#   palettes    colourings it leans toward (names from 'Palettes' in the config)
+#   prop        what it carries: item:<ItemName>@<Bone>  (bones: Head, Chest, UpperChest, Spine, Hips,
+#               LeftShoulder, RightShoulder, LeftHand, RightHand). Placement is set with the fitting tool.
+#   emotes-new-killer, emotes-witness, emotes-killed-again, emotes-saw-again, emotes-returned, emotes-on-sight
+#               player emotes for each moment (part of the name is enough; the log line 'Player animations'
+#               lists them). Anything left out uses the settings in F1.
+#   animations  its own animation triggers, for creatures that can't do player emotes (e.g. jump, stagger)
+#
+# A section named [Personality:Creature], e.g. [Brute:Fuling], overrides any key for that creature type only.
+#
+# Lines: in the lines file, a section like [taunt-killer/Braggart] is used for that personality
+# (most of the time), with the normal [taunt-killer] as the fallback.
+#
+# [Default] is not a personality: it's what every personality falls back to for anything it doesn't set.
+
+[Default]
+emotes-new-killer = flex, challenge, headbang
+emotes-witness = laugh, point
+emotes-killed-again = cheer, kickstep, flex
+emotes-saw-again = laugh, shrug, point
+emotes-returned = challenge, comehere, flex
+emotes-on-sight = point, laugh, challenge, comehere
+animations = jump
+
+[Braggart]
+weight = 1
+size = 0.3
+palettes = rust, blood
+prop = item:TrophyDeer@Head
+emotes-new-killer = flex, challenge, headbang
+emotes-witness = laugh, flex
+emotes-killed-again = flex, headbang, cheer
+emotes-saw-again = laugh, flex
+emotes-returned = challenge, flex
+emotes-on-sight = flex, challenge, headbang
+animations = jump
+
+[Trickster]
+weight = 1
+size = -0.3
+palettes = moss, sickly
+prop = item:TrophyNeck@RightShoulder
+emotes-new-killer = laugh, kickstep, point
+emotes-witness = laugh, point
+emotes-killed-again = laugh, kickstep, dance
+emotes-saw-again = laugh, point
+emotes-returned = laugh, wave
+emotes-on-sight = point, laugh, wave
+animations = jump
+
+[Brute]
+weight = 1
+size = 0.8
+palettes = shadow, blood, ash
+prop = item:TrophyFrostTroll@LeftShoulder
+emotes-new-killer = challenge, flex
+emotes-witness = challenge
+emotes-killed-again = flex, challenge
+emotes-saw-again = challenge
+emotes-returned = challenge
+emotes-on-sight = challenge, flex
+animations = jump
+
+[Coward]
+weight = 1
+size = -0.8
+palettes = ash, bone, sickly
+prop = item:TrophyGreydwarf@Hips
+emotes-new-killer = cower, laugh
+emotes-witness = point, cower
+emotes-killed-again = cower, cheer
+emotes-saw-again = shrug, cower
+emotes-returned = cower, shrug
+emotes-on-sight = cower, shrug
+animations = stagger
+
+[Zealot]
+weight = 1
+size = 0
+palettes = moss, bone, shadow
+prop = item:TrophySkeleton@UpperChest
+emotes-new-killer = kneel, despair
+emotes-witness = kneel, point
+emotes-killed-again = kneel, cheer
+emotes-saw-again = despair, kneel
+emotes-returned = kneel, challenge
+emotes-on-sight = kneel, point
+animations = jump
+
+[Glutton]
+weight = 1
+size = 0.5
+palettes = rust, sickly, moss
+prop = item:TrophyBoar@RightHand
+emotes-new-killer = eat, cheer
+emotes-witness = eat, laugh
+emotes-killed-again = eat, cheer
+emotes-saw-again = eat, laugh
+emotes-returned = eat, challenge
+emotes-on-sight = eat, point
+animations = jump
+
+# A Fuling-only personality: weight 0 here, so nothing else rolls it; [Hoarder:Fuling] turns it on for Fulings.
+[Hoarder]
+weight = 0
+size = -0.2
+palettes = rust, bone
+prop = item:Coins@Hips
+emotes-new-killer = cheer, laugh, point
+emotes-witness = laugh, point
+emotes-killed-again = cheer, kickstep
+emotes-saw-again = laugh, point
+emotes-returned = point, comehere
+emotes-on-sight = point, comehere, laugh
+animations = jump
+
+[Hoarder:Fuling]
+weight = 1.2
+
+# Fulings hold weapons, so props in hands go on the belt instead.
+[Glutton:Fuling]
+prop = item:TrophyBoar@Hips
+
+# The dead don't eat.
+[Glutton:Skeleton]
+weight = 0
+
+[Glutton:Charred]
+weight = 0

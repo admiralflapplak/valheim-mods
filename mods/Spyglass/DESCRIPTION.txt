@@ -1,0 +1,1 @@
+Craftable brass spyglass (telescope): zoom in on far-off land, ping what you see on the map, use it at the helm, mast and seats. The lens clouds and cracks as it wears. Other players see and hear it. Controller support.

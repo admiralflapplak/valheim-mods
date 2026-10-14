@@ -1,0 +1,7 @@
+{
+  "nick_spyglass": "望远镜",
+  "nick_spyglass_desc": "一支黄铜望远镜，可用来观察远方的海岸、山脉和怪物。拿在手中，按住格挡即可通过它观察，用鼠标滚轮调整放大倍率，用鼠标中键标记你所看到的位置。",
+  "nick_spyglass_magnification": "望远镜 x{0}",
+  "nick_spyglass_noping": "视野中没有可标记的目标。",
+  "nick_spyglass_broken": "望远镜损坏太严重，无法再用来观察。请在锻造炉修理它。"
+}

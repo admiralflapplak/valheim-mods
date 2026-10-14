@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Paths, framework, shared references and deploying to BepInEx/scripts come from ../Directory.Build.props. -->
+  <PropertyGroup>
+    <AssemblyName>FulingHeckler</AssemblyName>
+    <RootNamespace>FulingHeckler</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="DefaultQuips.txt" LogicalName="FulingHeckler.DefaultQuips.txt" />
+    <EmbeddedResource Include="DefaultLoot.txt" LogicalName="FulingHeckler.DefaultLoot.txt" />
+  </ItemGroup>
+
+  <!-- Unity modules FulingHeckler needs beyond the references in ../Directory.Build.props -->
+  <ItemGroup>
+    <Reference Include="UnityEngine.AnimationModule"><HintPath>$(ManagedDir)/UnityEngine.AnimationModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.ParticleSystemModule"><HintPath>$(ManagedDir)/UnityEngine.ParticleSystemModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.AudioModule"><HintPath>$(ManagedDir)/UnityEngine.AudioModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.UnityWebRequestAudioModule"><HintPath>$(ManagedDir)/UnityEngine.UnityWebRequestAudioModule.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,3 @@
+1.5.0: The settings menu is tidied. Each scene's on/off switch, Test button and options now sit together, and the diagnostics (torch, outfit, puff and emote tests) are under Advanced. No setting was renamed, so your saved values carry over.
+
+1.4.2: Replaced a deprecated Unity call in the Campfire Squatter's fire search. Build files now use the shared project settings.

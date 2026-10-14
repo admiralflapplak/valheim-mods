@@ -1,0 +1,164 @@
+1.0.0
+- First release: a craftable spyglass with a round lens, zoom, a map ping, use at a ship's helm and seats, wear, multiplayer sync, controller support and nine languages.
+
+0.8.26
+- Can be raised again at a ship's helm (the drakkar, longship and karve): 0.8.18 stopped recognising it, as its attach point is not part of a chair or the wheel's component.
+
+0.8.24
+- Put away on the back, the spyglass hangs like the game's own one-handed weapons (its length runs the same way from the back joint) instead of sticking up above the shoulder.
+
+0.8.23
+- Controller: the bumpers are the zoom (right in, left out) in every layout, not the layout's own secondary attack and run buttons (in an alternative layout run is the left stick's click). While the spyglass is raised the Hide button no longer puts the items away (it is the left bumper in some layouts).
+
+0.8.22
+- Controller: while looking through the spyglass the right bumper zooms in, the left bumper zooms out (running is off meanwhile) and the attack button (right trigger) pings. They are the game's own button names, so a player's chosen layout is followed.
+
+0.8.21
+- The round lens is always on (its setting is gone).
+- The settings are in the order a new player wants them: 1 Looking, 2 Pinging, 3 Other players, 4 Crafting and 5 Wear (the server's), and the sound and pose settings are Advanced (shown with Configuration Manager's Advanced settings ticked), as sections 6 and 7. The sections were renumbered, so a setting you had changed in an older version goes back to its default once.
+
+0.8.20
+- Scrolling the magnification down to the bottom no longer leaves it half a step off afterwards (4, 3, 2, then 1.5, then 2.5, 3.5...): the levels and both limits are whole steps of the wheel step.
+
+0.8.19
+- Look from your eyes is on by default.
+- The magnification message appears once, a moment after you stop turning the wheel, instead of one queued message per notch (which kept appearing long after you had put the spyglass down).
+
+0.8.18
+- Raising it also works while holding on at a ship's mast or bow (any of the game's seats, found by what they are, not by their animation).
+- Seated, the head follows where you look again, and the arm follows the look much less far to the left (20 degrees) than to the right (75), so it doesn't cut through the body.
+
+0.8.17
+- The spyglass can be raised while sitting on a chair, at a ship's wheel or in a seat on a ship (not in bed). The arm follows where you look, as far round as a seated body reaches, and the torso keeps its seated pose. Nothing about the wheel's or a chair's own controls changes: Block, attack and the wheel's keys are not used there, and moving or jumping still gets you up as before.
+
+0.8.16
+- The item stand positions are fixed at the tuned values and the three stand settings are gone from the config.
+
+0.8.15
+- The item stand settings (Wall stand height, Table stand extra height, Table stand along) apply as soon as they are changed (a stand shows it when the item is put back on it or the world is loaded again), not only when the game starts.
+
+0.8.14
+- The two leather bands are a little wider than the brass under them, so they no longer z-fight with it.
+- Horizontal item stand: nearer the mount and a little lower; the setting is now Table stand along (an adjustment from there).
+
+0.8.13
+- Horizontal item stand: the spyglass lies with its eyepiece end on the stand's mount, and the setting Table stand distance sets where.
+
+0.8.12
+- Horizontal item stand: the 0.1 m nudge across is back to 0 (it was on the wrong axis).
+
+0.8.11
+- Horizontal item stand: moved 0.1 m across, in line with the stand's mount (setting Table stand across).
+
+0.8.10
+- Horizontal item stand: the height is back to 0.8.8's, and a setting (Table stand across) moves it sideways.
+
+0.8.9
+- Horizontal item stand: raised a further 0.05 m, with a setting (Table stand extra height).
+
+0.8.8
+- Horizontal item stand: the spyglass lies flat, near the stand, instead of tilted into the table and far out.
+- The icon is drawn in a neutral light, so its brown parts no longer come out green in some places and times of day.
+
+0.8.7
+- Wall item stand: the spyglass has its own offset there (the club has none), centred like the club and raised a further 0.2 m (setting). The horizontal stand's offset is corrected along the item's length.
+
+0.8.6
+- Item stand: the spyglass is raised along the stand's own up (0.8.5 moved it along the wrong direction) and no longer leans its thick end toward the wall. A setting, Wall stand height, tunes it.
+
+0.8.5
+- On an item stand the spyglass hung too low: it is now centred where the game's own weapons are.
+
+0.8.4
+- Translations: German, French, Spanish, Brazilian Portuguese, Russian, Polish, Turkish and Chinese. The description mentions pinging.
+
+0.8.3
+- Took the extra loaded zones out again: the lag and trees popping in were worse than the extra distance was worth.
+
+0.8.1
+- Fixed the 0.8.0 setting name that the config file does not allow.
+
+0.8.0
+- Multiplayer: other players who have the mod are seen raising their spyglass to their eye (arm, torso lean and all), and you hear their raise, lower and zoom sounds when they are near. Each player's state is one small value on their own character; a server without the mod just passes it on. Settings under 5 - Others and pinging.
+- Ping: middle mouse (a setting) while looking through the spyglass pings the middle of the view on the map for everyone, the game's own ping. It reaches as far as the setting says, past where the game has loaded the ground.
+
+0.7.2
+- Tidied so nothing of the spyglass's animation can linger on a player who isn't using it: it lets go if the spyglass is put away or the player dies while it is up, forgets the standing pose on unload, and the hand is only ever turned while the spyglass is in it. Other characters' animation is no longer looked into by reflection each frame.
+
+0.7.1
+- New defaults, from the tuned settings: the hand's pose (forward 0.4, right 0.06, roll 57, elbow out 0.3 and down 0.3), far sight 3, clear air 0.8, the camera stays behind you (look from your eyes is off), and the sounds.
+
+0.7.0
+- Sounds: raising and lowering the spyglass, a click for each step of the magnification (higher as you zoom in), and a crash when the lens breaks. They are the game's own sound effects, and each can be swapped in the settings (4 - Sounds), or all switched off.
+
+0.6.3
+- The haze starts to show around the middle of the damage (hardly there at a third, clear at half, heavy by three quarters).
+- Dust and scratches gather over time, each speck and scratch coming in and strengthening on its own, unevenly (drifts of dust, more towards the rim, bigger specks fainter and softer, scratches of different strength and curve), instead of all appearing together.
+
+0.6.2
+- The lens's wear reaches the rim of the circle (it stopped short of the black ring) and looks more like real glass: dust and scratches first, then a crack from a spot of crushed glass with lines that thin out and fade, then condensation gathering at the rim with wiped streaks and smudges.
+
+0.6.1
+- The spyglass no longer falls through the ground when dropped: it keeps a collision box of its own size (the model swap had removed the club's).
+- The haze on a worn lens comes on much later and in patches (it was unusable at three quarters durability).
+- The haze and the crack are round, so no box edges show when the lens fades out.
+
+0.6.0
+- The spyglass wears: it has durability, shown like other items' and mended at the forge. Looking through it uses it up (one point per 6 seconds by default), and at no durability the lens is too damaged to look through.
+- A new spyglass has a clear lens and no crack. As it wears the glass clouds over and the crack spreads out from where it was hit.
+- Settings under 3 - Wear: the durability and the seconds of looking per point.
+
+0.5.0
+- Running and strafing no longer sway the upper body or swing the right arm while the spyglass is up: the spine, chest, neck and right shoulder are held in the standing pose (the left arm and the legs still animate).
+- The torso leans further with the look and the spyglass tilts more than the torso, so hand and spyglass tilt up and down; the head follows the look about half.
+
+0.4.2
+- The arm is held steadier looking up and down: the hand is placed where the head will be after the torso leans (it lagged and swung before), and the lean is gentler.
+- The head stops looking up and down on its own while the spyglass is raised, so it no longer dips into the spyglass.
+
+0.4.1
+- The hand is turned directly after the animation (not through the IK goal's rotation), so the spyglass points forward at the eye instead of up.
+
+0.4.0
+- A steady arm pose: the hand is held against the body at the right eye, not the camera, so only the torso and the body's turning move while you look around.
+- Settings under 9 - Pose to tune where the hand and elbow sit and which way the fingers point; 'Hold the pose' keeps it raised for looking at it.
+
+0.3.3
+- The torso leans with where you look (back to look up, forward to look down) while the spyglass is raised.
+- The hand sits by the right eye with the elbow out and down.
+
+0.3.2
+- The body turns with the camera while you look through it (as when blocking), so the raised arm no longer twists round it.
+
+0.3.1
+- The round lens is a clear circle with a darker rim (it was dark all over).
+
+0.3.0
+- Smaller (1.25 times, was 1.5).
+- Looking through it shows a round lens: black all round, darker towards the rim, with a crack in the glass.
+- Your right hand brings it up to your face.
+- Far sight and clear air: distant objects keep their detail further out and the fog thins while you look (only what the game has loaded can be seen).
+- New settings for each, in 1 - Looking.
+
+0.2.5
+- Turned around so the big end sticks out of the back of the hand, and made 1.5 times larger.
+
+0.2.4
+- Turned the model 90 degrees so the hand closes around the tube instead of the tube poking through the hand.
+
+0.2.3
+- The hand holds the spyglass around the middle instead of by its eyepiece end.
+
+0.2.2
+- The model takes its bronze and wood from the items' meshes, not their particle effects (it was see-through and white).
+
+0.2.1
+- Renamed the shared translations namespace; no change in play.
+
+0.2.0
+- The spyglass item: crafted at the forge, held in the hand.
+- Hold Block (right mouse / gamepad block) to look through it; the mouse wheel changes the magnification.
+- Settings: starting and highest magnification, wheel step, looking from your eyes; the recipe's cost and station (set by the server).
+
+0.1.0
+- First version.

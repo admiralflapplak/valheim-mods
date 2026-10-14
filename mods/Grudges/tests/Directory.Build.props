@@ -1,0 +1,3 @@
+<Project>
+  <!-- The tests are a plain console program: keep ../../Directory.Build.props (Valheim references, deploy) out of them. -->
+</Project>

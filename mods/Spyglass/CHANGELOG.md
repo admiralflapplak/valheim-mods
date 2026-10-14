@@ -1,0 +1,11 @@
+## 1.0.0
+- First release.
+- A craftable brass spyglass: hold Block to look through it, the mouse wheel zooms (the bumpers on a controller).
+- The view narrows to a round lens, the fog thins and distant detail holds out further.
+- Middle mouse (right trigger on a controller) pings what you look at on the map for everyone.
+- Works standing, sitting, at a ship's helm and holding on at the mast or bow.
+- The lens clouds and cracks as it wears, until it is mended at a forge.
+- Other players with the mod see you raise it and hear it.
+- Hangs properly in the hand, on your back and on item stands.
+- Settings in F1 (sound and pose are Advanced); the server decides the recipe and the wear.
+- English, German, French, Spanish, Brazilian Portuguese, Russian, Polish, Turkish and Chinese.

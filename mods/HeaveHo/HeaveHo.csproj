@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>HeaveHo</AssemblyName>
+    <RootNamespace>HeaveHo</RootNamespace>
+    <!-- The code uses Texture2D.LoadImage(byte[]) from a netstandard 2.1 Unity module, which net48 cannot compile against (as before) -->
+    <TargetFramework>netstandard2.1</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Unity-editor-only helper; copied into the Unity project, never compiled into the mod -->
+    <Compile Remove="UnityEditor/**" />
+  </ItemGroup>
+
+  <!-- Unity modules HeaveHo needs beyond the references in ../Directory.Build.props -->
+  <ItemGroup>
+    <Reference Include="UnityEngine.AssetBundleModule"><HintPath>$(ManagedDir)/UnityEngine.AssetBundleModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.ImageConversionModule"><HintPath>$(ManagedDir)/UnityEngine.ImageConversionModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.ParticleSystemModule"><HintPath>$(ManagedDir)/UnityEngine.ParticleSystemModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.AudioModule"><HintPath>$(ManagedDir)/UnityEngine.AudioModule.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="../Shared/ServerSettings.cs" Link="Shared/ServerSettings.cs" />
+  </ItemGroup>
+
+  <!-- The oar model and icon the plugin loads from next to its dll -->
+  <ItemGroup>
+    <OarFiles Include="assets/oar.obj;assets/oar.mtl;assets/oar.jpg;assets/oarIcon.png" />
+  </ItemGroup>
+  <Target Name="DeployOarFiles" AfterTargets="DeployToValheim" Condition="'$(DeployToGame)' == 'true'">
+    <Copy SourceFiles="@(OarFiles)" DestinationFolder="$(DeployDir)" />
+  </Target>
+</Project>

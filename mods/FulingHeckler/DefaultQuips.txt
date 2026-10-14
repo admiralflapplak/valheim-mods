@@ -1,0 +1,166 @@
+# ============================================================================
+#  Fuling Heckler: quips file
+# ============================================================================
+#  One line per quip:   event | when | text
+#
+#  event  What killed you. Most specific match wins, then it falls back:
+#           enemy:<prefab> -> boss (bosses only) -> enemy -> generic
+#           drowning, fall, burning, freezing, poison, smoke, edge, boiled,
+#           tree, stalactite, self, friend, cart, boat, structural, siege,
+#           unknown -> generic
+#         flee = what he shouts when you walk up too close and he runs off
+#         spotted, bored, boo, tombstone, copycat_bye, copycat_rude, campfire,
+#         thief_steal, thief_oops, thief_fee, thief_nope,
+#         gift_junk, gift_nice, gift_treasure, gift_caught = lines for the scenes
+#         Creature prefab names: https://valheim-modding.github.io/Jotunn/data/prefabs/character-list.html
+#
+#  when   first      the first time you die this way
+#         repeat     any time after that
+#         milestone  death number 5, 10, 25... (set in config)
+#         any        always eligible
+#
+#  Placeholders:
+#         {name}    your character's name
+#         {killer}  what killed you ("Troll", or a friend's name)
+#         {count}   "second", "third", ... "27th"
+#         {n}       the plain number
+#         {me}      his name, or just "Fuling" (by chance: 'Say His Name Chance'
+#                   in F1 > 2 - Look). Plain "Fuling" always stays "Fuling",
+#                   good for goblins in general: "Fuling village".
+#
+#  Edit freely, then press "Reload quips file" in the config menu (F1).
+#  Delete this file to get the defaults back.
+# ============================================================================
+
+
+# ---- Generic: the safety net, used when nothing more specific matches -------
+generic | first     | Hah! New way to die! {me} never see that one before!
+generic | first     | Tall-one fall over! {me} come see. Worth the run.
+generic | first     | {me} hear the scream from far away. {me} run SO fast.
+generic | repeat    | Again?! Hehehe. {me} tell whole village.
+generic | repeat    | Tall-one die {count} time. {me} counting on fingers. Need more fingers.
+generic | repeat    | {me} not even need to fight you. You do it yourself!
+generic | repeat    | {me} was eating. {me} stop eating for this. Worth it.
+generic | repeat    | You know {me} follow you now? {me} follow you everywhere. Best show in all lands.
+generic | milestone | {n}! {me} carve it on totem. Big totem.
+generic | milestone | {n} times! Fuling shaman say you cursed. {me} say you bad at this.
+generic | milestone | {n}! {me} throw party. You not invited. You dead.
+
+# ---- When you get too close (he cuts himself off and runs) -----------------
+flee | any | Gotta go!
+flee | any | Too close! {me} go!
+flee | any | Personal space! Bye!
+flee | any | NOPE!
+flee | any | {me} not touch you! Bye bye!
+flee | any | AAH! It moves! {me} leave!
+
+# ---- Scenes ------------------------------------------------------------------
+spotted   | any | Eep!
+spotted   | any | {me} not here!
+spotted   | any | You see nothing! Nothing!
+spotted   | any | {me} was never here.
+bored     | any | Boring.
+bored     | any | Tall-one never look. {me} go home.
+bored     | any | {me} watch you for SO long. You never notice. Rude.
+boo       | any | BOO!
+boo       | any | BOO! Hehehe!
+boo       | any | Gotcha, tall-one!
+tombstone | any | {me} not touch your things! {me} just dance!
+tombstone | any | Was like this when {me} got here!
+tombstone | any | Nice grave. Good for dancing. Bye!
+tombstone | any | {me} just... paying respects. Bye!
+
+copycat_bye  | any | Fun game. Bye!
+copycat_bye  | any | {me} tired now. Bye bye!
+copycat_bye  | any | {me} better dancer. Bye!
+copycat_rude | any | Rude!
+copycat_rude | any | Do not point at {me}!
+copycat_rude | any | {me} not a thing to point at!
+campfire     | any | {me} just warming hands! Bye!
+campfire     | any | Nice fire. {me} go now.
+campfire     | any | Was cold! {me} not touch anything!
+thief_steal  | any | Shiny! {me} take!
+thief_steal  | any | Ooh, coins! Mine now!
+thief_steal  | any | {me} borrow these!
+thief_oops   | any | Oops! Hole in pocket!
+thief_oops   | any | Wait... where shiny go?
+thief_oops   | any | {me} bad at stealing.
+thief_fee    | any | {me} keep {n}. Fee!
+thief_fee    | any | Finder's fee! Hehehe!
+thief_nope   | any | {me} want shiny... next time.
+gift_junk     | any | Present! Hehehe!
+gift_junk     | any | {me} share. {me} generous.
+gift_junk     | any | {me} clean out pockets. Into YOUR pockets.
+gift_junk     | any | You carry now. {me} tired.
+gift_nice     | any | {me} make that. You welcome.
+gift_nice     | any | {me} craft it all by self! Check bag!
+gift_nice     | any | Good gift this time. {me} feel nice. Weird.
+gift_treasure | any | {me} found it. {me} not want it. Yours.
+gift_treasure | any | Shh! Not tell shaman {me} give you that!
+gift_caught   | any | {me} not here! Is present! Bye!
+gift_caught   | any | Eep! Surprise ruined!
+gift_caught   | any | Take it! Take it! {me} go!
+
+# ---- Environment ------------------------------------------------------------
+drowning   | first  | Water is for fish, tall-one! Fish laughing too.
+drowning   | repeat | Drown again! {me} never go in water. {me} smart.
+drowning   | repeat | Glub glub glub! Hehehe! That was you!
+fall       | first  | Hah! Ground win! Ground always win!
+fall       | repeat | Tall-one jump, tall-one go splat. {count} splat! {me} love this game.
+fall       | repeat | {me} see you fly! Then {me} see you not fly!
+burning    | first  | Smell like cooking! {me} bring sauce next time.
+burning    | repeat | On fire again! {me} sit close. Warm.
+freezing   | any    | Cold-death! Tall-one forget cloak. {me} have no cloak and {me} fine.
+poison     | any    | Green sick! Tall-one eat wrong mushroom? Hehehe.
+smoke      | any    | Too much smoke! {me} make hole in roof. Tall-one never learn.
+edge       | any    | Tall-one fall off world! {me} not know world HAS edge!
+boiled     | any    | Hot sea cook tall-one! {me} not go to burning land. {me} not stupid.
+tree       | first  | Tree fall on tall-one! Tree win! {me} cheer for tree!
+tree       | repeat | Tree kill you {count} time. {me} think trees on Fuling side.
+tree       | repeat | You hit tree. Tree hit back. Fair!
+stalactite | any    | Rock fall from sky! Look UP, tall-one!
+
+# ---- Self, friends, other ---------------------------------------------------
+self       | any    | Tall-one kill tall-one! {me} not need to do anything! Best day!
+friend     | first  | {killer} hit you! {me} like {killer}. Good friend for {me}.
+friend     | repeat | {killer} do it AGAIN! Hehehe. {me} want {killer} in Fuling village.
+friend     | repeat | {me} think {killer} not like you very much.
+cart       | any    | Cart squish tall-one! {me} never trust cart.
+boat       | any    | Boat win! {me} not know boat can fight!
+structural | any    | House fall on tall-one! Fuling house made of sticks. Never fall. Well. Sometimes.
+siege      | any    | Big rock-thrower get you! Good aim. {me} impressed.
+
+# ---- Creatures --------------------------------------------------------------
+enemy | first     | {killer} beat you! {me} write it down. {me} cannot write. {me} remember.
+enemy | repeat    | {killer} win again! {me} bet on {killer}. {me} rich now.
+enemy | repeat    | {killer}! Again! Maybe say sorry to {killer}? Make friends?
+enemy | milestone | {n} times {killer} beat you! {me} make {killer} a hat.
+
+enemy:deer          | any    | DEER?! {me} eat deer for breakfast! Hehehehe!
+enemy:deer          | repeat | Deer get you {count} time. Deer is not even angry. Deer just walking.
+enemy:boar          | any    | Piggy kill you! Little piggy! {me} crying from laugh!
+enemy:neck          | any    | Lizard-fish win! Smallest thing in whole world win!
+enemy:greyling      | any    | Little tree-thing beat you. {me} embarrassed for you.
+enemy:greydwarf     | any    | Rock-throwing stick man get you! {me} throw better rocks.
+enemy:troll         | first  | Big blue one smash you flat! {me} hide from troll too. But {me} not DIE.
+enemy:troll         | repeat | Troll again! Troll not even remember you. {me} remember. {me} ALWAYS remember.
+enemy:troll         | repeat | Run from troll, tall-one! {me} run from troll. {me} alive.
+enemy:draugr        | any    | Stinky dead-man get you! Now you stinky dead-man too!
+enemy:blob          | any    | Puddle beat you. Angry puddle. {me} has seen everything now.
+enemy:wolf          | any    | Doggies! Many doggies! {me} count doggies. {me} run out of fingers.
+enemy:hatchling     | any    | Ice-bird freeze you! {me} stay away from mountain. Mountain is mean.
+enemy:fenring       | any    | Wolf-man get you at night! {me} sleep at night. Smart {me}.
+enemy:deathsquito   | first  | Bzzzz! Bitey bug get you! {me} know bug. Bug is {me} friend.
+enemy:deathsquito   | repeat | Bug again! {me} train bug. Good bug.
+enemy:lox           | any    | You poke big fluffy beast?! Why?! {me} never poke lox!
+enemy:goblin        | any    | My cousin get you! Cousin will be so happy! {me} bring cake.
+enemy:goblinarcher  | any    | Cousin with bow! Good shot cousin!
+enemy:goblinbrute   | any    | Big cousin smash! Big cousin very strong. Big cousin not smart. But strong!
+enemy:goblinshaman  | any    | Shaman get you! {me} tell you: shaman scary. Nobody listen to {me}.
+enemy:seeker        | any    | Bug-thing in fog! {me} never go in fog. Fog is for idiots.
+
+# ---- Bosses -----------------------------------------------------------------
+boss              | first  | {killer} too strong for you! {me} not even try {killer}. {me} not crazy.
+boss              | repeat | {killer} AGAIN?! {me} bring snacks next time. Long show.
+enemy:eikthyr     | any    | Big deer! Big deer with lightning! Still a deer! Hehehehe!
+enemy:goblinking  | any    | Yagluth! Even dead, Yagluth win! {me} bow to Yagluth!
