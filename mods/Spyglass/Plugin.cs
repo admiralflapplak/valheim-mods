@@ -109,7 +109,7 @@ namespace Spyglass
             SoundVolume = Config.Bind(sounds, "Volume", 1f, Advanced("How loud they are, as a part of each sound's own volume (the game's volume settings apply as well).", new AcceptableValueRange<float>(0f, 1f)));
             RaiseSound = Config.Bind(sounds, "Raise sound", "sfx_grapplinghook_reload", Advanced("The game's sound effect for raising the spyglass to your eye (Claude Tools' `prefabs sfx_` lists them)."));
             LowerSound = Config.Bind(sounds, "Lower sound", "sfx_equip_start", Advanced("The game's sound effect for lowering it (played lower in pitch)."));
-            ZoomSound = Config.Bind(sounds, "Zoom sound", "sfx_reload_start", Advanced("The game's sound effect for each step of the magnification (its pitch rises as you zoom in)."));
+            ZoomSound = Config.Bind(sounds, "Zoom step sound", "sfx_pickable_pick", Advanced("The game's sound effect for each step of the magnification (its pitch rises as you zoom in)."));
             BreakSound = Config.Bind(sounds, "Break sound", "sfx_equip", Advanced("The game's sound effect for the lens breaking."));
 
             const string pose = "7 - Pose";
