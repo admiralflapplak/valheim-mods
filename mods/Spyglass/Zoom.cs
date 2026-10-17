@@ -128,7 +128,7 @@ namespace Spyglass
             float highest = Mathf.Max(lowest, Mathf.Floor(Plugin.MaxMagnification.Value / step + 0.001f) * step);
             _magnification = Mathf.Clamp(Mathf.Round((_magnification + wheel * step) / step) * step, lowest, highest);
             if (!Mathf.Approximately(before, _magnification))
-                Sound.Play(Plugin.ZoomSound.Value, 0.85f + 0.5f * Mathf.InverseLerp(1.5f, Plugin.MaxMagnification.Value, _magnification));   // higher as it closes in
+                Sound.Play(Plugin.ZoomSound.Value, 0.85f + 0.5f * Mathf.InverseLerp(1.5f, Plugin.MaxMagnification.Value, _magnification), 0.5f);   // higher as it closes in
             if (!Mathf.Approximately(before, _magnification)) _messageAt = Time.time + MessageDelay;   // (one message once the wheel stops, not one per notch)
         }
 
@@ -203,7 +203,7 @@ namespace Spyglass
                     if (before <= 0f && up > 0f) Sound.PlayAt(Plugin.RaiseSound.Value, at, 1.1f);
                     else if (before > 0f && up <= 0f) Sound.PlayAt(Plugin.LowerSound.Value, at, 0.85f);
                     else if (before > 0f && up > 0f && !Mathf.Approximately(before, up))
-                        Sound.PlayAt(Plugin.ZoomSound.Value, at, 0.85f + 0.5f * Mathf.InverseLerp(1.5f, Plugin.MaxMagnification.Value, up));
+                        Sound.PlayAt(Plugin.ZoomSound.Value, at, 0.85f + 0.5f * Mathf.InverseLerp(1.5f, Plugin.MaxMagnification.Value, up), 0.5f);
                 }
                 arm.Blend = Mathf.MoveTowards(arm.Blend, up > 0f ? 1f : 0f, BlendSpeed * Time.deltaTime);
             }
