@@ -1,0 +1,12 @@
+## 0.8.9
+- First release.
+- Twelve weapon oils, at least one per biome, each made from its biome's materials and opened by the boss before it.
+- Brewed like mead: an oil base at the cauldron, matured in a new oil press into four oils.
+- Fire, frost (with a chill that slows), poison, lightning, physical, resistance-piercing and spirit damage, cheaper swings, slower wear with harder chopping and mining, life steal, harder stagger and a stronger block (shield included). Every bonus is a share of the weapon's own damage, so oils keep their worth as weapons improve.
+- Oils last 20 minutes of world time; one at a time (a server setting allows replacing).
+- An oiling animation, and a glow in the oil's colour on the weapon in hand, on the back and on the ground.
+- Oil on bare hands: punches carry it, both hands glow, and a status icon shows the time left. It survives logging out and is lost on death. Claws are oiled with the same palms animation.
+- Oiled weapons show a drop marker in the bag and hotbar; the tooltip names the oil and the minutes left; upgrading keeps the oil.
+- Hand-made bottles, mortars and press in the game's style, with icons drawn from them.
+- Settings in F1 (sounds are Advanced); the server decides the oils, the press and every recipe.
+- English, German, French, Spanish, Brazilian Portuguese, Russian, Polish, Turkish and Chinese.
