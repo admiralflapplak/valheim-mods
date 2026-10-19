@@ -14,7 +14,7 @@ namespace WeaponOils
     {
         public const string Guid = "nick.valheim.weaponoils";
         public const string Name = "WeaponOils";
-        public const string Version = "0.9.14";
+        public const string Version = "0.9.42";
 
         internal static Plugin Instance;
         internal static BepInEx.Logging.ManualLogSource Log;

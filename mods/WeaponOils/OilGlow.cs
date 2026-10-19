@@ -239,7 +239,7 @@ namespace WeaponOils
                 if (_particles == null) return;
             }
             Style style = StyleOf(oil.Effect);
-            Color colour = OilItems.ColourOf(oil);
+            Color colour = Bright(OilItems.ColourOf(oil));
             float strength = Plugin.GlowStrength.Value;
             Shed(_particles, style, colour, strength);
             if (_twin != null) Shed(_twin, style, colour, strength);
@@ -248,6 +248,13 @@ namespace WeaponOils
             _flicker = style.Flicker;
             _light.color = colour;
             _light.enabled = style.Light > 0f;
+        }
+
+        /// <summary>A dark oil colour (Barkhide's brown, Leech's blood) lifted to glow: the same hue, its brightest part raised to 0.9.</summary>
+        private static Color Bright(Color c)
+        {
+            float top = Mathf.Max(c.r, Mathf.Max(c.g, c.b));
+            return top >= 0.8f || top <= 0f ? c : new Color(c.r * 0.9f / top, c.g * 0.9f / top, c.b * 0.9f / top, c.a);
         }
 
         private static void Shed(ParticleSystem particles, Style style, Color colour, float strength)
@@ -276,16 +283,17 @@ namespace WeaponOils
             {
                 case OilEffect.Fire: return new Style { Rate = 22, SizeMin = 0.05f, SizeMax = 0.1f, LifeMin = 0.4f, LifeMax = 0.9f, Speed = 0.12f, Gravity = -0.2f, Light = 0.9f, Flicker = true };
                 case OilEffect.Frost: return new Style { Rate = 14, SizeMin = 0.04f, SizeMax = 0.08f, LifeMin = 0.8f, LifeMax = 1.5f, Speed = 0.05f, Gravity = -0.03f, Light = 0.4f };
-                case OilEffect.Poison: return new Style { Rate = 9, SizeMin = 0.04f, SizeMax = 0.07f, LifeMin = 0.7f, LifeMax = 1.1f, Speed = 0f, Gravity = 0.35f, Light = 0.25f };
+                case OilEffect.Poison: return new Style { Rate = 11, SizeMin = 0.04f, SizeMax = 0.08f, LifeMin = 0.7f, LifeMax = 1.1f, Speed = 0f, Gravity = 0.35f, Light = 0.4f };
                 case OilEffect.Lightning: return new Style { Rate = 30, SizeMin = 0.03f, SizeMax = 0.06f, LifeMin = 0.1f, LifeMax = 0.25f, Speed = 0.7f, Gravity = 0f, Light = 0.9f, Flicker = true };
                 case OilEffect.Spirit:
                 case OilEffect.Pure: return new Style { Rate = 14, SizeMin = 0.06f, SizeMax = 0.11f, LifeMin = 1f, LifeMax = 1.7f, Speed = 0.1f, Gravity = -0.06f, Light = 0.5f };
-                case OilEffect.Physical: return new Style { Rate = 7, SizeMin = 0.03f, SizeMax = 0.05f, LifeMin = 0.2f, LifeMax = 0.4f, Speed = 0f, Gravity = 0f, Light = 0.15f };
-                case OilEffect.StaminaSaving: return new Style { Rate = 8, SizeMin = 0.04f, SizeMax = 0.07f, LifeMin = 0.7f, LifeMax = 1.1f, Speed = 0f, Gravity = 0.25f, Light = 0f };
-                case OilEffect.Durability: return new Style { Rate = 7, SizeMin = 0.04f, SizeMax = 0.07f, LifeMin = 0.7f, LifeMax = 1.1f, Speed = 0f, Gravity = 0.3f, Light = 0f };
-                case OilEffect.LifeSteal: return new Style { Rate = 9, SizeMin = 0.04f, SizeMax = 0.07f, LifeMin = 0.7f, LifeMax = 1.1f, Speed = 0f, Gravity = 0.4f, Light = 0.2f };
-                case OilEffect.Stagger: return new Style { Rate = 10, SizeMin = 0.07f, SizeMax = 0.11f, LifeMin = 0.6f, LifeMax = 0.9f, Speed = 0.15f, Gravity = 0f, Light = 0f };
-                case OilEffect.Guard: return new Style { Rate = 11, SizeMin = 0.04f, SizeMax = 0.06f, LifeMin = 1f, LifeMax = 1.4f, Speed = 0.08f, Gravity = 0f, Light = 0.3f };
+                // (the oils that don't burn, freeze or spark had no light and few, small particles: on a weapon in hand they looked unoiled)
+                case OilEffect.Physical: return new Style { Rate = 16, SizeMin = 0.04f, SizeMax = 0.07f, LifeMin = 0.2f, LifeMax = 0.45f, Speed = 0.12f, Gravity = 0f, Light = 0.4f, Flicker = true };   // steel glints
+                case OilEffect.StaminaSaving: return new Style { Rate = 13, SizeMin = 0.05f, SizeMax = 0.09f, LifeMin = 0.8f, LifeMax = 1.2f, Speed = 0f, Gravity = 0.25f, Light = 0.4f };   // fat drips
+                case OilEffect.Durability: return new Style { Rate = 12, SizeMin = 0.05f, SizeMax = 0.09f, LifeMin = 1f, LifeMax = 1.5f, Speed = 0.04f, Gravity = -0.02f, Light = 0.35f };   // bark dust drifting
+                case OilEffect.LifeSteal: return new Style { Rate = 13, SizeMin = 0.05f, SizeMax = 0.08f, LifeMin = 0.7f, LifeMax = 1.1f, Speed = 0f, Gravity = 0.4f, Light = 0.45f };   // blood drips
+                case OilEffect.Stagger: return new Style { Rate = 14, SizeMin = 0.07f, SizeMax = 0.12f, LifeMin = 0.6f, LifeMax = 0.9f, Speed = 0.15f, Gravity = 0f, Light = 0.4f };
+                case OilEffect.Guard: return new Style { Rate = 14, SizeMin = 0.05f, SizeMax = 0.08f, LifeMin = 1f, LifeMax = 1.4f, Speed = 0.08f, Gravity = 0f, Light = 0.5f };
                 default: return new Style { Rate = 8, SizeMin = 0.05f, SizeMax = 0.08f, LifeMin = 0.6f, LifeMax = 1f, Speed = 0.05f, Gravity = 0f, Light = 0f };
             }
         }
@@ -312,6 +320,58 @@ namespace WeaponOils
             axis = Vector3.zero;
             axis[longest] = centre[longest] < 0f ? -1f : 1f;
             length = size[longest] * Mathf.Abs(transform.lossyScale[longest]);
+        }
+
+        /// <summary>
+        /// A hafted weapon's shaft: its true direction in the model's own space (pointing from the hand to the head), and how far (m) the
+        /// weapon reaches ahead of the hand along it. From its longest mesh, tilt and all: an atgeir's spear is turned some 20 degrees
+        /// inside its model, so the model's box (Blade) is not along the shaft, and slid along the box it left the hand. The hand, the
+        /// model's origin, is often well up the haft (a battleaxe's and a sledge's in the middle, an atgeir's a metre from the butt).
+        /// </summary>
+        internal void Shaft(out Vector3 axis, out float ahead)
+        {
+            Blade(out axis, out _);
+            ahead = 0f;
+            MeshFilter best = null;
+            Matrix4x4 bestToRoot = Matrix4x4.identity;
+            int bestAxis = 0;
+            float bestLength = 0f;
+            foreach (MeshFilter filter in GetComponentsInChildren<MeshFilter>())
+            {
+                if (filter.sharedMesh == null || filter.GetComponent<MeshRenderer>() == null) continue;
+                Matrix4x4 toRoot = transform.worldToLocalMatrix * filter.transform.localToWorldMatrix;
+                Vector3 size = filter.sharedMesh.bounds.size;
+                for (int k = 0; k < 3; k++)
+                {
+                    Vector3 side = Vector3.zero;
+                    side[k] = size[k];
+                    float length = toRoot.MultiplyVector(side).magnitude;
+                    if (length > bestLength) { bestLength = length; best = filter; bestToRoot = toRoot; bestAxis = k; }
+                }
+            }
+            if (best == null) { ahead = _bounds.size.magnitude * 0.5f; return; }
+            Vector3 unit = Vector3.zero;
+            unit[bestAxis] = 1f;
+            Vector3 along = bestToRoot.MultiplyVector(unit).normalized;
+            Bounds mesh = best.sharedMesh.bounds;
+            float most = float.MinValue, least = float.MaxValue;
+            for (int i = 0; i < 8; i++)
+            {
+                Vector3 corner = mesh.center + Vector3.Scale(mesh.extents, new Vector3((i & 1) == 0 ? -1 : 1, (i & 2) == 0 ? -1 : 1, (i & 4) == 0 ? -1 : 1));
+                float at = Vector3.Dot(bestToRoot.MultiplyPoint3x4(corner), along);
+                most = Mathf.Max(most, at);
+                least = Mathf.Min(least, at);
+            }
+            if (-least > most) { along = -along; most = -least; }   // (the head is the end farther from the hand)
+            axis = along;
+            ahead = most * Mathf.Abs(transform.lossyScale.x);
+        }
+
+        /// <summary>How far (m) a hafted weapon reaches ahead of the hand holding it, along its shaft (see Shaft).</summary>
+        internal float Ahead()
+        {
+            Shaft(out _, out float ahead);
+            return ahead;
         }
 
         internal static GameObject RightHandModelOf(VisEquipment vis) => vis != null ? RightHandModel(vis) : null;
