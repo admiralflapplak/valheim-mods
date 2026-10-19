@@ -25,6 +25,9 @@ namespace WeaponOils
     ///
     /// Oil rubbed on bare hands has a pose of its own (Palms): both hands come up in front of the chest, palms up, and the head bows to
     /// look at them, for the same time and with the same sound; it is told to other players by a counter of its own.
+    ///
+    /// A weapon with a blade in each hand (Skoll and Hati, the Berserkir axes) has a pose of its own too: the game's own dual block with
+    /// the torso squared up, the left blade drawn along the right one (DualGoals, TurnDual).
     /// </summary>
     internal static class OilAnimation
     {
@@ -38,7 +41,8 @@ namespace WeaponOils
         private static float LiftTime => BaseLift * Scale;
         private static float SweepTime => BaseSweep * Scale;
         private static float ReleaseTime => BaseRelease * Scale;
-        private static float Total => LiftTime + SweepTime + ReleaseTime;
+        // A weapon in each hand lets go more slowly: the Berserkir axes' stance holds the hands low by the hips, a long way from the guard.
+        private static float ReleaseOf(Pose pose) => pose.Dual == 1 ? ReleaseTime * 1.4f : ReleaseTime;
 
         /// <summary>0 to 1, starting and ending very gently (the smoother "smootherstep" curve: speed and acceleration are both zero at the ends).</summary>
         private static float Ease(float x)
@@ -74,6 +78,10 @@ namespace WeaponOils
             public Turned Left;                            // (the palms pose turns both hands)
             public Quaternion RestLeft, HeldLeft;
             public int SeenPalms = -1;
+            public int Dual = -1;                          // a weapon with a blade in each hand: -1 not looked at yet this oiling, 0 no, 1 yes
+            public bool Squared;                           // (when Dual) DualFacing has been worked out for this oiling
+            public Quaternion DualFacing;                  // (when Dual) the way the chest faces, level: the dual pose is placed from it
+            public float Twist;                            // (when Dual) how far that is turned from the block's chest, in degrees: undone at the spine
         }
 
         private static readonly Dictionary<Player, Pose> Poses = new Dictionary<Player, Pose>();
@@ -124,6 +132,8 @@ namespace WeaponOils
             pose.Planned = false;
             pose.Right = default;
             pose.Left = default;
+            pose.Dual = -1;
+            pose.Squared = false;
         }
 
         private static float _soundAt;
@@ -171,9 +181,10 @@ namespace WeaponOils
         private static float Weight(Pose pose)
         {
             float t = Time.time - pose.Start;
-            if (t < 0f || t > Total) return 0f;
+            float release = ReleaseOf(pose), total = LiftTime + SweepTime + release;
+            if (t < 0f || t > total) return 0f;
             if (t < LiftTime) return Ease(t / LiftTime);
-            if (t > Total - ReleaseTime) return 1f - Ease((t - (Total - ReleaseTime)) / ReleaseTime);
+            if (t > total - release) return 1f - Ease((t - (total - release)) / release);
             return 1f;
         }
 
@@ -191,6 +202,32 @@ namespace WeaponOils
             animator.SetIKPositionWeight(AvatarIKGoal.LeftHand, weight);
             animator.SetIKRotationWeight(AvatarIKGoal.LeftHand, 0f);
             animator.SetIKHintPositionWeight(AvatarIKHint.LeftElbow, HintWeight(weight));
+        }
+
+        /// <summary>
+        /// Whether the weapon in the right hand has a blade in each hand (Skoll and Hati, the Berserkir axes; their attacks are "dual_knives"
+        /// and "dualaxes"). Such a weapon is one model bent to the player's skeleton, not a model on the hand. Another player's weapon is
+        /// known from the item their equipment shows, since their items aren't sent.
+        /// </summary>
+        private static bool IsDual(VisEquipment vis, GameObject model, ItemDrop.ItemData held)
+        {
+            if (model == null || model.GetComponentInChildren<SkinnedMeshRenderer>() == null) return false;
+            ItemDrop.ItemData item = held;
+            if (item == null && vis != null && ObjectDB.instance != null)
+                item = ObjectDB.instance.GetItemPrefab(VisRightItem(vis))?.GetComponent<ItemDrop>()?.m_itemData;
+            string attack = item?.m_shared?.m_attack?.m_attackAnimation ?? "";
+            return attack.StartsWith("dual");
+        }
+
+        private static readonly AccessTools.FieldRef<VisEquipment, int> VisRightItem = AccessTools.FieldRefAccess<VisEquipment, int>("m_rightItem");
+
+        /// <summary>The thumb side of a fist, in the hand's own space (where a blade held point-up comes out), from the finger bones.</summary>
+        internal static Vector3 ThumbSide(Animator animator, Transform hand, bool isRight)
+        {
+            Transform index = animator.GetBoneTransform(isRight ? HumanBodyBones.RightIndexProximal : HumanBodyBones.LeftIndexProximal);
+            Transform little = animator.GetBoneTransform(isRight ? HumanBodyBones.RightLittleProximal : HumanBodyBones.LeftLittleProximal);
+            if (index == null || little == null) return Vector3.up;
+            return Quaternion.Inverse(hand.rotation) * (index.position - little.position).normalized;
         }
 
         [HarmonyPatch(typeof(CharacterAnimEvent), "OnAnimatorIK")]
@@ -243,6 +280,14 @@ namespace WeaponOils
                     pose.HandsOn = true;
                     return;
                 }
+                if (pose.Dual < 0) pose.Dual = IsDual(AnimVisField?.GetValue(__instance) as VisEquipment, model, held) ? 1 : 0;
+                if (pose.Dual == 1)
+                {
+                    DualGoals(animator, pose, anchor, frame, weight);
+                    FadeGameLook(__instance, animator, weight);
+                    pose.HandsOn = true;
+                    return;
+                }
                 glow.Blade(out _, out float length);
                 length = Mathf.Clamp(length, 0.35f, 1.6f);
 
@@ -264,6 +309,53 @@ namespace WeaponOils
                 FadeGameLook(__instance, animator, weight);
                 pose.LookAt = left;
                 pose.HandsOn = true;
+            }
+
+            // The game's own block with a weapon in each hand, read from the bones (the same for Skoll and Hati and the Berserkir axes),
+            // in the body's frame from the chest: both fists up in front of the face, elbows out, the blades rising toward each other and
+            // crossed near their tips. Poses of our own (an arm held out, or low across the chest) looked strained at the shoulder.
+            private static readonly Vector3 BlockRight = new Vector3(0.227f, 0.205f, 0.576f), BlockLeft = new Vector3(-0.185f, 0.214f, 0.580f);
+            // Where each elbow is pointed, from its own hand: out to the side, down and back, as in that block (a little further out). Set from
+            // the chest instead, the Berserkir axes' stance (the left shoulder held elsewhere) put the point inside the shoulder, and the
+            // left elbow bent in toward the body.
+            private static readonly Vector3 RightElbowOut = new Vector3(0.2f, -0.1f, -0.2f), LeftElbowOut = new Vector3(-0.25f, -0.15f, -0.15f);
+            internal static readonly Quaternion BlockRightTurn = Quaternion.Normalize(new Quaternion(-0.766f, 0.234f, 0.338f, -0.492f));
+            internal static readonly Quaternion BlockLeftTurn = Quaternion.Normalize(new Quaternion(0.670f, 0.250f, 0.305f, 0.627f));
+            private const float BlockChestYaw = 10f;   // the chest bone's turn from the player's facing in that block
+            private static readonly Vector3 Lower = new Vector3(0f, -0.08f, -0.06f);      // (a little below the guard and nearer, so the blades are in view and the arms bent)
+            // where the left fist starts: in toward the right one, so the blades cross low. Further (beside the right fist) was all of the
+            // left arm's reach in the axes' stance: the arm went straight and the elbow flicked inward.
+            private static readonly Vector3 LeftIn = new Vector3(0.14f, -0.02f, -0.06f);
+
+            /// <summary>
+            /// A blade in each hand (Skoll and Hati, the Berserkir axes): the game's own dual block, a little lower, the right fist held still
+            /// and the left one drawn from beside it back out to its place in the guard, so the crossing slides from the hilts to the tips: the
+            /// way one knife is stropped on another, each wiped by the other. The head follows the crossing.
+            /// </summary>
+            private static void DualGoals(Animator animator, Pose pose, Vector3 anchor, Quaternion frame, float weight)
+            {
+                // The dual stance twists the chest about 30 degrees right of the way the player faces (the right shoulder back); the game
+                // squares it up to block, this pose doesn't. Placed from the player's facing, the right arm had to reach from the pulled-back
+                // shoulder, stretched and across the body: so it is placed from the chest's own facing, worked out once as the oiling begins.
+                if (!pose.Squared)
+                {
+                    Transform chest = animator.GetBoneTransform(HumanBodyBones.Chest);
+                    float twist = chest != null ? Mathf.DeltaAngle(BlockChestYaw, (Quaternion.Inverse(frame) * chest.rotation).eulerAngles.y) : 0f;
+                    pose.Twist = Mathf.Clamp(twist, -60f, 60f);
+                    pose.DualFacing = frame * Quaternion.Euler(0f, pose.Twist, 0f);
+                    pose.Squared = true;
+                }
+                frame = pose.DualFacing;
+                float sweep = Ease((Time.time - pose.Start - LiftTime) / SweepTime);
+                Vector3 right = anchor + frame * (BlockRight + Lower);
+                Vector3 left = anchor + frame * (BlockLeft + Lower + LeftIn * (1f - sweep));
+
+                animator.SetIKPosition(AvatarIKGoal.RightHand, right);
+                animator.SetIKHintPosition(AvatarIKHint.RightElbow, right + frame * RightElbowOut);
+                animator.SetIKPosition(AvatarIKGoal.LeftHand, left);
+                animator.SetIKHintPosition(AvatarIKHint.LeftElbow, left + frame * LeftElbowOut);
+                Goals(animator, weight);
+                pose.LookAt = (right + left) * 0.5f + frame * new Vector3(0f, 0.12f, 0f);   // (about where the blades cross)
             }
 
             /// <summary>
@@ -299,6 +391,11 @@ namespace WeaponOils
                 if (pose.Palms)
                 {
                     if (TurnPalms(animator, pose, weight)) TurnHead(animator, pose, weight);
+                    return;
+                }
+                if (pose.Dual == 1)
+                {
+                    if (TurnDual(animator, pose, weight)) TurnHead(animator, pose, weight);
                     return;
                 }
                 GameObject model = OilGlow.RightHandModelOf(AnimVisField?.GetValue(__instance) as VisEquipment);
@@ -382,6 +479,53 @@ namespace WeaponOils
                 Vector3 fingersTo = facing * new Vector3(isRight ? 0.25f : -0.25f, 0.2f, 1f).normalized;
                 Vector3 palmTo = facing * new Vector3(0f, 1f, -0.45f).normalized;
                 held = Quaternion.LookRotation(fingersTo, palmTo) * Quaternion.Inverse(Quaternion.LookRotation(fingers, palm.normalized));
+                return true;
+            }
+
+            /// <summary>
+            /// Both hands turned to the game's own dual block (BlockRightTurn, BlockLeftTurn), from wherever the animator had them when the
+            /// oiling began: on the frames the animation steps. False on a frame the animation didn't step.
+            /// </summary>
+            private static bool TurnDual(Animator animator, Pose pose, float weight)
+            {
+                Transform right = animator.GetBoneTransform(HumanBodyBones.RightHand), left = animator.GetBoneTransform(HumanBodyBones.LeftHand);
+                if (right == null || left == null) return false;
+                bool stepped = !pose.Right.Have || Quaternion.Angle(right.rotation, pose.Right.Set) >= 0.05f;
+                if (!stepped && pose.Planned) return false;
+                Quaternion basisR = pose.Right.Basis(right.rotation), basisL = pose.Left.Basis(left.rotation);
+                if (!pose.Planned)
+                {
+                    Quaternion toChest = Quaternion.Inverse(pose.DualFacing);
+                    pose.Rest = toChest * basisR;
+                    pose.RestLeft = toChest * basisL;
+                    pose.Planned = true;
+                }
+                // The torso squared up, as the game does to block: the stance's twist undone, half at the spine and half at the chest, which
+                // carries the shoulders, the arms placed in the chest's frame and the hands round to the front. (Only on the frames the
+                // animation stepped, like the hands: the bones keep what they had otherwise, and turning them again would add up.)
+                Quaternion untwist = Quaternion.AngleAxis(-pose.Twist * weight, Vector3.up);
+                Quaternion half = Quaternion.AngleAxis(-pose.Twist * weight * 0.5f, Vector3.up);
+                Transform spine = animator.GetBoneTransform(HumanBodyBones.Spine), chestBone = animator.GetBoneTransform(HumanBodyBones.Chest);
+                if (spine != null && chestBone != null)
+                {
+                    spine.rotation = half * spine.rotation;
+                    chestBone.rotation = half * chestBone.rotation;
+                }
+                else untwist = Quaternion.identity;
+                // Letting go, the hands blend back toward where the game holds them now, not where it held them as the oiling began: the
+                // Berserkir axes' stance keeps moving the hands, and blending to the old turn left them ~10 degrees off, a snap at the end.
+                Quaternion restR = pose.Rest, restL = pose.RestLeft;
+                if (Time.time - pose.Start > LiftTime + SweepTime)
+                {
+                    Quaternion toChest = Quaternion.Inverse(pose.DualFacing);
+                    restR = Quaternion.Slerp(pose.Rest, toChest * basisR, 1f - weight);
+                    restL = Quaternion.Slerp(pose.RestLeft, toChest * basisL, 1f - weight);
+                }
+                right.rotation = untwist * pose.DualFacing * Quaternion.Slerp(restR, CharacterAnimEvent_OnAnimatorIK.BlockRightTurn, weight);
+                left.rotation = untwist * pose.DualFacing * Quaternion.Slerp(restL, CharacterAnimEvent_OnAnimatorIK.BlockLeftTurn, weight);
+                pose.LookAt = (right.position + left.position) * 0.5f + Vector3.up * 0.12f;   // (where the blades cross, now the body has turned)
+                pose.Right.Remember(basisR, right.rotation);
+                pose.Left.Remember(basisL, left.rotation);
                 return true;
             }
 

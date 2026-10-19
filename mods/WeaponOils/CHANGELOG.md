@@ -1,5 +1,7 @@
-## 0.8.9
+## 0.9.0
 - First release.
+- Melee weapons only: bows, crossbows and staffs refuse oil, while spears (which stab first) take it.
+- Weapons with a blade in each hand (Skoll and Hati, the Berserkir axes) have their own oiling animation, built on the game's dual block, and their glow sits on both blades (and on both hands for claws).
 - Twelve weapon oils, at least one per biome, each made from its biome's materials and opened by the boss before it.
 - Brewed like mead: an oil base at the cauldron, matured in a new oil press into four oils.
 - Fire, frost (with a chill that slows), poison, lightning, physical, resistance-piercing and spirit damage, cheaper swings, slower wear with harder chopping and mining, life steal, harder stagger and a stronger block (shield included). Every bonus is a share of the weapon's own damage, so oils keep their worth as weapons improve.

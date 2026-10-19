@@ -73,15 +73,22 @@ namespace WeaponOils
 
         /// <summary>
         /// Oil goes on melee weapons only: ones that do damage (the Spyglass is built on a club, and is no weapon). Bare hands too (the
-        /// game's "weapon" for an empty hand): that oil is kept on the player (OilHands).
+        /// game's "weapon" for an empty hand): that oil is kept on the player (OilHands). Staffs are two-handed weapons that do damage
+        /// too, so a weapon whose main attack shoots something is refused; spears stab first and throw second, so they stay oilable.
         /// </summary>
         public static bool CanOil(ItemDrop.ItemData item)
         {
             if (item == null || item.m_shared.m_damages.GetTotalDamage() <= 0f) return false;
             if (OilHands.IsHands(item)) return true;
             var t = item.m_shared.m_itemType;
-            return t == ItemDrop.ItemData.ItemType.OneHandedWeapon || t == ItemDrop.ItemData.ItemType.TwoHandedWeapon
-                || t == ItemDrop.ItemData.ItemType.TwoHandedWeaponLeft;
+            if (t != ItemDrop.ItemData.ItemType.OneHandedWeapon && t != ItemDrop.ItemData.ItemType.TwoHandedWeapon
+                && t != ItemDrop.ItemData.ItemType.TwoHandedWeaponLeft) return false;
+            var skill = item.m_shared.m_skillType;
+            if (skill == Skills.SkillType.Bows || skill == Skills.SkillType.Crossbows
+                || skill == Skills.SkillType.ElementalMagic || skill == Skills.SkillType.BloodMagic) return false;
+            var attack = item.m_shared.m_attack;
+            return attack == null || (attack.m_attackType != Attack.AttackType.Projectile
+                && attack.m_attackType != Attack.AttackType.TriggerProjectile);
         }
     }
 }

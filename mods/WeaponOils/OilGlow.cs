@@ -64,6 +64,13 @@ namespace WeaponOils
         private float _lightLevel;
         private bool _flicker;
         private float _seed;
+        // A weapon bent to the player's skeleton (Skoll and Hati, the Berserkir axes, claws) has its origin at the player's feet, not in the
+        // hand: its glow is a pair, one on each hand, moved along with the hands every frame.
+        private ParticleSystem _twin;
+        private Animator _animator;
+        private Transform _rightHand, _leftHand;
+        private bool _claws;
+        private const float SkinnedBladeLength = 0.3f;
 
         private void Awake()
         {
@@ -159,6 +166,60 @@ namespace WeaponOils
             _light.shadows = LightShadows.None;
             _light.range = 1.6f;
             _light.enabled = false;
+
+            if (OnBothHands())
+            {
+                shape.position = Vector3.zero;
+                shape.scale = new Vector3(0.04f, 0.04f, SkinnedBladeLength);
+                _twin = Instantiate(go, transform).GetComponent<ParticleSystem>();
+                _twin.name = "nick_oilglow_left";
+                PlaceOnHands();
+            }
+        }
+
+        private static readonly AccessTools.FieldRef<Character, Animator> CharacterAnimator = AccessTools.FieldRefAccess<Character, Animator>("m_animator");
+
+        /// <summary>Whether this model is a weapon in hand bent to the player's skeleton (no mesh of its own on the hand); finds the hands if so.</summary>
+        private bool OnBothHands()
+        {
+            if (Where != Slot.RightHand || GetComponentInChildren<SkinnedMeshRenderer>() == null) return false;
+            foreach (MeshFilter filter in GetComponentsInChildren<MeshFilter>())
+                if (filter.sharedMesh != null && filter.GetComponent<MeshRenderer>() != null) return false;
+            if (_player == null) _player = GetComponentInParent<Player>();
+            _animator = _player != null ? CharacterAnimator(_player) : null;
+            if (_animator == null) return false;
+            _rightHand = _animator.GetBoneTransform(HumanBodyBones.RightHand);
+            _leftHand = _animator.GetBoneTransform(HumanBodyBones.LeftHand);
+            _claws = OilHands.IsFist(ItemIn(_player, Slot.RightHand));
+            return _rightHand != null && _leftHand != null;
+        }
+
+        private void LateUpdate()
+        {
+            if (_twin != null) PlaceOnHands();
+        }
+
+        /// <summary>Each glow along its hand's blade: out of the thumb side of the fist, or forward over the knuckles for claws.</summary>
+        private void PlaceOnHands()
+        {
+            if (_rightHand == null || _leftHand == null || _animator == null) return;
+            Vector3 right = Place(_particles.transform, _rightHand, true), left = Place(_twin.transform, _leftHand, false);
+            _light.transform.position = (right + left) * 0.5f;
+        }
+
+        private Vector3 Place(Transform glow, Transform hand, bool isRight)
+        {
+            Vector3 along;
+            if (_claws)
+            {
+                Transform middle = _animator.GetBoneTransform(isRight ? HumanBodyBones.RightMiddleProximal : HumanBodyBones.LeftMiddleProximal);
+                along = middle != null ? (middle.position - hand.position).normalized : hand.forward;
+            }
+            else along = hand.rotation * OilAnimation.ThumbSide(_animator, hand, isRight);
+            if (along.sqrMagnitude < 0.5f) along = hand.forward;
+            glow.position = hand.position + along * (0.06f + SkinnedBladeLength * 0.5f);
+            glow.rotation = Quaternion.LookRotation(along);
+            return glow.position;
         }
 
         /// <summary>Starts the oil's look (null: nothing: stops it).</summary>
@@ -167,6 +228,7 @@ namespace WeaponOils
             if (oil == null)
             {
                 if (_particles != null) _particles.Stop(true, ParticleSystemStopBehavior.StopEmitting);   // (what is in the air fades by itself)
+                if (_twin != null) _twin.Stop(true, ParticleSystemStopBehavior.StopEmitting);
                 if (_light != null) _light.enabled = false;
                 return;
             }
@@ -179,21 +241,26 @@ namespace WeaponOils
             Style style = StyleOf(oil.Effect);
             Color colour = OilItems.ColourOf(oil);
             float strength = Plugin.GlowStrength.Value;
-
-            ParticleSystem.MainModule main = _particles.main;
-            main.startColor = colour;
-            main.startLifetime = new ParticleSystem.MinMaxCurve(style.LifeMin, style.LifeMax);
-            main.startSize = new ParticleSystem.MinMaxCurve(style.SizeMin * strength, style.SizeMax * strength);
-            main.startSpeed = style.Speed;
-            main.gravityModifier = style.Gravity;
-            ParticleSystem.EmissionModule emission = _particles.emission;
-            emission.rateOverTime = style.Rate * strength;
-            if (!_particles.isPlaying) _particles.Play(true);
+            Shed(_particles, style, colour, strength);
+            if (_twin != null) Shed(_twin, style, colour, strength);
 
             _lightLevel = style.Light;
             _flicker = style.Flicker;
             _light.color = colour;
             _light.enabled = style.Light > 0f;
+        }
+
+        private static void Shed(ParticleSystem particles, Style style, Color colour, float strength)
+        {
+            ParticleSystem.MainModule main = particles.main;
+            main.startColor = colour;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(style.LifeMin, style.LifeMax);
+            main.startSize = new ParticleSystem.MinMaxCurve(style.SizeMin * strength, style.SizeMax * strength);
+            main.startSpeed = style.Speed;
+            main.gravityModifier = style.Gravity;
+            ParticleSystem.EmissionModule emission = particles.emission;
+            emission.rateOverTime = style.Rate * strength;
+            if (!particles.isPlaying) particles.Play(true);
         }
 
         private struct Style
