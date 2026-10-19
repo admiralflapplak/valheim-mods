@@ -1,0 +1,71 @@
+# Thunderstore package for this mod, read by the Thunderstore CLI (tcli build, tcli publish). Made by Claude Tools' modkit package,
+# which keeps versionNumber and the dependencies up to date from the DLL; everything else is yours to edit.
+[config]
+schemaVersion = "0.0.1"
+
+[package]
+namespace = "Flap"
+name = "Heave_Ho"
+versionNumber = "1.0.0"
+description = "Rowing for ships: sit on a longship, karve or drakkar bench and pull the oars. Oars go through each hull's real oar ports and splash where they meet the water; a crew of rowers goes faster and steers by side. Stamina, rower HUD, controllers."
+websiteUrl = "https://github.com/admiralflapplak/valheim-mods"
+containsNsfwContent = false
+
+[package.dependencies]
+denikson-BepInExPack_Valheim = "5.4.2351"
+
+[build]
+icon = "./thunderstore/icon.png"
+readme = "./thunderstore-build/README.md"
+outdir = "./thunderstore-build"
+
+[[build.copy]]
+source = "./bin/Release/netstandard2.1/HeaveHo.dll"
+target = "plugins/HeaveHo.dll"
+
+[[build.copy]]
+source = "./assets/oar.obj"
+target = "plugins/oar.obj"
+
+[[build.copy]]
+source = "./assets/oar.mtl"
+target = "plugins/oar.mtl"
+
+[[build.copy]]
+source = "./assets/oar.jpg"
+target = "plugins/oar.jpg"
+
+[[build.copy]]
+source = "./assets/oar_drakkar.obj"
+target = "plugins/oar_drakkar.obj"
+
+[[build.copy]]
+source = "./assets/oar_longship.obj"
+target = "plugins/oar_longship.obj"
+
+[[build.copy]]
+source = "./assets/oar_karve.obj"
+target = "plugins/oar_karve.obj"
+
+[[build.copy]]
+source = "./assets/oarlock_karve.obj"
+target = "plugins/oarlock_karve.obj"
+
+[[build.copy]]
+source = "./assets/rowingPowerIcon.png"
+target = "plugins/rowingPowerIcon.png"
+
+[[build.copy]]
+source = "./assets/oarIcon.png"
+target = "plugins/oarIcon.png"
+
+[[build.copy]]
+source = "./CHANGELOG.md"
+target = "CHANGELOG.md"
+
+[publish]
+repository = "https://thunderstore.io"
+communities = [ "valheim" ]
+
+[publish.categories]
+valheim = [ "mods", "transportation", "vehicles", "tweaks", "client-side", "server-side", "deep-north-update", "ai-generated" ]

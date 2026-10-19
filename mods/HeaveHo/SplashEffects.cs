@@ -6,8 +6,8 @@ using UnityEngine;
 namespace HeaveHo
 {
     /// <summary>
-    /// Extra splash effects pulled from Valheim's own effect prefabs (the kind used for fish jumps, wading,
-    /// things falling in the water). The first time a world loads, every water-looking effect name is logged
+    /// Splash effects pulled from Valheim's own effect prefabs (the kind used for fish jumps, wading, things falling in the
+    /// water), spawned where a blade meets the water. The first time one is needed, every water-looking effect name is logged
     /// so they can be tried in F1 under "4. Splashes" without a rebuild.
     /// </summary>
     internal static class SplashEffects
@@ -119,63 +119,6 @@ namespace HeaveHo
 
             Plugin.Log.LogInfo("[Splash] water-related effects you can try in F1 (4. Splashes): " +
                                (hits.Count == 0 ? "none found" : string.Join(", ", hits)));
-
-            DiscoverEffectLists();
-        }
-
-        /// <summary>
-        /// Many effects (footsteps in water, swimming, fish jumps, things hitting the water) aren't registered on
-        /// their own; they live inside other objects' EffectList fields. Walk every prefab's components and log
-        /// the water-looking ones, with where they're used, so it's clear what each one is for.
-        /// </summary>
-        private static void DiscoverEffectLists()
-        {
-            System.Type effectListType = AccessTools.TypeByName("EffectList");
-            var effectPrefabsField = effectListType != null ? AccessTools.Field(effectListType, "m_effectPrefabs") : null;
-            if (effectPrefabsField == null) return;
-
-            var found = new SortedDictionary<string, SortedSet<string>>();
-            var seenTypes = new Dictionary<System.Type, List<System.Reflection.FieldInfo>>();
-
-            foreach (GameObject go in AllPrefabs())
-            {
-                if (go == null) continue;
-                foreach (Component comp in go.GetComponentsInChildren<Component>(true))
-                {
-                    if (comp == null) continue;
-                    System.Type t = comp.GetType();
-                    if (!seenTypes.TryGetValue(t, out var fields))
-                    {
-                        fields = AccessTools.GetDeclaredFields(t).Concat(
-                                     t.BaseType != null ? AccessTools.GetDeclaredFields(t.BaseType) : Enumerable.Empty<System.Reflection.FieldInfo>())
-                                 .Where(f => !f.IsStatic && f.FieldType == effectListType)
-                                 .ToList();
-                        seenTypes[t] = fields;
-                    }
-
-                    foreach (var f in fields)
-                    {
-                        if (!(effectPrefabsField.GetValue(f.GetValue(comp)) is System.Array datas)) continue;
-                        foreach (object data in datas)
-                        {
-                            if (data == null) continue;
-                            var prefabField = AccessTools.Field(data.GetType(), "m_prefab");
-                            if (!(prefabField?.GetValue(data) is GameObject fx) || fx == null) continue;
-
-                            string l = fx.name.ToLowerInvariant();
-                            if (!Keywords.Any(k => l.Contains(k))) continue;
-                            if (!found.TryGetValue(fx.name, out var where)) found[fx.name] = where = new SortedSet<string>();
-                            if (where.Count < 3) where.Add($"{t.Name}.{f.Name} on {go.name}");
-                        }
-                    }
-                }
-            }
-
-            var sb = new System.Text.StringBuilder("[Splash] water effects used inside game objects (name  <-  where it's used):\n");
-            foreach (var kv in found)
-                sb.AppendLine($"  {kv.Key}  <-  {string.Join("; ", kv.Value)}");
-            if (found.Count == 0) sb.AppendLine("  none found");
-            Plugin.Log.LogInfo(sb.ToString());
         }
     }
 }

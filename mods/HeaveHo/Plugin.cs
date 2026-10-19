@@ -5,6 +5,7 @@ using BepInEx;
 using BepInEx.Configuration;
 using HarmonyLib;
 using UnityEngine;
+using Nick.Shared;   // (Shared/Translations.cs)
 
 namespace HeaveHo
 {
@@ -13,7 +14,7 @@ namespace HeaveHo
     {
         public const string ModGuid = "nick.valheim.heaveho";
         public const string ModName = "Heave Ho";
-        public const string ModVersion = "1.8.0";
+        public const string ModVersion = "1.0.0";
 
         internal static BepInEx.Logging.ManualLogSource Log;
         internal static Plugin Instance;
@@ -33,24 +34,24 @@ namespace HeaveHo
 
         // 3. Oars (all ships)
         internal static ConfigEntry<bool> ShowOars;
+        internal static ConfigEntry<bool> ShipUnderSail;
         internal static ConfigEntry<float> OarModelScale;
         internal static ConfigEntry<float> StrokesPerSecond;
-        internal static ConfigEntry<float> OarLength;            // advanced (placeholder oar only)
-        internal static ConfigEntry<bool> UseValheimShader;      // advanced
 
         // 4. Splashes
         internal static ConfigEntry<bool> Splashes;
         internal static ConfigEntry<string> EntryEffects;
         internal static ConfigEntry<string> ExitEffects;
-        internal static ConfigEntry<float> SplashAmount;         // advanced
-
+        
         // 5. Rower HUD
         internal static ConfigEntry<float> HudOutboard;
         internal static ConfigEntry<float> HudHeight;
 
         // 9. Advanced
         internal static ConfigEntry<string> RowingSeatAnimations;
-        internal static ConfigEntry<KeyboardShortcut> RenderDumpKey;
+
+        /// <summary>Length (m) of the plain oar drawn when no oar model is installed at all.</summary>
+        internal const float PlaceholderOarLength = 3.2f;
 
         // Karve oarlock (hand-tuned) and the fallback for hulls that can't be measured.
         internal const float DefaultOutboard = 1.1f;
@@ -63,6 +64,60 @@ namespace HeaveHo
         internal static Mesh OarMesh;
         internal static Texture2D OarTexture;
 
+        /// <summary>An oar's shape, and its own texture (null: drawn with the ship's hull texture, the model's UVs point into it).</summary>
+        internal class OarModel
+        {
+            public Mesh Mesh;
+            public Texture2D Texture;
+            public bool HullTexture;
+        }
+
+        private static readonly Dictionary<string, OarModel> shipOars = new Dictionary<string, OarModel>();
+        private static string assetDir = "";
+
+        /// <summary>
+        /// The oar for a ship: its own oar_&lt;name&gt;.obj next to the dll if there is one (oar_drakkar.obj, named as in the F1 menu),
+        /// else the common oar.obj, else null (an asset-bundle oar or the placeholder is used).
+        /// </summary>
+        internal static OarModel OarFor(string ship)
+        {
+            if (shipOars.TryGetValue(ship, out OarModel found)) return found;
+            OarModel model = LoadShipModel("oar_", ship) ?? (OarMesh != null ? new OarModel { Mesh = OarMesh, Texture = OarTexture } : null);
+            shipOars[ship] = model;
+            return model;
+        }
+
+        private static readonly Dictionary<string, OarModel> shipFittings = new Dictionary<string, OarModel>();
+
+        /// <summary>A ship's oarlock fitting, oarlock_&lt;name&gt;.obj (the Karve's wooden oarlock), or null.</summary>
+        internal static OarModel FittingFor(string ship)
+        {
+            if (shipFittings.TryGetValue(ship, out OarModel found)) return found;
+            OarModel model = LoadShipModel("oarlock_", ship);
+            shipFittings[ship] = model;
+            return model;
+        }
+
+        private static OarModel LoadShipModel(string prefix, string ship)
+        {
+            string path = Path.Combine(assetDir, prefix + DisplayName(ship).ToLowerInvariant().Replace(' ', '_') + ".obj");
+            if (!File.Exists(path)) return null;
+            try
+            {
+                Mesh mesh = ObjLoader.Load(path);
+                mesh.name = "HeaveHo_" + prefix + ship;
+                Texture2D tex = ObjLoader.LoadTexture(path);
+                Log.LogInfo($"[{ship}] Loaded {Path.GetFileName(path)} ({mesh.vertexCount} verts, x {mesh.bounds.min.x:F2} to " +
+                            $"{mesh.bounds.max.x:F2}), " + (tex != null ? "texture " + tex.name : "drawn with the hull's texture"));
+                return new OarModel { Mesh = mesh, Texture = tex, HullTexture = tex == null };
+            }
+            catch (System.Exception e)
+            {
+                Log.LogWarning($"[{ship}] Couldn't load {Path.GetFileName(path)}: {e.Message}");
+                return null;
+            }
+        }
+
         private Harmony harmony;
         internal static HeaveHo.Shared.ServerSettings Synced;
 
@@ -71,22 +126,30 @@ namespace HeaveHo
             Log = Logger;
             Instance = this;
 
+            Translations.Load(this);
             Synced = new HeaveHo.Shared.ServerSettings(ModGuid, Config, Logger);
             Cfg.Init(Config, Synced);
             BindSettings();
 
+            assetDir = AssetDir();
             if (!LoadOarObj()) LoadOarBundle();
-            RowerHud.LoadIcon(AssetDir());
+            RowerHud.LoadIcon(assetDir);
 
             harmony = new Harmony(ModGuid);
             harmony.PatchAll();
             RowerHud.Install(harmony); // patched separately so a missing HUD method can't break rowing
+
+            // After a hot reload the ships already afloat have no rowing component from this copy.
+            foreach (Ship ship in FindObjectsByType<Ship>(FindObjectsSortMode.None))
+                if (!ship.GetComponent<RowingShip>()) ship.gameObject.AddComponent<RowingShip>();
         }
 
         private static void BindSettings()
         {
-            const string rowing = "1. Rowing", stamina = "2. Stamina", oars = "3. Oars (all ships)",
-                         splashes = "4. Splashes", hud = "5. Rower HUD", adv = "9. Advanced";
+            // What a player thinks about, in order: how rowing plays, what it costs, how the oars look, the rower's HUD, each ship,
+            // and the fine print.
+            const string rowing = "1. Rowing", stamina = "2. Stamina", oars = "3. Oars and splashes", hud = "4. Rower HUD",
+                         adv = "9. Advanced";
 
             RowerStrength = Cfg.Bind(rowing, "Rower strength", 2.0f,
                 "How hard rowers push. Acceleration (m/s²) at Pull hard when the crew's combined bonus is 1.0.",
@@ -120,48 +183,40 @@ namespace HeaveHo
 
             ShowOars = Cfg.Bind(oars, "Show oars", true,
                 "Master switch for oar visuals on every ship (each ship also has its own switch).",
-                from: "3. Oars/Show oars", local: true);
+                from: "3. Oars (all ships)/Show oars;3. Oars/Show oars", local: true);
             OarModelScale = Cfg.Bind(oars, "Oar size", 1f,
                 "Size multiplier for the oar model on every ship (each ship also has its own size).",
-                new AcceptableValueRange<float>(0.1f, 3f), from: "3. Oars/Oar model scale");
+                new AcceptableValueRange<float>(0.1f, 3f), from: "3. Oars (all ships)/Oar size;3. Oars/Oar model scale", local: true);
             StrokesPerSecond = Cfg.Bind(oars, "Stroke rate", 0.55f,
                 "Strokes per second at Easy stroke. Pull hard strokes faster.",
-                new AcceptableValueRange<float>(0.1f, 2f), from: "3. Oars/Strokes per second");
-            OarLength = Cfg.Bind(oars, "Placeholder oar length", 3.2f,
-                "Outboard length (m) of the built-in placeholder oar, used only when no oar.obj is installed.",
-                new AcceptableValueRange<float>(1f, 8f), advanced: true, from: "3. Oars/Oar length");
-            UseValheimShader = Cfg.Bind(oars, "Use Valheim shader", true,
-                "Draw asset-bundle oars with the ship's own shader (keeps your texture). Applies to newly loaded ships.",
-                advanced: true, from: "3. Oars/Use Valheim shader");
-
-            Splashes = Cfg.Bind(splashes, "Oar splashes", true,
+                new AcceptableValueRange<float>(0.1f, 2f), from: "3. Oars (all ships)/Stroke rate;3. Oars/Strokes per second", local: true);
+            ShipUnderSail = Cfg.Bind(oars, "Ship the oars under sail", false,
+                "While the sail is up and the ship is moving, oars nobody is pulling slide in out of sight; they come back out the " +
+                "moment someone rows or the ship slows. Off: they stay where each ship's \"Oars at rest\" puts them. Live.",
+                local: true);
+            Splashes = Cfg.Bind(oars, "Oar splashes", true,
                 "Splash where each blade enters the water, and a smaller one as it lifts out.",
-                from: "5. Splashes/Oar splashes", local: true);
-            EntryEffects = Cfg.Bind(splashes, "Effects on blade entry", "vfx_water_surface_fish",
+                from: "4. Splashes/Oar splashes;5. Splashes/Oar splashes", local: true);
+            EntryEffects = Cfg.Bind(oars, "Splash effects: blade enters", "vfx_water_surface_fish",
                 "Comma-separated Valheim effects (visuals or sfx_ sounds) spawned where the blade bites. " +
                 "Water-related names are listed in LogOutput.log under [Splash]. Live.",
-                from: "5. Splashes/Extra effects on blade entry");
-            ExitEffects = Cfg.Bind(splashes, "Effects on blade exit", "vfx_watersplash_bathtub",
+                from: "4. Splashes/Effects on blade entry;5. Splashes/Extra effects on blade entry", local: true);
+            ExitEffects = Cfg.Bind(oars, "Splash effects: blade lifts out", "vfx_watersplash_bathtub",
                 "Same, for when the blade lifts out. Live.",
-                from: "5. Splashes/Extra effects on blade exit");
-            SplashAmount = Cfg.Bind(splashes, "Wake splash amount", 0f,
-                "Extra particles cloned from the ship's own wake effects (Karve/Longship only). 0 = off.",
-                new AcceptableValueRange<float>(0f, 5f), advanced: true, from: "5. Splashes/Splash amount");
+                from: "4. Splashes/Effects on blade exit;5. Splashes/Extra effects on blade exit", local: true);
 
-            HudOutboard = Cfg.Bind(hud, "Distance outboard", 0.5f,
+            // (these two start from their new defaults: an earlier value isn't carried over)
+            HudOutboard = Cfg.Bind(hud, "Arrows: distance outboard", 0.2f,
                 "How far past your oarlock (m) the rowing arrows float.",
-                new AcceptableValueRange<float>(-3f, 3f), from: "4. HUD/Rower HUD distance outboard");
-            HudHeight = Cfg.Bind(hud, "Height", 0.9f,
+                new AcceptableValueRange<float>(-3f, 3f), local: true);
+            HudHeight = Cfg.Bind(hud, "Arrows: height", 0.2f,
                 "Height (m) of the rowing arrows above your oarlock.",
-                new AcceptableValueRange<float>(-2f, 4f), from: "4. HUD/Rower HUD height");
+                new AcceptableValueRange<float>(-2f, 4f), local: true);
 
             RowingSeatAnimations = Cfg.Bind(adv, "Rowing seat animations", "attach_sitship",
                 "Seat animations that count as rowing seats (helm and mast holds use others). Seats are listed in " +
                 "LogOutput.log per ship. Applies to newly loaded ships; all players should match.",
                 advanced: true, from: "0. Seats/Rowing seat animations");
-            RenderDumpKey = Cfg.Bind(adv, "Render dump key", new KeyboardShortcut(KeyCode.F8),
-                "Debug: writes BepInEx/HeaveHo_render_dump.txt about the nearest ship's rendering.",
-                advanced: true, from: "9. Debug/Render dump key", local: true);
 
             Cfg.PurgeOldSections();
         }
@@ -249,6 +304,7 @@ namespace HeaveHo
             public ConfigEntry<float> Scale;         // oar size for this ship
             public ConfigEntry<bool> Visuals;        // oars + splashes shown
             public ConfigEntry<bool> Physics;        // rowing thrust, turning, stamina cost
+            public ConfigEntry<bool> ShowAtRest;     // leave the oars out (stowed, or level in their ports) when nobody rows them
         }
 
         // Ships that need different defaults. Players' saved values always win.
@@ -267,8 +323,10 @@ namespace HeaveHo
             }
         }
 
-        private static string ShipSection(string ship) => "6. Ship: " + DisplayName(ship);
-        private static string OldShipKey(string ship, string key) => "3. Oars - " + ship + "/" + key;
+        private static string ShipSection(string ship) => "5. Ship: " + DisplayName(ship);
+        /// <summary>Where a ship's setting lived in the pre-release builds: "6. Ship: ...", and before that "3. Oars - ...".</summary>
+        private static string ShipFrom(string ship, string key, string oldestKey = null) =>
+            "6. Ship: " + DisplayName(ship) + "/" + key + (oldestKey != null ? ";3. Oars - " + ship + "/" + oldestKey : "");
 
         private static readonly Dictionary<string, ShipOarSettings> shipSettings = new Dictionary<string, ShipOarSettings>();
         private static readonly Dictionary<string, ConfigEntry<string>> seatFilters = new Dictionary<string, ConfigEntry<string>>();
@@ -285,7 +343,7 @@ namespace HeaveHo
                 entry = Cfg.Bind(ShipSection(ship), "Rowing seat names", IsDrakkar(ship) ? "sit_box" : "",
                     $"Seat name prefixes that row on the {DisplayName(ship)} (e.g. sit_box). Empty = all seats with a " +
                     "rowing animation. Applies to newly loaded ships; all players should match.",
-                    advanced: true, order: 10, from: OldShipKey(ship, "Rowing seat names"));
+                    advanced: true, order: 10, from: ShipFrom(ship, "Rowing seat names", "Rowing seat names"));
                 seatFilters[ship] = entry;
                 Cfg.Save();
             }
@@ -300,9 +358,12 @@ namespace HeaveHo
         {
             if (shipSettings.TryGetValue(ship, out var cfg)) return cfg;
 
+            // A ship whose oars go through oar ports has no placement to choose: the ports are known (see ShipProfile).
+            ShipProfile profile = ShipProfile.For(ship);
+            bool ported = profile != null;
             float defDist = DefaultOutboard, defHeight = DefaultHeight;
             string how = "hand-tuned defaults";
-            if (ship != "Karve" && measure(out float d, out float h))
+            if (!ported && ship != "Karve" && measure(out float d, out float h))
             {
                 defDist = d;
                 defHeight = h;
@@ -310,68 +371,99 @@ namespace HeaveHo
             }
 
             string section = ShipSection(ship), name = DisplayName(ship);
-            bool drakkar = IsDrakkar(ship);
             cfg = new ShipOarSettings
             {
-                Visuals = Cfg.Bind(section, "Oar visuals", !drakkar,
-                    $"Show oars and splashes on the {name}." + (drakkar ? " Off by default until the Drakkar has hand-placed oars." : "") + " Live.",
-                    order: 100, from: OldShipKey(ship, "Oar visuals"), local: true),
+                Visuals = Cfg.Bind(section, "Oar visuals", true,
+                    $"Show oars and splashes on the {name}. Live.",
+                    order: 100, from: ShipFrom(ship, "Oar visuals", "Oar visuals"), local: true),
                 Physics = Cfg.Bind(section, "Oar physics", true,
                     $"Seated rowers push and turn the {name} and spend stamina. Off = cosmetic rowing. " +
                     "Both off = ordinary seats. Live.",
-                    order: 99, from: OldShipKey(ship, "Oar physics")),
-                Scale = Cfg.Bind(section, "Oar size", drakkar ? 1.5f : 1f,
+                    order: 99, from: ShipFrom(ship, "Oar physics", "Oar physics")),
+                Scale = Cfg.Bind(section, "Oar size", 1f,
                     $"Oar size on the {name}, on top of the all-ships size. Live.",
-                    new AcceptableValueRange<float>(0.5f, 3f), order: 98, from: OldShipKey(ship, "Oar size")),
-                Placement = Cfg.Bind(section, "Oarlock placement", drakkar ? PlacementPerSeat : PlacementFixed,
+                    new AcceptableValueRange<float>(0.5f, 3f), order: 98, from: ShipFrom(ship, "Oar size", "Oar size"), local: true),
+                ShowAtRest = Cfg.Bind(section, "Oars at rest", true,
+                    profile != null && profile.StowAlongHull
+                        ? $"Leave the {name}'s oars out, stowed along the hull, when nobody is rowing them. Off: an oar slides out when its " +
+                          "rower starts and back in when they stop. Live."
+                        : $"Leave the {name}'s oars out, level through their ports, when nobody is rowing them. Off: an oar slides out of " +
+                          "its port when its rower starts and back in when they stop, so the ship keeps its own shape. Live.",
+                    order: 97, local: true)
+            };
+
+            if (ported)
+            {
+                // Moves every oar from where its port puts it (in metres); the defaults are the ports themselves.
+                cfg.PerSeatOutboard = Cfg.Bind(section, "Oar position: out", 0f,
+                    "Move every oar outward (+) or inward (-) from where the hull puts it (m). Live.",
+                    new AcceptableValueRange<float>(-1f, 1f), order: 80, from: ShipFrom(ship, "Oar position: out"));
+                cfg.PerSeatHeight = Cfg.Bind(section, "Oar position: up", 0f,
+                    "Move every oar up (+) or down (-) from where the hull puts it (m). Live.",
+                    new AcceptableValueRange<float>(-1f, 1f), order: 79, from: ShipFrom(ship, "Oar position: up"));
+            }
+            else
+            {
+                cfg.Placement = Cfg.Bind(section, "Oarlock placement", PlacementFixed,
                     "Fixed: one distance and height for every bench. Per seat: the rail is measured beside each seat " +
                     "(for hulls whose benches span the beam). Applies to newly loaded ships.",
                     new AcceptableValueList<string>(PlacementFixed, PlacementPerSeat), order: 90,
-                    from: OldShipKey(ship, "Oarlock placement")),
-                Outboard = Cfg.Bind(section, "Fixed: distance from centerline", (float)System.Math.Round(defDist, 2),
+                    from: ShipFrom(ship, "Oarlock placement", "Oarlock placement"));
+                cfg.Outboard = Cfg.Bind(section, "Fixed: distance from centerline", (float)System.Math.Round(defDist, 2),
                     $"Fixed placement: oar pivot distance (m) from the centerline. Default {how}. Live.",
                     new AcceptableValueRange<float>(0f, 10f), order: 89,
-                    from: OldShipKey(ship, "Oarlock distance from centerline")),
-                Height = Cfg.Bind(section, "Fixed: height above seat", (float)System.Math.Round(defHeight, 2),
+                    from: ShipFrom(ship, "Fixed: distance from centerline", "Oarlock distance from centerline"));
+                cfg.Height = Cfg.Bind(section, "Fixed: height above seat", (float)System.Math.Round(defHeight, 2),
                     $"Fixed placement: oar pivot height (m) above the benches. Default {how}. Live.",
                     new AcceptableValueRange<float>(-2f, 4f), order: 88,
-                    from: OldShipKey(ship, "Oarlock height above seat")),
-                PerSeatOutboard = Cfg.Bind(section, "Per seat: distance from rail", 0f,
+                    from: ShipFrom(ship, "Fixed: height above seat", "Oarlock height above seat"));
+                cfg.PerSeatOutboard = Cfg.Bind(section, "Per seat: distance from rail", 0f,
                     "Per seat placement: move every oarlock outward (+) or inward (-) from the measured rail (m). Live.",
                     new AcceptableValueRange<float>(-3f, 3f), order: 80,
-                    from: OldShipKey(ship, "Per seat: distance from rail")),
-                PerSeatHeight = Cfg.Bind(section, "Per seat: height above rail", 0.05f,
+                    from: ShipFrom(ship, "Per seat: distance from rail", "Per seat: distance from rail"));
+                cfg.PerSeatHeight = Cfg.Bind(section, "Per seat: height above rail", 0.05f,
                     "Per seat placement: height (m) above the measured rail. Live.",
                     new AcceptableValueRange<float>(-2f, 2f), order: 79,
-                    from: OldShipKey(ship, "Per seat: height above rail")),
-                Spacing = Cfg.Bind(section, "Per seat: oar spacing", 1.0f,
+                    from: ShipFrom(ship, "Per seat: height above rail", "Per seat: height above rail"));
+                cfg.Spacing = Cfg.Bind(section, "Per seat: oar spacing", 1.0f,
                     "Per seat placement: fore-aft gap (m) between oars of rowers sharing one bench. Live.",
                     new AcceptableValueRange<float>(0f, 3f), order: 78,
-                    from: OldShipKey(ship, "Per seat: oar spacing"))
-            };
+                    from: ShipFrom(ship, "Per seat: oar spacing", "Per seat: oar spacing"));
+            }
             shipSettings[ship] = cfg;
+            Cfg.PurgeSection("6. Ship: " + name);      // what is left of this ship's settings under their old names
+            Cfg.PurgeSection("3. Oars - " + ship);
             Cfg.Save();
 
             Log.LogInfo($"[{ship}] '{section}': visuals {(cfg.Visuals.Value ? "on" : "off")}, physics {(cfg.Physics.Value ? "on" : "off")}, " +
-                        $"placement {cfg.Placement.Value}, {cfg.Outboard.Value:F2} m out, {cfg.Height.Value:F2} m up, size {cfg.Scale.Value:F2} " +
-                        $"(fixed default {how}: {defDist:F2} / {defHeight:F2})");
+                        (ported ? (profile.Fitting ? "oars in oarlocks on the gunwale" : "oars through the hull's oar ports") : $"placement {cfg.Placement.Value}, {cfg.Outboard.Value:F2} m out, {cfg.Height.Value:F2} m up") +
+                        $", size {cfg.Scale.Value:F2}" + (ported ? "" : $" (fixed default {how}: {defDist:F2} / {defHeight:F2})"));
             return cfg;
         }
 
         private void Update()
         {
             Synced?.Update();
-            if (RenderDumpKey.Value.IsDown())
-            {
-                try { RenderDump.Write(Path.GetDirectoryName(Info.Location) ?? ""); }
-                catch (System.Exception e) { Log.LogError("Render dump failed: " + e); }
-            }
         }
 
         private void OnDestroy()
         {
             harmony?.UnpatchSelf();
             Synced?.Dispose();
+            Translations.Unload();
+            RowerHud.Unload();
+            RowingShip.DestroyAll(); // their oars, RPC and held seat go with them; a reload adds fresh ones
+            foreach (OarModel m in shipOars.Values)
+                if (m != null && m.Mesh != OarMesh) { Destroy(m.Mesh); if (m.Texture != null) Destroy(m.Texture); }
+            shipOars.Clear();
+            foreach (OarModel m in shipFittings.Values)
+                if (m != null) { Destroy(m.Mesh); if (m.Texture != null) Destroy(m.Texture); }
+            shipFittings.Clear();
+            if (OarMesh != null) Destroy(OarMesh);
+            if (OarTexture != null) Destroy(OarTexture);
+            OarMesh = null;
+            OarTexture = null;
+            OarPrefab = null;
         }
 
         private static string cachedBonusText;

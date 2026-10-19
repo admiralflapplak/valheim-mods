@@ -18,8 +18,9 @@ namespace HeaveHo
     }
 
     /// <summary>
-    /// Config helpers: ordered/advanced entries, and migration of values saved under the pre-1.7 section and key
-    /// names, so reorganizing the menu never resets anyone's tuning.
+    /// Config helpers: ordered/advanced entries, and migration of values saved under an older section and key
+    /// name, so reorganizing the menu never resets anyone's tuning (it carried the testers' settings across while the layout
+    /// was being settled before the first release).
     /// </summary>
     internal static class Cfg
     {
@@ -28,11 +29,13 @@ namespace HeaveHo
         private static Dictionary<ConfigDefinition, string> orphans;
         private static int nextOrder = 100000;
 
-        // Sections used before 1.7. Leftover values in them are removed once everything has been migrated.
+        // Sections the pre-release builds used. Leftover values in them are removed once everything has been migrated.
         private static readonly HashSet<string> OldSections = new HashSet<string>
         {
             "0. Seats", "0. Controls", "1. Rowing", "2. Stamina", "3. Oars", "4. HUD", "5. Splashes", "9. Debug",
-            "5. Oar rendering (experimental)"
+            "5. Oar rendering (experimental)",
+            // the last pre-release layout: the splash settings joined the oars', and the HUD and the ships moved up a number
+            "3. Oars (all ships)", "4. Splashes", "5. Rower HUD", "9. Advanced"
         };
 
         internal static void Init(ConfigFile config, HeaveHo.Shared.ServerSettings synced)
@@ -61,16 +64,31 @@ namespace HeaveHo
             return entry;
         }
 
+        /// <summary>Carries a value over from where it used to live: the first of the old "section/key" names (separated by ;) that has one.</summary>
         private static void Migrate(ConfigEntryBase entry, string from)
         {
             if (orphans == null) return;
-            int slash = from.IndexOf('/');
-            var old = new ConfigDefinition(from.Substring(0, slash), from.Substring(slash + 1));
-            if (!orphans.TryGetValue(old, out string value)) return;
+            foreach (string name in from.Split(';'))
+            {
+                int slash = name.IndexOf('/');
+                var old = new ConfigDefinition(name.Substring(0, slash), name.Substring(slash + 1));
+                if (!orphans.TryGetValue(old, out string value)) continue;
 
-            orphans.Remove(old);
-            entry.SetSerializedValue(value);
-            Plugin.Log.LogInfo($"Config: moved '{old.Section} / {old.Key}' to '{entry.Definition.Section} / {entry.Definition.Key}' ({value}).");
+                orphans.Remove(old);
+                entry.SetSerializedValue(value);
+                Plugin.Log.LogInfo($"Config: moved '{old.Section} / {old.Key}' to '{entry.Definition.Section} / {entry.Definition.Key}' ({value}).");
+                return;
+            }
+        }
+
+        /// <summary>Drops every value still left in a section that no setting lives in any more (a ship's old section, once it has been moved).</summary>
+        internal static void PurgeSection(string section)
+        {
+            if (orphans == null) return;
+            var stale = new List<ConfigDefinition>();
+            foreach (ConfigDefinition d in orphans.Keys)
+                if (d.Section == section) stale.Add(d);
+            foreach (ConfigDefinition d in stale) orphans.Remove(d);
         }
 
         /// <summary>Drops values left in the old global sections (per-ship ones migrate when each ship loads).</summary>

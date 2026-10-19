@@ -1,0 +1,1 @@
+Rowing for ships: sit on a longship, karve or drakkar bench and pull the oars. Oars go through each hull's real oar ports and splash where they meet the water; a crew of rowers goes faster and steers by side. Stamina, rower HUD, controllers.

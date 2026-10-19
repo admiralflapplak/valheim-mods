@@ -25,7 +25,7 @@
 
   <!-- The oar model and icon the plugin loads from next to its dll -->
   <ItemGroup>
-    <OarFiles Include="assets/oar.obj;assets/oar.mtl;assets/oar.jpg;assets/oarIcon.png" />
+    <OarFiles Include="assets/oar.obj;assets/oar.mtl;assets/oar.jpg;assets/oarIcon.png;assets/rowingPowerIcon.png;assets/oar_drakkar.obj;assets/oar_longship.obj;assets/oar_karve.obj;assets/oarlock_karve.obj" />
   </ItemGroup>
   <Target Name="DeployOarFiles" AfterTargets="DeployToValheim" Condition="'$(DeployToGame)' == 'true'">
     <Copy SourceFiles="@(OarFiles)" DestinationFolder="$(DeployDir)" />
