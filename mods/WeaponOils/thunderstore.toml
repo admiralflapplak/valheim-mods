@@ -1,0 +1,35 @@
+# Thunderstore package for this mod, read by the Thunderstore CLI (tcli build, tcli publish). Made by Claude Tools' modkit package,
+# which keeps versionNumber and the dependencies up to date from the DLL; everything else is yours to edit.
+[config]
+schemaVersion = "0.0.1"
+
+[package]
+namespace = "Flap"
+name = "Weapon_Oils"
+versionNumber = "1.0.0"
+description = "Weapon oils (blade oil, weapon coating), like meads for your blade: 12 oils imbue a melee weapon or bare fists with fire, frost, poison, lightning, life steal and more. Brewed at the cauldron, matured in an oil press. Glowing, animated."
+websiteUrl = "https://github.com/admiralflapplak/valheim-mods"
+containsNsfwContent = false
+
+[package.dependencies]
+denikson-BepInExPack_Valheim = "5.4.2351"
+
+[build]
+icon = "./thunderstore/icon.png"
+readme = "./thunderstore-build/README.md"
+outdir = "./thunderstore-build"
+
+[[build.copy]]
+source = "./bin/Release/net48/WeaponOils.dll"
+target = "plugins/WeaponOils.dll"
+
+[[build.copy]]
+source = "./CHANGELOG.md"
+target = "CHANGELOG.md"
+
+[publish]
+repository = "https://thunderstore.io"
+communities = [ "valheim" ]
+
+[publish.categories]
+valheim = [ "mods", "gear", "crafting", "client-side", "server-side", "deep-north-update", "ai-generated" ]

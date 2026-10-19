@@ -2,14 +2,18 @@
 
 Oils that coat a melee weapon for a while, the way meads work on you. Brew a base at the cauldron, let it mature in an oil press, then rub the oil on your blade (or your bare fists) for twenty minutes of fire, frost, poison, lightning and more.
 
+![The twelve oils, their bases and the oil press](thunderstore/screenshots/01-oils-and-press.png)
+
 - **Twelve oils, at least one for every biome.** Each is made from what its own biome gives you, and opens up once the boss before that biome has fallen.
 - **They stay worth using.** Every oil's bonus is a share of your weapon's own damage, so a cheap early oil still pulls its weight with an end-game weapon. Later oils are stronger, and each is chosen to work against the creatures where you make it.
 - **Brewed like mead.** Cook an oil base at the cauldron, put it in an oil press, and twenty minutes later tap four finished oils.
-- **Rub it on.** Use an oil with a melee weapon in your hand: your character holds the weapon out and draws a hand along the blade. The weapon then glows and sheds particles in the oil's colour, in your hand, on your back and on the ground.
+- **Rub it on.** Use an oil with a melee weapon in your hand: your character holds the weapon out and draws a hand along the blade. Every kind of melee weapon has its own way: a blade in each hand is crossed and stropped, a greatsword is held up in a guard, a battleaxe, atgeir or sledge is shifted in the grip so the hand reaches its head. The weapon then glows and sheds particles in the oil's colour, in your hand, on your back and on the ground.
 - **Or on your fists.** Use an oil with no weapon in hand and you rub it into your palms: your punches carry it, both hands glow, and its icon and time left show at the top right like a mead's. Claws (fist weapons) are rubbed the same way.
 - **See what's oiled at a glance.** An oiled weapon shows a small drop in the oil's colour in your bag and on your hotbar, and its tooltip names the oil and the minutes left.
 - **Nothing is wasted.** A weapon that is already oiled refuses a second oil until the first wears off (a server setting allows replacing), and upgrading an oiled weapon keeps its oil.
 - **Made to fit the game.** Hand-made bottles of smoky glass with a cork, a leather band and a charm on a cord for their biome; mortars of paste for the bases; a screw press built on the game's own storage barrel.
+
+![Every oil on a sword](thunderstore/screenshots/02-oil-effects.png)
 
 ## The oils
 
@@ -55,12 +59,19 @@ An oil lasts **20 minutes** of world time by default. It keeps running while you
 
 Every cost, the press's cost and station, and the press's time and yield can be changed by the server.
 
+![Oiling a sword and Skoll and Hati](thunderstore/screenshots/03-oiling.png)
+
 ## Using them
 
 - **On a weapon:** hold the melee weapon and use the oil from your bag or hotbar.
 - **On your fists:** put your weapons away, then use the oil.
 - The oiling animation stops at once if you attack, and can be turned off or sped up in the settings.
 - When an oil wears off you're told on screen.
+
+![An oiled weapon in the bag, and its tooltip](thunderstore/screenshots/04-inventory.png)
+![Oil bases at the cauldron](thunderstore/screenshots/05-cauldron.png)
+![The oil press at work](thunderstore/screenshots/06-press.png)
+![Oil rubbed into bare hands](thunderstore/screenshots/07-bare-hands.png)
 
 ## Settings
 
@@ -79,6 +90,7 @@ Everything is in the F1 Configuration Manager. Tick **Advanced settings** to see
 - The server needs the mod: the oils, bases and press are new items and a new piece, and a server without them would delete them. Everyone playing needs it too.
 - The server's settings (the oils, the press and the recipes) are sent to everyone who joins, so all players brew and fight by the same numbers.
 - Other players with the mod see your oiled weapons and hands glow and see you oil them.
+- Tested in single player. It is made for multiplayer (the settings come from the server, the glow and the animations are sent to other players), but it hasn't been tried on a dedicated server or with other players yet: reports are welcome.
 
 ## Other mods and known clashes
 
