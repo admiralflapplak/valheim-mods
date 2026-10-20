@@ -43,11 +43,11 @@ namespace BelowTheKeel
             if (!Sea.IsDeep(ship.transform.position, out _)) return;
 
             ulong id = ShipId(ship);
-            bool due = Fires(id, slot, out Omen omen, out uint seed);
+            bool due = Fires(id, slot, out Omen omen, out uint seed), failSafe = false;
             if (!due && FailSafeDue(ship))
             {
                 Pick(id, slot, out omen, out seed);
-                due = true;
+                due = failSafe = true;
             }
             if (due) omen = Playable(omen, ship);   // (none playable now: it counts as not come, the open-sea count goes on)
 
@@ -57,7 +57,7 @@ namespace BelowTheKeel
             _lastPlayed = Time.time;
             if (!Plugin.Enabled.Value || !omen.IsEnabled) return;   // (this player's own choice: it still came for the crew)
 
-            Plugin.Log.LogInfo($"Omen: {omen.Name}");
+            Plugin.Log.LogInfo($"Omen: {omen.Name}" + (failSafe ? " (fail-safe)" : ""));
             omen.Play(ship, seed);
         }
 
