@@ -137,6 +137,7 @@ namespace WisplightArrows
             var timer = _glow.AddComponent<TimedDestruction>();
             timer.m_triggerOnAwake = true;
             _glow.AddComponent<GlowFollow>();   // (on a creature it was shot into: follows it; on the ground: switches itself off)
+            _glow.AddComponent<GlowFade>();     // (shrinks and dims away over its last seconds, the same on every game)
             AddWisp(ball, _glow.transform, Vector3.zero);   // (at the arrow's tip: the game spawns it where the arrow struck)
 
             // In flight: the wooden arrow's projectile with a wisp riding on it, leaving the glow where it stops.

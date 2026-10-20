@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using HarmonyLib;
 using UnityEngine;
 
@@ -8,16 +9,20 @@ namespace WisplightArrows
     /// and writes the creature's ZDOID on it; every game then keeps the glow over that creature until it times out, and leaves it where
     /// the creature was last seen if it dies or unloads. A glow with no creature written stays where it landed. The ZDOID is only kept for
     /// the glow's short, unsaved life (the glow isn't persistent), so world renumbering never meets it. It rides at the spot on the
-    /// creature where the arrow's shaft came out of it (OffsetKey, in the creature's own space), not inside it.
+    /// creature where the arrow's shaft came out of it, not inside it: held by the creature's bone nearest that spot (BoneKey, found by
+    /// name on every game, so it moves with a rearing head or a swinging arm), at OffsetKey in that bone's own space. A creature with no
+    /// skeleton to find holds it by its own position and facing.
     /// </summary>
     internal class GlowFollow : MonoBehaviour
     {
         public const string TargetKey = "nick_wisparrow_target";
         public const string OffsetKey = "nick_wisparrow_offset";
+        public const string BoneKey = "nick_wisparrow_bone";
         private const float SendEvery = 0.5f;   // how often the owner moves the glow's saved position (it decides which area it belongs to)
 
         private ZNetView _nview;
         private Character _target;
+        private Transform _holder;   // the bone (or the creature itself) the glow is held by
         private Vector3 _offset;
         private bool _looked;
         private float _sendTimer;
@@ -35,16 +40,46 @@ namespace WisplightArrows
                 if (found == null) return;   // (not loaded here yet: try again next frame)
                 _target = found.GetComponent<Character>();
                 _offset = _nview.GetZDO().GetVec3(OffsetKey, Vector3.zero);
+                if (_target != null) _holder = FindBone(_target, _nview.GetZDO().GetString(BoneKey, "")) ?? _target.transform;
                 _looked = true;
             }
-            if (_target == null) { enabled = false; return; }   // (dead or gone: stays where it was last)
+            if (_target == null || _holder == null) { enabled = false; return; }   // (dead or gone: stays where it was last)
 
-            transform.position = _target.transform.TransformPoint(_offset);
+            transform.position = _holder.TransformPoint(_offset);
             if (_nview.IsOwner() && (_sendTimer -= Time.deltaTime) <= 0f)
             {
                 _sendTimer = SendEvery;
                 _nview.GetZDO().SetPosition(transform.position);
             }
+        }
+
+        /// <summary>The creature's skeleton: every bone its skinned meshes move with.</summary>
+        private static HashSet<Transform> Bones(Character c)
+        {
+            var bones = new HashSet<Transform>();
+            foreach (SkinnedMeshRenderer r in c.GetComponentsInChildren<SkinnedMeshRenderer>())
+                if (r.bones != null) foreach (Transform b in r.bones) if (b != null) bones.Add(b);
+            return bones;
+        }
+
+        private static Transform NearestBone(Character c, Vector3 at)
+        {
+            Transform best = null;
+            float bestDist = float.MaxValue;
+            foreach (Transform b in Bones(c))
+            {
+                float d = (b.position - at).sqrMagnitude;
+                if (d < bestDist) { bestDist = d; best = b; }
+            }
+            return best;
+        }
+
+        /// <summary>A bone by name in the creature's skeleton (null if there is none of that name: held by the creature then).</summary>
+        private static Transform FindBone(Character c, string name)
+        {
+            if (string.IsNullOrEmpty(name)) return null;
+            foreach (Transform b in Bones(c)) if (b.name == name) return b;
+            return null;
         }
 
         private static readonly AccessTools.FieldRef<Projectile, bool> DidHit = AccessTools.FieldRefAccess<Projectile, bool>("m_didHit");
@@ -73,7 +108,9 @@ namespace WisplightArrows
                 ZNetView madeView = made.GetComponent<ZNetView>();
                 if (madeView == null || !madeView.IsValid()) return;
                 madeView.GetZDO().Set(TargetKey, nview.GetZDO().m_uid);
-                madeView.GetZDO().Set(OffsetKey, hit.transform.InverseTransformPoint(at));
+                Transform bone = NearestBone(hit, at);
+                madeView.GetZDO().Set(BoneKey, bone != null ? bone.name : "");
+                madeView.GetZDO().Set(OffsetKey, (bone != null ? bone : hit.transform).InverseTransformPoint(at));
             }
         }
     }

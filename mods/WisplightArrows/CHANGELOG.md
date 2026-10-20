@@ -1,0 +1,11 @@
+## 0.8.1
+- Not yet released.
+- A craftable arrow tipped with a wisp sealed in a glass orb: little damage, made for the Mistlands.
+- Clears the mist along its flight path, which stays clear for a few seconds after.
+- Leaves a glow where it lands that keeps the mist back for a minute, then fades away as the mist rolls back in.
+- Shot into a creature, the glow rides along on it, held by the creature's bone where the arrow went in.
+- A small wisp glows at your bow hand while one is drawn.
+- Dropped arrows glow faintly at the orb.
+- An inventory icon in the style of the game's own arrows.
+- Settings in F1; the server decides them all.
+- English, German, French, Spanish, Brazilian Portuguese, Russian, Polish, Turkish and Chinese.
