@@ -11,7 +11,7 @@ namespace BelowTheKeel
     internal static class Commands
     {
         private const string Command = "keel";
-        private const string Usage = "keel status | keel next | keel play <eye [width] [depth] | eye at <seconds>|pacer|halfboat [near]|ransnet> | keel probe [off] | keel pose | keel shaders [text] | keel material <prefab>";
+        private const string Usage = "keel status | keel next | keel play <eye [width] [depth] | eye at <seconds>|pacer|halfboat [near]|ransnet> | keel probe [off] | keel pose | keel depths | keel shaders [text] | keel material <prefab>";
 
         private static readonly AccessTools.FieldRef<Dictionary<string, Terminal.ConsoleCommand>> TerminalCommands =
             AccessTools.StaticFieldRefAccess<Dictionary<string, Terminal.ConsoleCommand>>(AccessTools.Field(typeof(Terminal), "commands"));
@@ -22,6 +22,14 @@ namespace BelowTheKeel
         }
 
         internal static void Unregister() => TerminalCommands().Remove(Command);
+
+        private static string Spread(List<float> depths)
+        {
+            if (depths.Count == 0) return "none";
+            depths.Sort();
+            float At(float q) => depths[Mathf.Clamp((int)(q * (depths.Count - 1)), 0, depths.Count - 1)];
+            return $"{depths.Count} points, deepest {depths[depths.Count - 1]:0} m; 10% {At(0.1f):0}, half {At(0.5f):0}, 90% {At(0.9f):0} m";
+        }
 
         private static void Run(Terminal t, string[] a)
         {
@@ -100,6 +108,33 @@ namespace BelowTheKeel
                     if (ship == null) { t.AddString("Not aboard a ship."); return; }
                     string where = RansNetOmen.Pose(ship);
                     t.AddString($"One of Ran's drowned, above the water 7 m to starboard, for a minute (eyes open 11 s in): {where}");
+                    return;
+                }
+                case "depths":
+                {
+                    // The whole world from the generator: how deep its ocean is, and how deep where omens may come (no land near).
+                    var all = new List<float>();
+                    var open = new List<float>();
+                    float saved = Plugin.MinDepth.Value;
+                    Plugin.MinDepth.Value = -1000f;   // (for the moment: so IsDeep checks only the biome and the land round about)
+                    try
+                    {
+                        for (float x = -10000f; x <= 10000f; x += 200f)
+                            for (float z = -10000f; z <= 10000f; z += 200f)
+                            {
+                                if (x * x + z * z > 10000f * 10000f) continue;
+                                var p = new Vector3(x, 0f, z);
+                                if (WorldGenerator.instance.GetBiome(p) != Heightmap.Biome.Ocean) continue;
+                                float d = Sea.Depth(p);
+                                all.Add(d);
+                                if (Sea.IsDeep(p, out _)) open.Add(d);
+                            }
+                    }
+                    finally { Plugin.MinDepth.Value = saved; }
+                    t.AddString("Ocean depth (every 200 m over the world): " + Spread(all));
+                    t.AddString($"Away from land ({Plugin.LandDistance.Value:0} m): " + Spread(open));
+                    foreach (float min in new[] { 20f, 25f, 30f, 35f, 40f, 50f, 60f })
+                        t.AddString($"  at least {min:0} m deep: {open.FindAll(d => d >= min).Count * 100f / Mathf.Max(1, open.Count):0}% of it");
                     return;
                 }
                 case "shaders":

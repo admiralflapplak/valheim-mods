@@ -12,7 +12,7 @@ namespace BelowTheKeel
     {
         public const string Guid = "nick.valheim.belowthekeel";
         public const string Name = "BelowTheKeel";
-        public const string Version = "0.7.0";
+        public const string Version = "0.7.2";
 
         internal static Plugin Instance;
         internal static BepInEx.Logging.ManualLogSource Log;
@@ -43,8 +43,10 @@ namespace BelowTheKeel
                 "On average, how many minutes of sailing in deep water pass between two omens.", new AcceptableValueRange<float>(2f, 120f));
             MinutesApart = Synced.Bind("1 - When", "Least minutes apart", 6f,
                 "Two omens never come closer together than this.", new AcceptableValueRange<float>(1f, 60f));
-            MinDepth = Synced.Bind("1 - When", "Least water depth", 40f,
-                "Omens only come where the sea is at least this deep under the ship (metres).", new AcceptableValueRange<float>(10f, 200f));
+            MinDepth = Synced.Bind("1 - When", "Least water depth", 25f,
+                "Omens only come where the sea is at least this deep under the ship (metres), and only in the Ocean biome. Valheim's open " +
+                "sea is about 30 m deep almost everywhere (keel depths): the distance from land below is what keeps them out at sea.",
+                new AcceptableValueRange<float>(10f, 60f));
             LandDistance = Synced.Bind("1 - When", "Least distance from land", 250f,
                 "Omens only come when no land is this close to the ship (metres).", new AcceptableValueRange<float>(0f, 1000f));
             NightFactor = Synced.Bind("1 - When", "More often at night", 2f,
