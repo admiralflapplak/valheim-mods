@@ -41,6 +41,20 @@ namespace BelowTheKeel
             return m;
         }
 
+        private static Material _rope;
+
+        /// <summary>Dark, wet rope (the lit shader the probe's dark discs used: shows under the water).</summary>
+        internal static Material Rope()
+        {
+            if (_rope != null) return _rope;
+            _rope = new Material(FindShader("Custom/Creature") ?? FindShader("Legacy Shaders/Diffuse"))
+            {
+                name = "BelowTheKeel_Rope",
+                color = new Color(0.12f, 0.1f, 0.07f)
+            };
+            return _rope;
+        }
+
         internal static Shader FindShader(string name)
         {
             foreach (Shader sh in Resources.FindObjectsOfTypeAll<Shader>())
@@ -55,6 +69,8 @@ namespace BelowTheKeel
             foreach (Material m in _drowned.Values)
                 if (m != null) Object.Destroy(m);
             _drowned.Clear();
+            if (_rope != null) Object.Destroy(_rope);
+            _rope = null;
         }
     }
 }

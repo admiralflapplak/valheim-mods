@@ -11,7 +11,7 @@ namespace BelowTheKeel
     internal static class Commands
     {
         private const string Command = "keel";
-        private const string Usage = "keel status | keel next | keel play <eye|pacer|halfboat|ransnet> | keel probe [off] | keel shaders [text]";
+        private const string Usage = "keel status | keel next | keel play <eye|pacer|halfboat|ransnet> | keel probe [off] | keel pose | keel shaders [text] | keel material <prefab>";
 
         private static readonly AccessTools.FieldRef<Dictionary<string, Terminal.ConsoleCommand>> TerminalCommands =
             AccessTools.StaticFieldRefAccess<Dictionary<string, Terminal.ConsoleCommand>>(AccessTools.Field(typeof(Terminal), "commands"));
@@ -72,6 +72,13 @@ namespace BelowTheKeel
                     t.AddString(Probe.Show(ship));
                     return;
                 }
+                case "pose":
+                {
+                    if (ship == null) { t.AddString("Not aboard a ship."); return; }
+                    string where = RansNetOmen.Pose(ship);
+                    t.AddString($"One of Ran's drowned, above the water 7 m to starboard, for a minute (eyes open 11 s in): {where}");
+                    return;
+                }
                 case "shaders":
                 {
                     string filter = a.Length > 2 ? a[2] : "";
@@ -79,6 +86,28 @@ namespace BelowTheKeel
                     foreach (Shader sh in Resources.FindObjectsOfTypeAll<Shader>())
                         if (sh.name.IndexOf(filter, System.StringComparison.OrdinalIgnoreCase) >= 0) names.Add($"{sh.name} ({(sh.isSupported ? "ok" : "unsupported")}, queue {sh.renderQueue})");
                     foreach (string n in names) t.AddString(n);
+                    return;
+                }
+                case "material":
+                {
+                    GameObject prefab = a.Length > 2 && ZNetScene.instance != null ? ZNetScene.instance.GetPrefab(a[2]) : null;
+                    if (prefab == null) { t.AddString("No such prefab."); return; }
+                    foreach (Renderer r in prefab.GetComponentsInChildren<Renderer>(true))
+                        foreach (Material m in r.sharedMaterials)
+                        {
+                            if (m == null) continue;
+                            t.AddString($"{r.name}: {m.name} ({m.shader.name}) keywords [{string.Join(" ", m.shaderKeywords)}]");
+                            for (int i = 0; i < m.shader.GetPropertyCount(); i++)
+                            {
+                                string n = m.shader.GetPropertyName(i);
+                                var type = m.shader.GetPropertyType(i);
+                                string v = type == UnityEngine.Rendering.ShaderPropertyType.Color ? m.GetColor(n).ToString()
+                                         : type == UnityEngine.Rendering.ShaderPropertyType.Texture ? (m.GetTexture(n) != null ? m.GetTexture(n).name : "-")
+                                         : type == UnityEngine.Rendering.ShaderPropertyType.Vector ? m.GetVector(n).ToString()
+                                         : m.GetFloat(n).ToString("0.###");
+                                t.AddString($"  {n} = {v}");
+                            }
+                        }
                     return;
                 }
                 default:
