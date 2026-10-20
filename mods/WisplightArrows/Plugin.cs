@@ -12,7 +12,7 @@ namespace WisplightArrows
     {
         public const string Guid = "nick.valheim.wisplightarrows";
         public const string Name = "WisplightArrows";
-        public const string Version = "0.8.1";
+        public const string Version = "1.0.0";
 
         internal static Plugin Instance;
         internal static BepInEx.Logging.ManualLogSource Log;

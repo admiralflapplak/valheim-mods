@@ -1,5 +1,5 @@
-## 0.8.1
-- Not yet released.
+## 1.0.0
+- First release.
 - A craftable arrow tipped with a wisp sealed in a glass orb: little damage, made for the Mistlands.
 - Clears the mist along its flight path, which stays clear for a few seconds after.
 - Leaves a glow where it lands that keeps the mist back for a minute, then fades away as the mist rolls back in.

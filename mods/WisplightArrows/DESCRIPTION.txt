@@ -1,0 +1,1 @@
+Mist-clearing arrows (wisp arrows, light arrows) for the Mistlands: a wisp in a glass orb parts the mist as it flies, leaves a fading wisplight where it lands, marks creatures it hits, and glows on your bow. Low damage, utility ammo, craftable.
