@@ -45,6 +45,7 @@ namespace BelowTheKeel
                     bool deep = Sea.IsDeep(p, out string why);
                     t.AddString($"Depth {Sea.Depth(p):0} m, biome {WorldGenerator.instance.GetBiome(p)}: " + (deep ? "omens may come" : "no omens (" + why + ")"));
                     t.AddString($"Ship id {Director.ShipId(ship):X}, {Visuals.Count} omen object(s) showing");
+                    t.AddString($"Open sea since its last omen: {Director.OpenSeaSeconds(ship) / 60f:0.0} min (fail-safe at {Plugin.FailSafeMinutes.Value:0})");
                     t.AddString($"Weather {EnvMan.instance.GetCurrentEnvironment()?.m_name}, fog {RenderSettings.fogMode} density {RenderSettings.fogDensity:0.0000} (sight {Sea.SightDistance():0} m), night {EnvMan.IsNight()}");
                     return;
                 }

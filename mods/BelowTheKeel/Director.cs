@@ -7,18 +7,29 @@ namespace BelowTheKeel
     /// its seed) is a hash of the ship's id and the slot number on the server's clock. Everyone aboard the same ship with the same
     /// settings (the server's, see Plugin) works out the same answer on their own, so the crew sees the same thing at the same moment,
     /// even when the ship's owner or the server doesn't have the mod.
+    ///
+    /// The fail-safe: bad luck (or omens due while the ship was near land) can leave a long stretch of open sea with none. The ship counts
+    /// its time on the open sea since the last omen, in its own ZDO, written only by its owner (so everyone aboard reads the same count,
+    /// however long they've been aboard). Past the limit, the next slot out at sea brings one.
     /// </summary>
     internal static class Director
     {
         internal const double SlotSeconds = 30.0;
+        internal const string OpenSeaKey = "BelowTheKeel.deepSeconds";   // seconds on the open sea since this ship's last omen
 
         private static long _lastSlot = long.MinValue;
+        private static float _lastPlayed = float.NegativeInfinity;      // (Time.time) this game's last omen: the fail-safe never fires twice
+                                                                         // while the owner's reset is still on its way to everyone
 
-        internal static void Reset() => _lastSlot = long.MinValue;
+        internal static void Reset()
+        {
+            _lastSlot = long.MinValue;
+            _lastPlayed = float.NegativeInfinity;
+        }
 
         internal static void Update()
         {
-            if (ZNet.instance == null || Player.m_localPlayer == null || !Plugin.Enabled.Value) return;
+            if (ZNet.instance == null || Player.m_localPlayer == null) return;
 
             Ship ship = Ship.GetLocalShip();
             if (ship == null) return;
@@ -30,9 +41,21 @@ namespace BelowTheKeel
             if (firstLook) return;   // just boarded or loaded: don't fire in the middle of a slot
 
             if (!Sea.IsDeep(ship.transform.position, out _)) return;
-            if (!Fires(ShipId(ship), slot, out Omen omen, out uint seed)) return;
-            omen = Playable(omen, ship);
-            if (omen == null || !omen.IsEnabled) return;
+
+            ulong id = ShipId(ship);
+            bool due = Fires(id, slot, out Omen omen, out uint seed);
+            if (!due && FailSafeDue(ship))
+            {
+                Pick(id, slot, out omen, out seed);
+                due = true;
+            }
+            if (due) omen = Playable(omen, ship);   // (none playable now: it counts as not come, the open-sea count goes on)
+
+            CountOpenSea(ship, reset: omen != null && due);
+
+            if (!due || omen == null) return;
+            _lastPlayed = Time.time;
+            if (!Plugin.Enabled.Value || !omen.IsEnabled) return;   // (this player's own choice: it still came for the crew)
 
             Plugin.Log.LogInfo($"Omen: {omen.Name}");
             omen.Play(ship, seed);
@@ -52,10 +75,15 @@ namespace BelowTheKeel
             for (long s = slot - 1; s >= slot - apart; s--)
                 if (RawHit(shipId, s)) return false;
 
-            uint h = Hash(shipId, slot, 2);
-            omen = Omens.All[h % (uint)Omens.All.Length];
-            seed = Hash(shipId, slot, 3);
+            Pick(shipId, slot, out omen, out seed);
             return true;
+        }
+
+        /// <summary>Which omen a slot brings, and its seed: the same for everyone aboard.</summary>
+        private static void Pick(ulong shipId, long slot, out Omen omen, out uint seed)
+        {
+            omen = Omens.All[Hash(shipId, slot, 2) % (uint)Omens.All.Length];
+            seed = Hash(shipId, slot, 3);
         }
 
         /// <summary>The omen picked, or the next one along that can come now (the Half-Boat needs fog or night).</summary>
@@ -70,6 +98,31 @@ namespace BelowTheKeel
             return null;
         }
 
+        /// <summary>The ship's time on the open sea since its last omen, as its owner counted it (0 when the owner hasn't the mod).</summary>
+        internal static float OpenSeaSeconds(Ship ship)
+        {
+            ZDO zdo = ShipZdo(ship);
+            return zdo != null ? zdo.GetFloat(OpenSeaKey) : 0f;
+        }
+
+        private static bool FailSafeDue(Ship ship)
+        {
+            float limit = Plugin.FailSafeMinutes.Value * 60f;
+            if (limit <= 0f) return false;
+            if (Time.time - _lastPlayed < Plugin.MinutesApart.Value * 60f) return false;
+            return OpenSeaSeconds(ship) >= limit;
+        }
+
+        /// <summary>The owner adds this slot's time on the open sea, or starts again from 0 when an omen came. Once a slot at most: the
+        /// ship's ZDO is resent to everyone near whenever it changes, so it carries one small number and no more.</summary>
+        private static void CountOpenSea(Ship ship, bool reset)
+        {
+            ZNetView nview = ship.GetComponent<ZNetView>();
+            if (nview == null || !nview.IsValid() || !nview.IsOwner()) return;
+            ZDO zdo = nview.GetZDO();
+            zdo.Set(OpenSeaKey, reset ? 0f : zdo.GetFloat(OpenSeaKey) + (float)SlotSeconds);   // (reset by writing 0: a removed key stays on other games)
+        }
+
         private static bool RawHit(ulong shipId, long slot)
         {
             float slotsBetween = Plugin.MinutesBetween.Value * 60f / (float)SlotSeconds;
@@ -78,11 +131,16 @@ namespace BelowTheKeel
             return Hash(shipId, slot, 1) / (float)uint.MaxValue < chance;
         }
 
+        private static ZDO ShipZdo(Ship ship)
+        {
+            ZNetView nview = ship.GetComponent<ZNetView>();
+            return nview != null && nview.IsValid() ? nview.GetZDO() : null;
+        }
+
         /// <summary>The ship's network id, the same on every machine.</summary>
         internal static ulong ShipId(Ship ship)
         {
-            ZNetView nview = ship.GetComponent<ZNetView>();
-            ZDO zdo = nview != null ? nview.GetZDO() : null;
+            ZDO zdo = ShipZdo(ship);
             if (zdo == null) return 0;
             return (ulong)zdo.m_uid.UserID * 0x9E3779B97F4A7C15UL ^ zdo.m_uid.ID;
         }

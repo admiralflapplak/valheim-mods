@@ -12,7 +12,7 @@ namespace BelowTheKeel
     {
         public const string Guid = "nick.valheim.belowthekeel";
         public const string Name = "BelowTheKeel";
-        public const string Version = "0.7.5";
+        public const string Version = "0.8.0";
 
         internal static Plugin Instance;
         internal static BepInEx.Logging.ManualLogSource Log;
@@ -24,6 +24,7 @@ namespace BelowTheKeel
         internal static ConfigEntry<float> MinDepth;
         internal static ConfigEntry<float> LandDistance;
         internal static ConfigEntry<float> NightFactor;
+        internal static ConfigEntry<float> FailSafeMinutes;
 
         // 2 - Omens (each player's own: one who turns an omen off just doesn't see it when the rest of the crew does)
         internal static ConfigEntry<bool> Enabled;
@@ -51,6 +52,10 @@ namespace BelowTheKeel
                 "Omens only come when no land is this close to the ship (metres).", new AcceptableValueRange<float>(0f, 1000f));
             NightFactor = Synced.Bind("1 - When", "More often at night", 2f,
                 "How many times more often omens come at night.", new AcceptableValueRange<float>(1f, 5f));
+            FailSafeMinutes = Synced.Bind("1 - When", "Fail-safe minutes", 40f,
+                "After this many minutes on the open sea with no omen (by bad luck, or because they came due near land), the next chance out " +
+                "at sea brings one. Counted by the ship (its owner's game), so the whole crew shares it. 0 turns it off.",
+                new AcceptableValueRange<float>(0f, 240f));
 
             Enabled = Config.Bind("2 - Omens", "Enabled", true, "See omens at all.");
             Eye = Config.Bind("2 - Omens", "The Eye", true, "A vast eye opens far below the ship.");

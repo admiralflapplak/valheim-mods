@@ -17,6 +17,7 @@ Four of them, drawn from Norse lore. Described lightly here, so there's somethin
 
 - Only in the **Ocean biome**, at least **25 m** deep, with **no land within 250 m**: out on the open sea, never along the coast.
 - About **one every 20 minutes** of sailing out there, **twice as often at night**, and never two within 6 minutes of each other.
+- **A fail-safe**: after 40 minutes on the open sea with none (bad luck happens), the next chance out there brings one.
 - While you're aboard a ship. They come to the ship, not to a swimmer.
 
 ## Sailing together
@@ -31,7 +32,7 @@ Everything is in the F1 Configuration Manager.
 
 | Section | What's in it |
 |---|---|
-| **1 - When** | How many minutes between omens on average (20), the least time between two (6), the least water depth (25 m), the least distance from land (250 m), and how much more often they come at night (2×). The server decides these. |
+| **1 - When** | How many minutes between omens on average (20), the least time between two (6), the least water depth (25 m), the least distance from land (250 m), how much more often they come at night (2×), and the fail-safe (40 minutes; 0 turns it off). The server decides these. |
 | **2 - Omens** | Turn omens off altogether, or any one of them. Each player's own: if you turn one off, you just don't see it when your crew does. |
 
 ## Console commands
@@ -40,7 +41,7 @@ For trying them out (F5 console; turn the console on in Settings → Gameplay). 
 
 | Command | What it does |
 |---|---|
-| `keel status` | The depth here and whether omens can come, the weather and how far the fog lets you see |
+| `keel status` | The depth here and whether omens can come, the time at sea since the last omen, the weather and how far the fog lets you see |
 | `keel next` | When the next three omens are due (spoilers!) |
 | `keel play pacer` / `ransnet` / `halfboat` / `eye` | Play one now |
 | `keel play halfboat near` | The Half-Boat held alongside for a minute, to look at |
@@ -51,7 +52,7 @@ For trying them out (F5 console; turn the console on in Settings → Gameplay). 
 ## Other mods and known clashes
 
 - No clashes are known. It changes nothing in the game itself; it only adds things to look at, made from the game's own models and materials.
-- Nothing it shows is saved with the world or sent to other players, so removing it leaves nothing behind.
+- Nothing it shows is saved with the world or sent to other players. The only thing it keeps is one number on each ship (its time at sea since the last omen, for the fail-safe); removing the mod leaves that unused and harmless.
 - Mods that change the ocean, the water's look or the fog may change how well the omens can be seen.
 
 ## Made with AI
