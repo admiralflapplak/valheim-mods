@@ -26,7 +26,7 @@ namespace BelowTheKeel
             foreach (string n in names)
                 foreach (Shader sh in loaded)
                     if (sh.name == n && sh.isSupported) return sh;
-            return Shader.Find("Hidden/InternalErrorShader");
+            return Look.DarkSerpent().shader;   // (the serpent's own: always there when a world is)
         }
 
         internal static string Show(Ship ship)
