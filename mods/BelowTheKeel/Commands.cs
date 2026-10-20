@@ -11,7 +11,7 @@ namespace BelowTheKeel
     internal static class Commands
     {
         private const string Command = "keel";
-        private const string Usage = "keel status | keel next | keel play <eye|pacer|halfboat [near]|ransnet> | keel probe [off] | keel pose | keel shaders [text] | keel material <prefab>";
+        private const string Usage = "keel status | keel next | keel play <eye [width] [depth]|pacer|halfboat [near]|ransnet> | keel probe [off] | keel pose | keel shaders [text] | keel material <prefab>";
 
         private static readonly AccessTools.FieldRef<Dictionary<string, Terminal.ConsoleCommand>> TerminalCommands =
             AccessTools.StaticFieldRefAccess<Dictionary<string, Terminal.ConsoleCommand>>(AccessTools.Field(typeof(Terminal), "commands"));
@@ -62,6 +62,14 @@ namespace BelowTheKeel
                     if (ship == null) { t.AddString("Not aboard a ship."); return; }
                     Omen omen = a.Length > 2 ? Omens.Find(a[2]) : null;
                     if (omen == null) { t.AddString(Usage); return; }
+                    if (omen is EyeOmen && a.Length > 3)
+                    {
+                        float width = float.TryParse(a[3], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float w) ? w : EyeOmen.Width;
+                        float depth = a.Length > 4 && float.TryParse(a[4], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float d) ? d : 0f;
+                        EyeOmen.Play(ship, (uint)Random.Range(int.MinValue, int.MaxValue), Mathf.Clamp(width, 2f, 120f), depth);
+                        t.AddString($"Playing eye, {width:0} m across, top {(depth > 0f ? depth.ToString("0.#") + " m" : "6-7 m")} down");
+                        return;
+                    }
                     if (omen is HalfBoatOmen && a.Length > 3 && a[3] == "near")
                     {
                         HalfBoatOmen.Play(ship, (uint)Random.Range(int.MinValue, int.MaxValue), lateral: 12f);

@@ -55,6 +55,33 @@ namespace BelowTheKeel
             return _rope;
         }
 
+        private static Material _hide;
+
+        /// <summary>The serpent's darkened scales with its fins' glow taken out: a hide to hold something else's glow.</summary>
+        internal static Material DarkHide()
+        {
+            if (_hide != null) return _hide;
+            _hide = new Material(DarkSerpent()) { name = "BelowTheKeel_DarkHide" };
+            if (_hide.HasProperty("_EmissionColor")) _hide.SetColor("_EmissionColor", Color.black);
+            return _hide;
+        }
+
+        private static Material _eye;
+        private static Texture2D _eyeAlbedo, _eyeGlow;
+
+        /// <summary>The Eye's eyeball: the serpent's own material (it shows under the water) with the eye drawn on it, the iris aglow.</summary>
+        internal static Material Eye()
+        {
+            if (_eye != null) return _eye;
+            EyeMeshes.Draw(out _eyeAlbedo, out _eyeGlow);
+            _eye = new Material(DarkSerpent()) { name = "BelowTheKeel_Eye", color = Color.white };
+            _eye.SetTexture("_MainTex", _eyeAlbedo);
+            _eye.SetTexture("_EmissionMap", _eyeGlow);
+            _eye.SetColor("_EmissionColor", new Color(3f, 3f, 3f));
+            if (_eye.HasProperty("_BumpMap")) _eye.SetTexture("_BumpMap", null);
+            return _eye;
+        }
+
         private static Material _wood;
 
         /// <summary>Old, sea-worn boat wood (the karve wreckage's own material).</summary>
@@ -86,6 +113,13 @@ namespace BelowTheKeel
             _rope = null;
             if (_wood != null) Object.Destroy(_wood);
             _wood = null;
+            if (_eye != null) Object.Destroy(_eye);
+            if (_hide != null) Object.Destroy(_hide);
+            _hide = null;
+            if (_eyeAlbedo != null) Object.Destroy(_eyeAlbedo);
+            if (_eyeGlow != null) Object.Destroy(_eyeGlow);
+            _eye = null;
+            _eyeAlbedo = _eyeGlow = null;
         }
     }
 }
