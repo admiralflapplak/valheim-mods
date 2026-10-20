@@ -6,7 +6,8 @@ namespace BelowTheKeel
 {
     /// <summary>
     /// The sea draugr of Norwegian folklore: a drowned man rowing half a boat through the fog, an omen that someone aboard will drown. He
-    /// comes out of the fog ahead, rows past off one side, broken end first, and is gone into the fog behind, paying the ship no mind.
+    /// rises from the sea far out in the fog ahead, rows past off one side, broken end first, and sinks again far behind, paying the ship
+    /// no mind.
     /// The half-boat is the game's karve wreckage (the stern and its post: the wreck's bottom boards are a whole boat's length, so they
     /// stay out); the rower a draugr posed bone by bone, rowing two oars made here.
     /// </summary>
@@ -53,6 +54,9 @@ namespace BelowTheKeel
     {
         private static readonly string[] Wreck = { "shipwreck_karve_stern", "shipwreck_karve_sternpost" };   // (stern toward the wreck's +z)
 
+        private const float SinkSeconds = 7f;      // rising at the start, sinking at the end (far out in the fog, just in case)
+        private const float SinkDepth = 4.5f;      // deep enough to take the rower's head under too
+        private const float SinkTilt = 14f;        // the broken end goes down first
         private const float HullScale = 0.6f;      // the karve wreck shrunk to a one-man boat (the rower stays full size)
         private const float Draft = 0.25f;         // how deep the hull sits below the wave under it
         private const float SeatHeight = 1.05f;    // the rower's hips above the boat's root (in the wreck's own size: times HullScale)
@@ -65,6 +69,7 @@ namespace BelowTheKeel
 
         private Ship _ship;
         private float _duration, _lateral, _pass, _stroke, _age;
+        private float _pitch, _roll, _yawWobble;   // following the waves, smoothed
         private bool _hold;
         private Vector3 _heading, _lastPos;
         private Transform _boat, _rower;
@@ -202,7 +207,7 @@ namespace BelowTheKeel
             Vector3 right = Vector3.Cross(Vector3.up, _heading);
             float along = _hold ? 0f : Mathf.Lerp(_pass, -_pass, _age / _duration);
             Vector3 pos = _ship.transform.position + _heading * along + right * _lateral;
-            pos.y = Floating.GetLiquidLevel(pos, 1f, LiquidType.Water) - Draft;
+            pos.y = Floating.GetLiquidLevel(pos, 1f, LiquidType.Water) - Draft - SinkDepth * Under();
             transform.position = pos;
 
             // It faces the way it really moves over the water (broken end first), turning slowly.
@@ -215,10 +220,38 @@ namespace BelowTheKeel
                     transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(-moved), 1f - Mathf.Exp(-1f * dt));
                 _lastPos = pos;
             }
-            float roll = 3f * Mathf.Sin(_age * 0.9f), pitch = 2f * Mathf.Sin(_age * 0.7f + 1f);
-            _boat.localRotation = Quaternion.Euler(pitch, 0f, roll);
+            Ride(dt);
 
             Row();
+        }
+
+        /// <summary>
+        /// Tilts the hull to the waves under it: the water's height at bow and stern gives the pitch, at either side the roll (a small
+        /// boat rides every wave). Eased, so it rocks rather than jitters; the swell also nudges its heading a little.
+        /// </summary>
+        private void Ride(float dt)
+        {
+            const float halfLength = 2.2f, halfWidth = 1f;
+            Vector3 f = transform.forward, r = transform.right, c = transform.position;
+            float Level(Vector3 p) => Floating.GetLiquidLevel(p, 1f, LiquidType.Water);
+            float bow = Level(c + f * halfLength), stern = Level(c - f * halfLength);
+            float port = Level(c - r * halfWidth), starboard = Level(c + r * halfWidth);
+
+            float pitch = Mathf.Clamp(Mathf.Atan2(stern - bow, halfLength * 2f) * Mathf.Rad2Deg, -18f, 18f);
+            float roll = Mathf.Clamp(Mathf.Atan2(starboard - port, halfWidth * 2f) * Mathf.Rad2Deg * 0.7f, -15f, 15f);
+            float k = dt > 0f ? 1f - Mathf.Exp(-3f * dt) : 1f;
+            _pitch = Mathf.Lerp(_pitch, pitch, k);
+            _roll = Mathf.Lerp(_roll, roll, k);
+            _yawWobble = Mathf.Lerp(_yawWobble, (bow - stern) * 4f + 2f * Mathf.Sin(_age * 0.4f), k * 0.3f);
+            _boat.localRotation = Quaternion.Euler(_pitch - SinkTilt * Under(), _yawWobble, _roll);
+        }
+
+        /// <summary>How far under the sea it is, 0 to 1: rising out of it at the start, going back down at the end.</summary>
+        private float Under()
+        {
+            float up = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(_age / SinkSeconds));
+            float down = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((_duration - _age) / SinkSeconds));
+            return 1f - Mathf.Min(up, down);
         }
 
         /// <summary>
