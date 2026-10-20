@@ -10,6 +10,21 @@ namespace BelowTheKeel
     {
         private const int RingPoints = 16;
 
+        /// <summary>
+        /// How far one can see through the fog now (metres): where the game's fog has all but swallowed things. The fog follows the
+        /// weather, which the server syncs, so it is near enough the same for the whole crew.
+        /// </summary>
+        internal static float SightDistance()
+        {
+            float d = Mathf.Max(RenderSettings.fogDensity, 1e-4f);
+            switch (RenderSettings.fogMode)
+            {
+                case FogMode.Linear: return RenderSettings.fogEndDistance;
+                case FogMode.ExponentialSquared: return 1.87f / d;   // exp(-(d x)^2) = 3%
+                default: return 3.5f / d;                            // exp(-d x) = 3%
+            }
+        }
+
         internal static float WaterLevel => ZoneSystem.instance != null ? ZoneSystem.instance.m_waterLevel : 30f;
 
         /// <summary>How deep the sea is under a point (metres; negative over land).</summary>

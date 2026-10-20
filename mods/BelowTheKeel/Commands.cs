@@ -11,7 +11,7 @@ namespace BelowTheKeel
     internal static class Commands
     {
         private const string Command = "keel";
-        private const string Usage = "keel status | keel next | keel play <eye|pacer|halfboat|ransnet> | keel probe [off] | keel pose | keel shaders [text] | keel material <prefab>";
+        private const string Usage = "keel status | keel next | keel play <eye|pacer|halfboat [near]|ransnet> | keel probe [off] | keel pose | keel shaders [text] | keel material <prefab>";
 
         private static readonly AccessTools.FieldRef<Dictionary<string, Terminal.ConsoleCommand>> TerminalCommands =
             AccessTools.StaticFieldRefAccess<Dictionary<string, Terminal.ConsoleCommand>>(AccessTools.Field(typeof(Terminal), "commands"));
@@ -37,6 +37,7 @@ namespace BelowTheKeel
                     bool deep = Sea.IsDeep(p, out string why);
                     t.AddString($"Depth {Sea.Depth(p):0} m, biome {WorldGenerator.instance.GetBiome(p)}: " + (deep ? "omens may come" : "no omens (" + why + ")"));
                     t.AddString($"Ship id {Director.ShipId(ship):X}, {Visuals.Count} omen object(s) showing");
+                    t.AddString($"Weather {EnvMan.instance.GetCurrentEnvironment()?.m_name}, fog {RenderSettings.fogMode} density {RenderSettings.fogDensity:0.0000} (sight {Sea.SightDistance():0} m), night {EnvMan.IsNight()}");
                     return;
                 }
                 case "next":
@@ -61,6 +62,12 @@ namespace BelowTheKeel
                     if (ship == null) { t.AddString("Not aboard a ship."); return; }
                     Omen omen = a.Length > 2 ? Omens.Find(a[2]) : null;
                     if (omen == null) { t.AddString(Usage); return; }
+                    if (omen is HalfBoatOmen && a.Length > 3 && a[3] == "near")
+                    {
+                        HalfBoatOmen.Play(ship, (uint)Random.Range(int.MinValue, int.MaxValue), lateral: 12f);
+                        t.AddString($"Half-boat holding 12 m to starboard for a minute; ship at {ship.transform.position.x:0.0} {ship.transform.position.z:0.0}, heading {ship.transform.eulerAngles.y:0}");
+                        return;
+                    }
                     omen.Play(ship, (uint)Random.Range(int.MinValue, int.MaxValue));   // only on this screen
                     t.AddString("Playing " + omen.Name);
                     return;

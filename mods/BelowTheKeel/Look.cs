@@ -55,6 +55,19 @@ namespace BelowTheKeel
             return _rope;
         }
 
+        private static Material _wood;
+
+        /// <summary>Old, sea-worn boat wood (the karve wreckage's own material).</summary>
+        internal static Material Wood()
+        {
+            if (_wood != null) return _wood;
+            GameObject wreck = ZNetScene.instance != null ? ZNetScene.instance.GetPrefab("shipwreck_karve_stern") : null;
+            var r = wreck != null ? wreck.GetComponentInChildren<MeshRenderer>(true) : null;
+            _wood = r != null ? new Material(r.sharedMaterial) : new Material(FindShader("Custom/Piece") ?? FindShader("Legacy Shaders/Diffuse"));
+            _wood.name = "BelowTheKeel_Wood";
+            return _wood;
+        }
+
         internal static Shader FindShader(string name)
         {
             foreach (Shader sh in Resources.FindObjectsOfTypeAll<Shader>())
@@ -71,6 +84,8 @@ namespace BelowTheKeel
             _drowned.Clear();
             if (_rope != null) Object.Destroy(_rope);
             _rope = null;
+            if (_wood != null) Object.Destroy(_wood);
+            _wood = null;
         }
     }
 }

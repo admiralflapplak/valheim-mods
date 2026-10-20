@@ -31,7 +31,8 @@ namespace BelowTheKeel
 
             if (!Sea.IsDeep(ship.transform.position, out _)) return;
             if (!Fires(ShipId(ship), slot, out Omen omen, out uint seed)) return;
-            if (!omen.IsEnabled) return;
+            omen = Playable(omen, ship);
+            if (omen == null || !omen.IsEnabled) return;
 
             Plugin.Log.LogInfo($"Omen: {omen.Name}");
             omen.Play(ship, seed);
@@ -55,6 +56,18 @@ namespace BelowTheKeel
             omen = Omens.All[h % (uint)Omens.All.Length];
             seed = Hash(shipId, slot, 3);
             return true;
+        }
+
+        /// <summary>The omen picked, or the next one along that can come now (the Half-Boat needs fog or night).</summary>
+        internal static Omen Playable(Omen picked, Ship ship)
+        {
+            int start = System.Array.IndexOf(Omens.All, picked);
+            for (int i = 0; i < Omens.All.Length; i++)
+            {
+                Omen o = Omens.All[(start + i) % Omens.All.Length];
+                if (o.CanPlay(ship)) return o;
+            }
+            return null;
         }
 
         private static bool RawHit(ulong shipId, long slot)

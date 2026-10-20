@@ -14,6 +14,10 @@ namespace BelowTheKeel
 
         internal bool IsEnabled => Setting.Value;
 
+        /// <summary>Whether it can come now (the weather, the time). Must give the same answer for the whole crew: read only what the
+        /// server syncs (time of day, weather), never anything about this one player.</summary>
+        internal virtual bool CanPlay(Ship ship) => true;
+
         internal abstract void Play(Ship ship, uint seed);
     }
 

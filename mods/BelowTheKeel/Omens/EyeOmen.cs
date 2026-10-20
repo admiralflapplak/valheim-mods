@@ -8,6 +8,8 @@ namespace BelowTheKeel
         internal override string Name => "eye";
         protected override ConfigEntry<bool> Setting => Plugin.Eye;
 
+        internal override bool CanPlay(Ship ship) => false;   // not built yet: the schedule moves on to the next omen
+
         internal override void Play(Ship ship, uint seed)
         {
             Plugin.Log.LogInfo("eye: not built yet");
