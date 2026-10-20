@@ -804,8 +804,12 @@ MAKERS = {"eye": icon_eye, "below": icon_below, "halfboat": icon_halfboat, "mist
 if __name__ == "__main__":
     if not sys.argv[1:]:
         # The icon chosen: the burning eye under the water, no boat (drawn entirely here, no game art in it).
-        icon_eye_glow().convert("RGB").resize((256, 256), Image.LANCZOS).save(os.path.join(HERE, "icon.png"))
-        print("wrote icon.png")
+        eye = icon_eye_glow().convert("RGB")
+        eye.resize((256, 256), Image.LANCZOS).save(os.path.join(HERE, "icon.png"))
+        # The page's banner: the same eye, a wide band through its middle (no omen shown in it: spoiler-free).
+        os.makedirs(os.path.join(HERE, "screenshots"), exist_ok=True)
+        eye.crop((0, int(S * 0.3), S, int(S * 0.3) + S * 9 // 20)).save(os.path.join(HERE, "screenshots", "banner.png"))
+        print("wrote icon.png and screenshots/banner.png")
         sys.exit(0)
     which = sys.argv[1:]
     icons = {}

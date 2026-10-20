@@ -1,17 +1,54 @@
 # Below the Keel
 
+![Something burning under dark water, looking up](thunderstore/screenshots/banner.png)
+
 Sailing Valheim's open sea can be peaceful, or it can be an hour of nothing. Below the Keel puts something under it.
 
 Far from land, in deep water, now and then something happens. Something you might see if you're looking over the side at the right moment, and might miss if you aren't. None of it can hurt you, slow you or touch your ship: it's there to be seen, and to make you less sure about the water under you.
 
 ## The omens
 
-Four of them, drawn from Norse lore. Described lightly here, so there's something left to find.
+Four of them, drawn from Norse lore. Described lightly here, so there's something left to find. The pictures are behind spoilers: click one only if you want to know.
 
-- **The Pacer.** Something long and dark keeps pace under the ship. However long you watch, there is always more of it.
-- **Rán's Net.** The sea goddess Rán drags sailors down in her net. Sometimes you sail over the ones she caught.
-- **The Half-Boat.** In Norwegian folklore, a drowned fisherman rows half a boat through the fog, and seeing him means someone aboard will drown. Only in fog or at night.
-- **The Eye.** Easy to miss. Hard to forget.
+**The Pacer.** Something long and dark keeps pace under the ship. However long you watch, there is always more of it.
+
+<details>
+<summary>Spoiler: the Pacer</summary>
+
+![A long dark shape under bright water, beside the hull](thunderstore/screenshots/pacer-rail.png)
+![The same shape from further along the rail](thunderstore/screenshots/pacer-rail-2.png)
+
+</details>
+
+**Rán's Net.** The sea goddess Rán drags sailors down in her net. Sometimes you sail over the ones she caught.
+
+<details>
+<summary>Spoiler: Rán's Net</summary>
+
+![Pale figures hanging in the water over the side, lit from below](thunderstore/screenshots/ransnet-rail.png)
+![The drowned in the foreground, the ship behind them](thunderstore/screenshots/ransnet-wide.png)
+
+</details>
+
+**The Half-Boat.** In Norwegian folklore, a drowned fisherman rows half a boat through the fog, and seeing him means someone aboard will drown. Only in fog or at night.
+
+<details>
+<summary>Spoiler: the Half-Boat</summary>
+
+![A dark rower in fog beyond the ship's rail](thunderstore/screenshots/halfboat-rail.png)
+![The rower and his broken boat in the mist](thunderstore/screenshots/halfboat-close.png)
+
+</details>
+
+**The Eye.** Easy to miss. Hard to forget.
+
+<details>
+<summary>Spoiler: the Eye</summary>
+
+![Beside the ship, in the black water](thunderstore/screenshots/eye-close.png)
+![The ship, small, beside it](thunderstore/screenshots/eye-wide.png)
+
+</details>
 
 ## When they come
 
@@ -45,7 +82,8 @@ For trying them out (F5 console; turn the console on in Settings → Gameplay). 
 | `keel next` | When the next three omens are due (spoilers!) |
 | `keel play pacer` / `ransnet` / `halfboat` / `eye` | Play one now |
 | `keel play halfboat near` | The Half-Boat held alongside for a minute, to look at |
-| `keel play eye <width> <depth>` | The Eye at another size (36 m across, 6.5 m down by default) |
+| `keel play eye show` | The Eye lifted above the water, held open for a minute, to look at |
+| `keel play eye classic` | The Eye as it first was, with whites |
 | `keel pose` | One of Rán's drowned held above the water beside the ship |
 | `keel depths` | How deep your world's ocean is, from the world generator |
 
