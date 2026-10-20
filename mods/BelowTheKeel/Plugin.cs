@@ -10,7 +10,7 @@ namespace BelowTheKeel
     {
         public const string Guid = "nick.valheim.belowthekeel";
         public const string Name = "BelowTheKeel";
-        public const string Version = "0.1.6";
+        public const string Version = "0.2.0";
 
         internal static Plugin Instance;
         internal static BepInEx.Logging.ManualLogSource Log;
@@ -69,6 +69,7 @@ namespace BelowTheKeel
         private void OnDestroy()
         {
             Visuals.ClearAll();
+            Look.Forget();
             Director.Reset();
             Commands.Unregister();
             Synced?.Dispose();

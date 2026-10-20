@@ -1,0 +1,43 @@
+using UnityEngine;
+
+namespace BelowTheKeel
+{
+    /// <summary>
+    /// Materials for the omens, made from the game's own. Shader.Find misses the game's shaders (they come in asset bundles), and the
+    /// primitives' default material uses Unity's Standard shader, which the game's build leaves out: copy a game material instead. Only
+    /// dark, opaque surfaces show under the water (the probe: pale or see-through ones vanish in the murk).
+    /// </summary>
+    internal static class Look
+    {
+        private static Material _darkSerpent;
+
+        /// <summary>The sea serpent's scales, darkened almost to black.</summary>
+        internal static Material DarkSerpent()
+        {
+            if (_darkSerpent != null) return _darkSerpent;
+
+            Material source = null;
+            GameObject serpent = ZNetScene.instance != null ? ZNetScene.instance.GetPrefab("Serpent") : null;
+            var skin = serpent != null ? serpent.GetComponentInChildren<SkinnedMeshRenderer>(true) : null;
+            if (skin != null) source = skin.sharedMaterial;
+
+            _darkSerpent = source != null ? new Material(source) : new Material(FindShader("Custom/Creature"));
+            _darkSerpent.name = "BelowTheKeel_DarkSerpent";
+            _darkSerpent.color = new Color(0.05f, 0.06f, 0.07f);
+            return _darkSerpent;
+        }
+
+        internal static Shader FindShader(string name)
+        {
+            foreach (Shader sh in Resources.FindObjectsOfTypeAll<Shader>())
+                if (sh.name == name) return sh;
+            return null;
+        }
+
+        internal static void Forget()
+        {
+            if (_darkSerpent != null) Object.Destroy(_darkSerpent);
+            _darkSerpent = null;
+        }
+    }
+}
