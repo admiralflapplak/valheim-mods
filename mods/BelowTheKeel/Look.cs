@@ -82,6 +82,22 @@ namespace BelowTheKeel
             return _eye;
         }
 
+        private static Material _eyeFire;
+        private static Texture2D _fireAlbedo, _fireGlow;
+
+        /// <summary>The Eye's eyeball, burning (after the icon): no white, the whole iris aglow, so it burns up through the water.</summary>
+        internal static Material EyeFire()
+        {
+            if (_eyeFire != null) return _eyeFire;
+            EyeMeshes.DrawFire(out _fireAlbedo, out _fireGlow);
+            _eyeFire = new Material(DarkSerpent()) { name = "BelowTheKeel_EyeFire", color = Color.white };
+            _eyeFire.SetTexture("_MainTex", _fireAlbedo);
+            _eyeFire.SetTexture("_EmissionMap", _fireGlow);
+            _eyeFire.SetColor("_EmissionColor", new Color(2.2f, 2.2f, 2.2f));
+            if (_eyeFire.HasProperty("_BumpMap")) _eyeFire.SetTexture("_BumpMap", null);
+            return _eyeFire;
+        }
+
         private static Material _wood;
 
         /// <summary>Old, sea-worn boat wood (the karve wreckage's own material).</summary>
@@ -114,6 +130,11 @@ namespace BelowTheKeel
             if (_wood != null) Object.Destroy(_wood);
             _wood = null;
             if (_eye != null) Object.Destroy(_eye);
+            if (_eyeFire != null) Object.Destroy(_eyeFire);
+            if (_fireAlbedo != null) Object.Destroy(_fireAlbedo);
+            if (_fireGlow != null) Object.Destroy(_fireGlow);
+            _eyeFire = null;
+            _fireAlbedo = _fireGlow = null;
             if (_hide != null) Object.Destroy(_hide);
             _hide = null;
             if (_eyeAlbedo != null) Object.Destroy(_eyeAlbedo);

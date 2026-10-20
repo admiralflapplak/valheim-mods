@@ -5,8 +5,9 @@ namespace BelowTheKeel
 {
     /// <summary>
     /// A vast eye opens below the ship. A dark scaled hide rises out of the murk under the hull, the eye in it shut; then the lids roll
-    /// apart and a glowing amber eye with a slit pupil looks up, finds whoever is looking down, follows them, blinks once (the upper
-    /// lid), and closes. Its upper lid is always the one away from the ship: looking down from the deck, the top.
+    /// apart on a burning eye with a slit pupil (after the package icon), which looks up, finds whoever is looking down, follows them,
+    /// blinks once (the upper lid), and closes. Its upper lid is always the one away from the ship: looking down from the deck, the top.
+    /// (0.11 tried a searching eye that locked onto one of the crew and tightened its slit; taken out at the user's choice.)
     /// The hide sinks away. Easy to miss; impossible to forget. Made here: the eyeball's texture is drawn in code, the lids are sphere
     /// shells turning on the eye's long axis (their opening is the almond of an eye); the hide is the sea serpent's darkened scales.
     /// (A milky third lid sweeping across was tried in 0.6.6-0.6.8 and taken out.)
@@ -18,10 +19,16 @@ namespace BelowTheKeel
 
         internal const float Width = 36f;   // the eyeball across (metres): tried 6 to 36 in the game, the biggest won
 
-        internal override void Play(Ship ship, uint seed) => Play(ship, seed, Width, 0f);
+        internal override void Play(Ship ship, uint seed) => Play(ship, seed, Width, float.NaN);
 
         /// <summary>For "keel play eye at &lt;seconds&gt;": held still at that moment of its life, to look at.</summary>
         internal static float FreezeAt = -1f;
+
+        /// <summary>For "keel play eye classic": the first eye, drawn with its whites and a painted slit, instead of the burning one.</summary>
+        internal static bool Classic;
+
+        /// <summary>For "keel play eye [fire] show": the whole model lifted above the water, further out, to look at.</summary>
+        internal static bool Show;
 
         /// <param name="depth">How far under the surface the top of the eye is (0: 6.5 m, give or take a little from the seed: near the
         /// deepest one can see, so the glow carries and the rest comes and goes; 8.5 was too deep). "keel play eye [width] [depth]"
@@ -30,12 +37,14 @@ namespace BelowTheKeel
         {
             var rng = new System.Random((int)seed);
             float radius = width / 2f;
-            if (depth <= 0f) depth = 6.25f + (float)rng.NextDouble() * 0.5f;
+            if (float.IsNaN(depth)) depth = 6.25f + (float)rng.NextDouble() * 0.5f;   // (negative: above the water, for "show")
             GameObject go = Visuals.Spawn("Eye", ship.transform.position, Quaternion.identity, EyeBody.Duration + 1f);
             go.AddComponent<EyeBody>().Begin(ship, radius,
-                lateral: (rng.Next(2) == 0 ? -1f : 1f) * radius * (1.15f + (float)rng.NextDouble() * 0.35f),   // beside the hull: seen over the side
+                lateral: (rng.Next(2) == 0 ? -1f : 1f) * radius * (Show ? 11.5f : 1.15f + (float)rng.NextDouble() * 0.35f),   // beside the hull: seen over the side
                 depth: depth, freezeAt: FreezeAt);
             FreezeAt = -1f;
+            Classic = false;   // (one test eye at a time: the ones that come on their own keep the default)
+            Show = false;
         }
     }
 
@@ -62,6 +71,7 @@ namespace BelowTheKeel
         private Transform _socket, _ball, _lidA, _lidB;
         private Quaternion _gaze = Quaternion.identity;
 
+
         internal void Begin(Ship ship, float radius, float lateral, float depth, float freezeAt)
         {
             _freezeAt = freezeAt;
@@ -87,7 +97,8 @@ namespace BelowTheKeel
             hide.transform.localPosition = new Vector3(0f, radius * 0.25f - 30f * (radius / 12f), 0f);
             Setup(hide.GetComponent<MeshRenderer>(), hideMat);
 
-            _ball = Part("Eyeball", EyeMeshes.Sphere(radius, 0f, 180f, 0f, 360f, iris: true), Look.Eye());
+            _ball = Part("Eyeball", EyeMeshes.Sphere(radius, 0f, 180f, 0f, 360f, iris: true), EyeOmen.Classic ? Look.Eye() : Look.EyeFire());
+
             // Lid A (the upper, away from the ship) is a half-shell, so it can cover the whole eye on its own when it blinks; lid B a
             // quarter.
             _lidA = Part("LidA", EyeMeshes.Sphere(radius * LidGap, 0f, 180f, 0f, 180f, iris: false), hideMat);
@@ -239,6 +250,56 @@ namespace BelowTheKeel
         /// The eye, seen from above (uv centre = the top of the eyeball): a slit pupil, a streaked amber iris, a dark ring, and the dark,
         /// bloodshot white. The glow map holds only the iris: under the water only what glows or is dark shows.
         /// </summary>
+        /// <summary>
+        /// The burning eye (thunderstore/make_icon.py's glow_eye, after Reference/pic2.png): no white, the iris out to where the lids
+        /// close, hot yellow at the middle through orange to deep red, darkening at the edge; blotchy in coarse blocks (like the game's own
+        /// pixelated textures); a tall, ragged, slightly leaning slit. All of it glows (the glow map is the picture itself).
+        /// </summary>
+        internal static void DrawFire(out Texture2D albedo, out Texture2D glow)
+        {
+            const int size = 512, block = 11;
+            var rng = new System.Random(3);
+            int g1 = size / block + 2, g2 = size / (block * 4) + 3;
+            var n1 = new float[g1, g1];
+            var n2 = new float[g2, g2];
+            for (int i = 0; i < g1; i++) for (int j = 0; j < g1; j++) n1[i, j] = (float)rng.NextDouble();
+            for (int i = 0; i < g2; i++) for (int j = 0; j < g2; j++) n2[i, j] = (float)rng.NextDouble();
+            Color[] stops = { new Color(0.40f, 0.03f, 0.02f), new Color(0.85f, 0.20f, 0.04f), new Color(1f, 0.55f, 0.08f),
+                              new Color(1f, 0.86f, 0.22f), new Color(1f, 0.97f, 0.55f) };
+            float[] at = { 0f, 0.35f, 0.62f, 0.85f, 1f };
+
+            albedo = new Texture2D(size, size, TextureFormat.RGBA32, true) { name = "BelowTheKeel_FireAlbedo", wrapMode = TextureWrapMode.Clamp };
+            glow = new Texture2D(size, size, TextureFormat.RGBA32, true) { name = "BelowTheKeel_FireGlow", wrapMode = TextureWrapMode.Clamp };
+            var px = new Color[size * size];
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    float u = x / (size - 1f) * 2f - 1f, v = y / (size - 1f) * 2f - 1f;
+                    float r = Mathf.Sqrt(u * u + v * v);
+                    float blocky = n1[y / block, x / block];
+                    // smooth large blotches: the coarse grid, eased between its points
+                    float gx = x / (float)(block * 4), gy = y / (float)(block * 4);
+                    int ix = (int)gx, iy = (int)gy;
+                    float fx = gx - ix, fy = gy - iy;
+                    fx = fx * fx * (3 - 2 * fx); fy = fy * fy * (3 - 2 * fy);
+                    float smooth = Mathf.Lerp(Mathf.Lerp(n2[iy, ix], n2[iy, ix + 1], fx), Mathf.Lerp(n2[iy + 1, ix], n2[iy + 1, ix + 1], fx), fy);
+                    float heat = Mathf.Clamp01(1.08f - r * 1.05f + (smooth - 0.5f) * 0.6f + (blocky - 0.5f) * 0.22f);
+                    Color c = stops[0];
+                    for (int k = 0; k < at.Length - 1; k++)
+                        if (heat >= at[k] && heat <= at[k + 1]) c = Color.Lerp(stops[k], stops[k + 1], (heat - at[k]) / (at[k + 1] - at[k]));
+                    float lean = u - v * 0.06f;
+                    float width = 0.07f * (1f - Mathf.Pow(Mathf.Clamp01(Mathf.Abs(v) / 0.9f), 2f)) + (blocky - 0.5f) * 0.02f;
+                    if (Mathf.Abs(lean) < width && Mathf.Abs(v) < 0.9f) c = new Color(0.02f, 0.01f, 0.01f);
+                    c *= Mathf.Clamp01((1.02f - r) / 0.2f);   // darkening toward where the lids close
+                    c.a = 1f;
+                    px[y * size + x] = c;
+                }
+            albedo.SetPixels(px);
+            albedo.Apply(true);
+            glow.SetPixels(px);
+            glow.Apply(true);
+        }
+
         internal static void Draw(out Texture2D albedo, out Texture2D glow)
         {
             const int size = 256;

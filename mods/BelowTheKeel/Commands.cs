@@ -11,7 +11,7 @@ namespace BelowTheKeel
     internal static class Commands
     {
         private const string Command = "keel";
-        private const string Usage = "keel status | keel next | keel play <eye [width] [depth] | eye at <seconds>|pacer [side] [depth] [glow x]|halfboat [near [metres]]|ransnet> | keel probe [off] | keel pose | keel hands [up] [out] [marks] | keel plate <name> <x> <y> <z> <yaw> <pitch> [fov] [size] [cut [omens]] | keel depths | keel shaders [text] | keel material <prefab>";
+        private const string Usage = "keel status | keel next | keel play <eye [classic] [width] [depth] | eye [classic] at <seconds> | eye [classic] show [at <seconds>]|pacer [side] [depth] [glow x]|halfboat [near [metres]]|ransnet> | keel probe [off] | keel pose | keel hands [up] [out] [marks] | keel plate <name> <x> <y> <z> <yaw> <pitch> [fov] [size] [cut [omens]] | keel depths | keel shaders [text] | keel material <prefab>";
 
         private static readonly AccessTools.FieldRef<Dictionary<string, Terminal.ConsoleCommand>> TerminalCommands =
             AccessTools.StaticFieldRefAccess<Dictionary<string, Terminal.ConsoleCommand>>(AccessTools.Field(typeof(Terminal), "commands"));
@@ -72,6 +72,23 @@ namespace BelowTheKeel
                     if (ship == null) { t.AddString("Not aboard a ship."); return; }
                     Omen omen = a.Length > 2 ? Omens.Find(a[2]) : null;
                     if (omen == null) { t.AddString(Usage); return; }
+                    EyeOmen.Classic = omen is EyeOmen && System.Array.IndexOf(a, "classic") > 2;
+                    bool show = omen is EyeOmen && System.Array.IndexOf(a, "show") > 2;
+                    var rest = new List<string>(a);
+                    rest.Remove("fire");
+                    rest.Remove("classic");
+                    rest.Remove("show");
+                    a = rest.ToArray();
+                    if (show)
+                    {
+                        // The whole model, 12 m across, its eye's top 9 m above the water (the hide's dome round it), held open for a minute.
+                        EyeOmen.Show = true;
+                        int at = System.Array.IndexOf(a, "at");
+                        EyeOmen.FreezeAt = at > 0 && a.Length > at + 1 ? float.Parse(a[at + 1], System.Globalization.CultureInfo.InvariantCulture) : 10f;
+                        EyeOmen.Play(ship, (uint)Random.Range(int.MinValue, int.MaxValue), 12f, -9f);
+                        t.AddString("The eye, lifted above the water beside the ship for a minute");
+                        return;
+                    }
                     if (omen is EyeOmen && a.Length > 4 && a[3] == "at")
                     {
                         float at = float.Parse(a[4], System.Globalization.CultureInfo.InvariantCulture);
@@ -83,9 +100,9 @@ namespace BelowTheKeel
                     if (omen is EyeOmen && a.Length > 3)
                     {
                         float width = float.TryParse(a[3], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float w) ? w : EyeOmen.Width;
-                        float depth = a.Length > 4 && float.TryParse(a[4], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float d) ? d : 0f;
+                        float depth = a.Length > 4 && float.TryParse(a[4], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float d) ? d : float.NaN;
                         EyeOmen.Play(ship, (uint)Random.Range(int.MinValue, int.MaxValue), Mathf.Clamp(width, 2f, 120f), depth);
-                        t.AddString($"Playing eye, {width:0} m across, top {(depth > 0f ? depth.ToString("0.#") + " m" : "6-7 m")} down");
+                        t.AddString($"Playing eye, {width:0} m across, top {(!float.IsNaN(depth) ? depth.ToString("0.#") + " m" : "6-7 m")} down");
                         return;
                     }
                     if (omen is PacerOmen && a.Length > 3)
