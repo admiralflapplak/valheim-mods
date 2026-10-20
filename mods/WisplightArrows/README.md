@@ -2,6 +2,8 @@
 
 Arrows tipped with a wisp sealed in a glass orb. They do little damage: they're for seeing your way through the Mistlands.
 
+![A Wisplight arrow leaving the bow, its wisp trailing through thick mist](thunderstore/screenshots/01-flight.png)
+
 - **They part the mist as they fly.** The wisp on the arrow pushes the mist aside along its whole path, and the path stays clear for a few seconds before the mist closes in again behind it.
 - **They light up where they land.** Where the arrow strikes the ground, a tree or a rock, the wisp stays and keeps the mist back for a minute, then slowly fades as the mist rolls back in. It sits on the part of the arrow that's sticking out, never buried in the ground.
 - **Mark a creature.** Shoot one into a creature and the wisp rides along on it for the same minute, held where the arrow went in, so you can see it moving through the mist.
@@ -9,11 +11,20 @@ Arrows tipped with a wisp sealed in a glass orb. They do little damage: they're 
 - **Dropped, they glow.** An arrow lying on the ground glows faintly at its orb (it doesn't clear any mist).
 - **Everyone sees it.** Other players with the mod see the glows, the wisps on creatures and the wisp on your bow.
 
+![Before: thick mist. After: the mist pushed back. And then you see what was in it.](thunderstore/screenshots/02-mist-sequence.png)
+*Before, after, and why you might not want to see what's out there.*
+
+![A Seeker lit up by the wisp of the arrow that hit it](thunderstore/screenshots/03-seeker-marked.png)
+
+![At full draw, the wisp glowing at the bow hand](thunderstore/screenshots/06-drawn.png)
+
 ## Crafting
 
 At a workbench (level 1): 4 Wood, 1 Feathers, 1 Silver and 1 Wisp make 10 arrows. A server owner can change the cost, the station and how many a craft makes in the server's config.
 
 Each arrow does 6 pierce damage of its own (a wooden arrow does 22), on top of the bow's.
+
+![The recipe at the workbench](thunderstore/screenshots/05-crafting.png) ![One craft's ingredients beside the arrows it makes](thunderstore/screenshots/04-inventory.png)
 
 ## Settings
 
