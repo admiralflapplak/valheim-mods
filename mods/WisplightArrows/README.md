@@ -38,6 +38,7 @@ Everything is in the F1 Configuration Manager. The server decides all of them.
 
 ## Playing on a server
 
+- **Multiplayer is untested.** The mod is built for it (the glows and the wisps on creatures and bows are shared with other players), but so far it has only been played in single player. If something looks wrong with friends or on a server, please report it.
 - The server needs the mod for the arrows to be craftable and kept: a server without it would delete them. A player who has the mod on a server that doesn't simply doesn't get the recipe.
 - The glows are temporary objects every player's game sees. They're never saved with the world, and one goes when the player who shot it leaves.
 - Players without the mod don't see the glows, and the mist stays as it is for them.
