@@ -1,0 +1,13 @@
+## 1.0.0
+- First release.
+- Tested in single player; multiplayer and dedicated servers are untested.
+- Rare, harmless omens on the open sea: Ocean biome only, at least 25 m deep, no land within 250 m, while aboard a ship.
+- About one every 20 minutes at sea, twice as often at night, never two within 6 minutes; a fail-safe brings one after 40 minutes without.
+- The Pacer: something long and dark swims beneath the ship, keeping pace and following its turns.
+- Rán's Net: the drowned hang on ropes in the deep, lit from below; their eyes open as you sail over them and they turn to watch you go.
+- The Half-Boat: a drowned man rows half a boat past you, rising from the sea in the fog and sinking again. Fog or night only.
+- The Eye: a vast burning eye opens beside the ship, follows you, blinks, and sinks away.
+- Everyone aboard the same ship sees the same omen at the same moment; the server doesn't need the mod.
+- Nothing affects play: no damage, no physics, nothing saved in the world but one number per ship.
+- Settings in F1: when omens come (the server's), and each omen on or off (each player's own).
+- Console commands for trying them out: keel status, keel next, keel play.
