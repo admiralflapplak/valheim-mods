@@ -24,9 +24,11 @@ namespace BelowTheKeel
 
         /// <summary>
         /// The look of one of the game's prefabs (its meshes, materials, animator) with everything else taken off: no ZNetView, AI,
-        /// colliders, physics or the game's own scripts. Null when the game has no prefab by that name.
+        /// colliders, physics or the game's own scripts. Only its look (the child named <paramref name="part"/>, "Visual" on creatures)
+        /// is copied, never the root: a creature's root carries Character, which registers itself with the game as soon as it wakes.
+        /// Null when the game has no prefab by that name.
         /// </summary>
-        internal static GameObject CloneLook(string prefabName, Transform parent)
+        internal static GameObject CloneLook(string prefabName, Transform parent, string part = "Visual")
         {
             GameObject prefab = ZNetScene.instance != null ? ZNetScene.instance.GetPrefab(prefabName) : null;
             if (prefab == null)
@@ -42,8 +44,27 @@ namespace BelowTheKeel
                 Object.DontDestroyOnLoad(_holder);
             }
 
-            GameObject copy = Object.Instantiate(prefab, _holder.transform);
-            foreach (MonoBehaviour mb in copy.GetComponentsInChildren<MonoBehaviour>(true)) Object.DestroyImmediate(mb);
+            Transform source = part != null ? prefab.transform.Find(part) : prefab.transform;
+            if (source == null)
+            {
+                Plugin.Log.LogWarning($"{prefabName} has no {part}");
+                return null;
+            }
+
+            GameObject copy = Object.Instantiate(source.gameObject, _holder.transform);
+            // In passes: Unity refuses to remove a script another one still depends on (RequireComponent).
+            for (int pass = 0; pass < 5; pass++)
+            {
+                MonoBehaviour[] left = copy.GetComponentsInChildren<MonoBehaviour>(true);
+                if (left.Length == 0) break;
+                foreach (MonoBehaviour mb in left) Object.DestroyImmediate(mb);
+            }
+            if (copy.GetComponentsInChildren<MonoBehaviour>(true).Length > 0)
+            {
+                Plugin.Log.LogWarning($"Couldn't strip every script off {prefabName}: not shown");
+                Object.DestroyImmediate(copy);
+                return null;
+            }
             foreach (Joint j in copy.GetComponentsInChildren<Joint>(true)) Object.DestroyImmediate(j);
             foreach (Rigidbody rb in copy.GetComponentsInChildren<Rigidbody>(true)) Object.DestroyImmediate(rb);
             foreach (Collider c in copy.GetComponentsInChildren<Collider>(true)) Object.DestroyImmediate(c);

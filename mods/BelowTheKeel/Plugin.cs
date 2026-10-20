@@ -1,5 +1,7 @@
 using BepInEx;
 using BepInEx.Configuration;
+using HarmonyLib;
+using UnityEngine;
 using ServerSettings = HeaveHo.Shared.ServerSettings;   // (mods/Shared/ServerSettings.cs, still in the namespace of the mod it was first copied for)
 
 namespace BelowTheKeel
@@ -10,7 +12,7 @@ namespace BelowTheKeel
     {
         public const string Guid = "nick.valheim.belowthekeel";
         public const string Name = "BelowTheKeel";
-        public const string Version = "0.2.0";
+        public const string Version = "0.3.4";
 
         internal static Plugin Instance;
         internal static BepInEx.Logging.ManualLogSource Log;
@@ -56,8 +58,39 @@ namespace BelowTheKeel
             Config.SaveOnConfigSet = true;
             Config.Save();
 
+            // 0.3.0 copied whole draugr (Character included) and broke them apart, which left destroyed characters in the game's list
+            // and health bars stuck on screen. Only things already destroyed go: harmless when there are none.
+            Character.GetAllCharacters().RemoveAll(c => c == null);
+            RemoveDeadHuds();
+
             Commands.Register();
             Logger.LogInfo($"{Name} {Version} loaded");
+        }
+
+        /// <summary>EnemyHud can't drop the bar of a character destroyed while it had one (its own clean-up skips a destroyed key).</summary>
+        private static void RemoveDeadHuds()
+        {
+            if (EnemyHud.instance == null) return;
+            var huds = (System.Collections.IDictionary)AccessTools.Field(typeof(EnemyHud), "m_huds").GetValue(EnemyHud.instance);
+            var dead = new System.Collections.Generic.List<object>();
+            foreach (System.Collections.DictionaryEntry e in huds)
+                if ((Character)e.Key == null) dead.Add(e.Key);
+            foreach (object key in dead)
+            {
+                var gui = Traverse.Create(huds[key]).Field("m_gui").GetValue<GameObject>();
+                if (gui != null) Object.Destroy(gui);
+                huds.Remove(key);
+            }
+
+            // Bars no entry owns any more (left on screen, never updated): everything under the root but the live ones and the templates.
+            var keep = new System.Collections.Generic.HashSet<GameObject>
+                { EnemyHud.instance.m_baseHud, EnemyHud.instance.m_baseHudBoss, EnemyHud.instance.m_baseHudPlayer, EnemyHud.instance.m_baseHudMount };
+            foreach (object hud in huds.Values) keep.Add(Traverse.Create(hud).Field("m_gui").GetValue<GameObject>());
+            int orphans = 0;
+            foreach (Transform child in EnemyHud.instance.m_hudRoot.transform)
+                if (!keep.Contains(child.gameObject)) { Object.Destroy(child.gameObject); orphans++; }
+
+            if (dead.Count + orphans > 0) Log.LogInfo($"Removed {dead.Count + orphans} stuck health bar(s)");
         }
 
         private void Update()

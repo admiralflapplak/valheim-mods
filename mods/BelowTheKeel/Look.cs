@@ -27,6 +27,20 @@ namespace BelowTheKeel
             return _darkSerpent;
         }
 
+        private static readonly System.Collections.Generic.Dictionary<Material, Material> _drowned =
+            new System.Collections.Generic.Dictionary<Material, Material>();
+
+        /// <summary>A game material made grey-green and dark, as a body long in the sea (one copy per source material).</summary>
+        internal static Material Drowned(Material source)
+        {
+            if (source == null) return null;
+            if (_drowned.TryGetValue(source, out Material m) && m != null) return m;
+            m = new Material(source) { name = "BelowTheKeel_Drowned_" + source.name };
+            m.color = new Color(0.22f, 0.27f, 0.25f);
+            _drowned[source] = m;
+            return m;
+        }
+
         internal static Shader FindShader(string name)
         {
             foreach (Shader sh in Resources.FindObjectsOfTypeAll<Shader>())
@@ -38,6 +52,9 @@ namespace BelowTheKeel
         {
             if (_darkSerpent != null) Object.Destroy(_darkSerpent);
             _darkSerpent = null;
+            foreach (Material m in _drowned.Values)
+                if (m != null) Object.Destroy(m);
+            _drowned.Clear();
         }
     }
 }
