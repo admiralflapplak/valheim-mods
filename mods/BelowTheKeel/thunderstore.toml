@@ -1,0 +1,35 @@
+# Thunderstore package for this mod, read by the Thunderstore CLI (tcli build, tcli publish). Made by Claude Tools' modkit package,
+# which keeps versionNumber and the dependencies up to date from the DLL; everything else is yours to edit.
+[config]
+schemaVersion = "0.0.1"
+
+[package]
+namespace = "Flap"
+name = "Below_the_Keel"
+versionNumber = "1.0.0"
+description = "Sea monsters and horror for sailing: rare, harmless omens (random events) on the deep open ocean. A serpent paces your ship, the drowned hang below, a ghost rows half a boat in the fog, a vast eye opens beneath you. Creepy atmosphere only."
+websiteUrl = "https://github.com/admiralflapplak/valheim-mods"
+containsNsfwContent = false
+
+[package.dependencies]
+denikson-BepInExPack_Valheim = "5.4.2351"
+
+[build]
+icon = "./thunderstore/icon.png"
+readme = "./thunderstore-build/README.md"
+outdir = "./thunderstore-build"
+
+[[build.copy]]
+source = "./bin/Release/net48/BelowTheKeel.dll"
+target = "plugins/BelowTheKeel.dll"
+
+[[build.copy]]
+source = "./CHANGELOG.md"
+target = "CHANGELOG.md"
+
+[publish]
+repository = "https://thunderstore.io"
+communities = [ "valheim" ]
+
+[publish.categories]
+valheim = [ "mods", "misc", "client-side", "deep-north-update", "ai-generated" ]
