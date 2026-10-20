@@ -6,9 +6,10 @@ namespace BelowTheKeel
 {
     /// <summary>
     /// Rán's net: the drowned hang under the ship, straight as the dead, arms at their sides, toes pointing down, one rope from the feet
-    /// down into the dark, as if weighted and caught. They rise out of the murk on the ship's course, so it sails over them, heads bowed
-    /// and eyes dark. Then every pair of eyes opens at once, the bodies turn to face you and the heads tip back to look up at you. Before the end the eyes
-    /// go out and they all drop into the deep together, as if the net were drawn in. The bodies are the game's draugr, darkened and posed
+    /// down into the dark, as if weighted and caught. They rise out of the murk on the ship's course (laid out on it while still too deep
+    /// to see, so a turn doesn't lose them), so it sails over them, heads bowed and eyes dark. As the ship comes over them every pair of
+    /// eyes opens at once, the bodies turn to face you and the heads tip back to look up at you. Before the end (sooner when the ship
+    /// has left them behind) the eyes go out and they all drop into the deep together, as if the net were drawn in. The bodies are the game's draugr, darkened and posed
     /// bone by bone; their eyes are the draugr's own glow.
     /// </summary>
     internal sealed class RansNetOmen : Omen
@@ -21,26 +22,19 @@ namespace BelowTheKeel
             var rng = new System.Random((int)seed);
             float duration = Range(rng, 35f, 45f);
 
-            // Where the ship will be in a few seconds, so it passes over them (it is the same for the whole crew: the ship's own motion).
-            var body = ship.GetComponent<Rigidbody>();
-            Vector3 velocity = body != null ? body.linearVelocity : Vector3.zero;
-            velocity.y = 0f;
-            Vector3 centre = ship.transform.position + velocity * 10f;
-            Vector3 along = velocity.sqrMagnitude > 0.5f ? velocity.normalized : Flat(ship.transform.forward);
-            Vector3 across = Vector3.Cross(Vector3.up, along);
-            float spread = 8f + velocity.magnitude * 5f;   // a longer field when sailing fast, so it doesn't go by in a moment
-
-            GameObject root = Visuals.Spawn("RansNet", new Vector3(centre.x, Sea.WaterLevel, centre.z), Quaternion.identity, duration + 1f);
+            // The bodies' places along the ship's course (-1 behind .. 1 ahead, times the field's length, which grows with speed) and
+            // across it (metres): the net lays them out on the course while they're still too deep to see (RansNet.Follow).
+            GameObject root = Visuals.Spawn("RansNet", ship.transform.position, Quaternion.identity, duration + 1f);
             var net = root.AddComponent<RansNet>();
 
             int count = rng.Next(6, 10);
             for (int i = 0; i < count; i++)
             {
-                Vector3 offset = along * Range(rng, -spread, spread) + across * Range(rng, -9f, 9f);
-                if (!net.Add(offset, depth: Range(rng, 4.5f, 7.5f), yaw: Range(rng, 0f, 360f), tilt: Range(rng, -8f, 8f), phase: Range(rng, 0f, 10f)))
+                if (!net.Add(new Vector3(Range(rng, -9f, 9f), 0f, Range(rng, -1f, 1f)), depth: Range(rng, 4.5f, 7.5f), yaw: Range(rng, 0f, 360f),
+                        tilt: Range(rng, -8f, 8f), phase: Range(rng, 0f, 10f)))
                     break;
             }
-            net.Begin(duration);
+            net.Begin(duration, ship);
         }
 
         /// <summary>For "keel pose": one body hanging just above the water beside the ship, to see the pose and ropes clearly.</summary>
@@ -73,7 +67,13 @@ namespace BelowTheKeel
         private const float HiddenDrop = 12f;      // how far below their hanging depth they start and end: out of sight
         private const float RiseSeconds = 8f;
         private const float DropSeconds = 2.5f;
-        private const float EyesOpenAt = 11f;      // seconds in: risen, hanging still a moment, then every pair opens at once
+        private const float EyesOpenAt = 11f;      // the earliest the eyes open: risen, hanging still a moment (more when the ship is still far)
+        private const float EyesOpenLatest = 20f;  // ...and the latest, if the ship never comes (slowed, turned away)
+        private const float FollowUntil = 5f;      // until then the net lays itself on the ship's course (still deep: unseen)
+        private const float ArriveIn = EyesOpenAt - FollowUntil;   // where the ship will be this many seconds after: the middle of the field
+        private const float FieldBase = 8f, FieldPerSpeed = 5f;    // the field's half-length along the course: longer when sailing fast
+        private const float LeftBehind = 30f;      // all of them this far behind the ship: out of sight, the end comes now
+        private const float WatchAtLeast = 6f;     // ...but not before they've watched it go this long
         private const float EyesOpenSeconds = 0.3f;
         private const float EyesCloseBeforeEnd = 3.5f;
         private const float EyesCloseSeconds = 0.4f;
@@ -81,6 +81,8 @@ namespace BelowTheKeel
         private const float HeadFollow = 55f;     // the most the head turns from the body to follow the player (degrees): it does all the looking up
         private const float HeadLag = 2f;         // how quickly the head catches up with the player (higher is quicker)
         private const float RopeLength = 24f;      // reaches well past what the murk lets through
+        private const float GlowWidth = 5f;      // the pool of light under each body (metres across)
+        private const float GlowBelow = 2.4f;      // how far under the body's middle it lies
         private const float RopeThickness = 0.07f;
 
         private static readonly int EmissionColor = Shader.PropertyToID("_EmissionColor");
@@ -99,15 +101,20 @@ namespace BelowTheKeel
             public Transform T;
             public Vector3 Offset;
             public float Depth, Yaw, Tilt, Phase, TurnDelay;
+            public float Along, Across;   // the place on the course: along -1..1 (times the field), across in metres
             public Quaternion HeadTurn = Quaternion.identity;   // on top of the body's facing: eases toward the player
             public readonly List<Aim> Limbs = new List<Aim>();
             public Aim Head;
-            public Transform LeftToe, RightToe, Rope;
+            public Transform LeftToe, RightToe, Rope, Glow;
             public readonly List<Renderer> Glows = new List<Renderer>();
             public readonly List<Color> GlowColours = new List<Color>();
         }
 
         private readonly List<Body> _bodies = new List<Body>();
+        private Ship _ship;
+        private Vector3 _along = Vector3.forward;   // the course they lie on (fixed once FollowUntil passes)
+        private float _field = FieldBase;
+        private float _openAt = -1f;               // when the eyes opened (the ship came over them)
         private float _duration, _age;
 
         internal bool Add(Vector3 offset, float depth, float yaw, float tilt, float phase)
@@ -126,7 +133,7 @@ namespace BelowTheKeel
             look.transform.localPosition = Vector3.zero;
             look.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
 
-            var body = new Body { T = holder, Offset = offset, Depth = depth, Yaw = yaw, Tilt = tilt, Phase = phase, TurnDelay = phase * 0.25f };
+            var body = new Body { T = holder, Offset = offset, Along = offset.z, Across = offset.x, Depth = depth, Yaw = yaw, Tilt = tilt, Phase = phase, TurnDelay = phase * 0.25f };
             foreach (var r in look.GetComponentsInChildren<Renderer>(true))
             {
                 // Only the body and its eyes: the draugr's smoke, flies and dripping water have no place under the sea.
@@ -162,6 +169,7 @@ namespace BelowTheKeel
             body.LeftToe = Find(look.transform, "LeftFoot_end");
             body.RightToe = Find(look.transform, "RightFoot_end");
             body.Rope = Rope();
+            body.Glow = GlowPool();
 
             _bodies.Add(body);
             return true;
@@ -178,6 +186,24 @@ namespace BelowTheKeel
             body.Limbs.Add(new Aim { Bone = b, Child = c, Dir = dir.normalized, Rest = b.localRotation });
         }
 
+        /// <summary>
+        /// A soft pool of teal light in the water under a body, so from the deck it shows as a dark shape against it (the murk swallows a
+        /// dark body on dark water). A flat disc, opaque but glowing, brightest at the middle and black at the rim: only what glows or is
+        /// dark shows through Valheim's water, and see-through things vanish.
+        /// </summary>
+        private Transform GlowPool()
+        {
+            GameObject disc = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            Destroy(disc.GetComponent<Collider>());
+            disc.name = "GlowPool";
+            disc.transform.SetParent(transform, false);
+            disc.transform.localScale = new Vector3(GlowWidth, 0.15f, GlowWidth);
+            var r = disc.GetComponent<MeshRenderer>();
+            r.sharedMaterial = Look.GhostLight();
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            return disc.transform;
+        }
+
         private Transform Rope()
         {
             GameObject rope = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
@@ -191,16 +217,73 @@ namespace BelowTheKeel
             return rope.transform;
         }
 
-        internal void Begin(float duration)
+        /// <param name="ship">Lay the bodies out on its course, time the eyes to its arrival, end once it has left them (null: stay put).</param>
+        internal void Begin(float duration, Ship ship = null)
         {
             _duration = duration;
+            _ship = ship;
+            if (ship == null) _openAt = EyesOpenAt;   // ("keel pose": nothing to wait for)
+            Follow();
             Place();
         }
 
         private void LateUpdate()
         {
             _age += Time.deltaTime;
+            Follow();
             Place();
+        }
+
+        /// <summary>
+        /// The net's place, from the ship: while still deep, the middle of the field where the ship will be ArriveIn seconds from now
+        /// at its present speed and course, the bodies laid along that course; after, fixed in the water. The eyes open once the ship
+        /// is over the field's near half (or at the latest EyesOpenLatest); once the ship has left them all well behind, the end comes.
+        /// All from the ship's own motion: the same on every game aboard.
+        /// </summary>
+        private void Follow()
+        {
+            if (_ship == null) return;
+            var rb = _ship.GetComponent<Rigidbody>();
+            Vector3 v = rb != null ? rb.linearVelocity : Vector3.zero;
+            v.y = 0f;
+            Vector3 shipPos = _ship.transform.position;
+
+            if (_age < FollowUntil)
+            {
+                _along = v.sqrMagnitude > 0.5f ? v.normalized : Flat(_ship.transform.forward);
+                _field = FieldBase + v.magnitude * FieldPerSpeed;
+                Vector3 centre = shipPos + v * ArriveIn;
+                transform.position = new Vector3(centre.x, Sea.WaterLevel, centre.z);
+                Vector3 across = Vector3.Cross(Vector3.up, _along);
+                foreach (Body b in _bodies) b.Offset = _along * (b.Along * _field) + across * b.Across;
+                return;
+            }
+
+            // How far ahead of the ship the field's middle still is, along the course.
+            float ahead = Vector3.Dot(transform.position - shipPos, _along);
+            if (_openAt < 0f && _age >= EyesOpenAt && (ahead <= _field * 0.5f || _age >= EyesOpenLatest))
+            {
+                _openAt = _age;
+                Plugin.Log.LogInfo($"Ran's Net: eyes open at {_age:0.0} s, the field's middle {ahead:0} m ahead (field {_field:0} m each way)");
+            }
+
+            if (_openAt >= 0f && _age > _openAt + WatchAtLeast && _duration - _age > EyesCloseBeforeEnd)
+            {
+                bool allBehind = true;
+                foreach (Body b in _bodies)
+                    if (Vector3.Dot(b.T.position - shipPos, _along) > -LeftBehind) { allBehind = false; break; }
+                if (allBehind)
+                {
+                    _duration = _age + EyesCloseBeforeEnd;   // (eyes out, then the drop: out of sight, but the same on every game)
+                    Plugin.Log.LogInfo($"Ran's Net: left behind at {_age:0.0} s, ending");
+                }
+            }
+        }
+
+        private static Vector3 Flat(Vector3 v)
+        {
+            v.y = 0f;
+            return v.sqrMagnitude > 1e-4f ? v.normalized : Vector3.forward;
         }
 
         private void Place()
@@ -212,7 +295,9 @@ namespace BelowTheKeel
             else lower = 0f;
 
             float eyes = Eyes(left);
-            float swayWeight = 1f - Mathf.Clamp01((_age - EyesOpenAt) / 2f);   // the drifting stops once they've seen you, for good
+            // The light under them: up as they rise, with them while they hang, gone as they drop (a little brighter once their eyes open).
+            float light = (1f - Mathf.Clamp01(lower / HiddenDrop)) * (0.85f + 0.15f * eyes);
+            float swayWeight = _openAt < 0f ? 1f : 1f - Mathf.Clamp01((_age - _openAt) / 2f);   // the drifting stops once they've seen you, for good
             Player player = Player.m_localPlayer;
             foreach (Body b in _bodies)
             {
@@ -222,7 +307,7 @@ namespace BelowTheKeel
 
                 // Once its eyes are open, each turns (a little after the others) to face the player; the body stays straight up and down
                 // and only the head looks up (Pose).
-                if (player != null && _age > EyesOpenAt + b.TurnDelay && left > EyesCloseBeforeEnd)
+                if (player != null && _openAt >= 0f && _age > _openAt + b.TurnDelay && left > EyesCloseBeforeEnd)
                 {
                     Vector3 to = player.transform.position - b.T.position;
                     float targetYaw = Mathf.Atan2(to.x, to.z) * Mathf.Rad2Deg;
@@ -232,6 +317,15 @@ namespace BelowTheKeel
 
                 Pose(b, eyes, player);
                 Ropes(b);
+                if (b.Glow != null)
+                {
+                    b.Glow.position = b.T.position + Vector3.down * GlowBelow;
+                    b.Glow.rotation = Quaternion.identity;
+                    var gr = b.Glow.GetComponent<Renderer>();
+                    gr.GetPropertyBlock(_block);
+                    _block.SetColor(EmissionColor, Look.GhostLightColour * light);
+                    gr.SetPropertyBlock(_block);
+                }
 
                 for (int i = 0; i < b.Glows.Count; i++)
                 {
@@ -287,12 +381,12 @@ namespace BelowTheKeel
             b.Rope.rotation = Quaternion.FromToRotation(Vector3.up, -down);
         }
 
-        /// <summary>How open the eyes are, 0 to 1: dark while they rise, all open at once, out again just before the drop.</summary>
+        /// <summary>How open the eyes are, 0 to 1: dark while they rise and wait, all open at once as the ship comes, out again before the drop.</summary>
         private float Eyes(float left)
         {
-            if (_age < EyesOpenAt) return 0f;
+            if (_openAt < 0f || _age < _openAt) return 0f;
             if (left < EyesCloseBeforeEnd) return Mathf.Clamp01(1f - (EyesCloseBeforeEnd - left) / EyesCloseSeconds);
-            return Mathf.Clamp01((_age - EyesOpenAt) / EyesOpenSeconds);
+            return Mathf.Clamp01((_age - _openAt) / EyesOpenSeconds);
         }
 
         private static Transform Find(Transform root, string name)
