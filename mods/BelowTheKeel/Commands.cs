@@ -11,7 +11,7 @@ namespace BelowTheKeel
     internal static class Commands
     {
         private const string Command = "keel";
-        private const string Usage = "keel status | keel next | keel play <eye [width] [depth] | eye at <seconds>|pacer [side] [depth]|halfboat [near [metres]]|ransnet> | keel probe [off] | keel pose | keel hands [up] [out] [marks] | keel depths | keel shaders [text] | keel material <prefab>";
+        private const string Usage = "keel status | keel next | keel play <eye [width] [depth] | eye at <seconds>|pacer [side] [depth] [glow x]|halfboat [near [metres]]|ransnet> | keel probe [off] | keel pose | keel hands [up] [out] [marks] | keel plate <name> <x> <y> <z> <yaw> <pitch> [fov] [size] [cut [omens]] | keel depths | keel shaders [text] | keel material <prefab>";
 
         private static readonly AccessTools.FieldRef<Dictionary<string, Terminal.ConsoleCommand>> TerminalCommands =
             AccessTools.StaticFieldRefAccess<Dictionary<string, Terminal.ConsoleCommand>>(AccessTools.Field(typeof(Terminal), "commands"));
@@ -91,8 +91,11 @@ namespace BelowTheKeel
                     if (omen is PacerOmen && a.Length > 3)
                     {
                         float side = float.Parse(a[3], System.Globalization.CultureInfo.InvariantCulture);
-                        float depth = a.Length > 4 ? float.Parse(a[4], System.Globalization.CultureInfo.InvariantCulture) : float.NaN;
-                        PacerOmen.Play(ship, (uint)Random.Range(int.MinValue, int.MaxValue), side, depth);
+                        float depth = a.Length > 4 && a[4] != "glow" ? float.Parse(a[4], System.Globalization.CultureInfo.InvariantCulture) : float.NaN;
+                        int g = System.Array.IndexOf(a, "glow");
+                        PacerOmen.Glow = g > 0 && a.Length > g + 1 ? float.Parse(a[g + 1], System.Globalization.CultureInfo.InvariantCulture) : 1f;
+                        try { PacerOmen.Play(ship, (uint)Random.Range(int.MinValue, int.MaxValue), side, depth); }
+                        finally { PacerOmen.Glow = 1f; }
                         t.AddString($"Playing pacer {side:0} m to the side" + (float.IsNaN(depth) ? "" : $", its middle {depth:0.#} m down"));
                         return;
                     }
@@ -122,6 +125,16 @@ namespace BelowTheKeel
                     foreach (string arg in a)
                         if (float.TryParse(arg, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float r)) nums.Add(r);
                     t.AddString(Hands.Show(Player.m_localPlayer, ship, nums.Count > 0 ? nums[0] : 0f, nums.Count > 1 ? nums[1] : 0f));
+                    return;
+                }
+                case "plate":
+                {
+                    // keel plate <name> <x> <y> <z> <yaw> <pitch> [fov] [size] [cut]: a still from a camera placed from the player.
+                    if (Player.m_localPlayer == null || ship == null || a.Length < 8) { t.AddString("keel plate <name> <x> <y> <z> <yaw> <pitch> [fov=60] [size=2048] [cut]"); return; }
+                    float F(int i, float d) => a.Length > i && float.TryParse(a[i], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float v) ? v : d;
+                    bool cut = System.Array.IndexOf(a, "cut") > 0;
+                    t.AddString(Plate.Render(Player.m_localPlayer, ship, a[2], new Vector3(F(3, 0f), F(4, 1.6f), F(5, 0f)), F(6, 0f), F(7, 0f),
+                        F(8, 60f), (int)F(9, 2048f), cut, System.Array.IndexOf(a, "omens") > 0));
                     return;
                 }
                 case "pose":

@@ -9,9 +9,10 @@
     <Compile Include="../Shared/ServerSettings.cs" Link="Shared/ServerSettings.cs" />
   </ItemGroup>
 
-  <!-- Unity modules beyond ../Directory.Build.props: sounds and animators on the game's models we borrow -->
+  <!-- Unity modules beyond ../Directory.Build.props: sounds and animators on the game's models we borrow; PNGs for keel plate -->
   <ItemGroup>
     <Reference Include="UnityEngine.AnimationModule"><HintPath>$(ManagedDir)/UnityEngine.AnimationModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.ImageConversionModule"><HintPath>$(ManagedDir)/UnityEngine.ImageConversionModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.AudioModule"><HintPath>$(ManagedDir)/UnityEngine.AudioModule.dll</HintPath><Private>false</Private></Reference>
   </ItemGroup>
 </Project>

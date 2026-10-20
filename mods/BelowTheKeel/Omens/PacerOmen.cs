@@ -14,6 +14,8 @@ namespace BelowTheKeel
 
         internal override void Play(Ship ship, uint seed) => Play(ship, seed, float.NaN, float.NaN);
 
+        internal static float Glow = 1f;   // the fins' glow, for pictures only ("keel play pacer <side> <depth> glow <x>")
+
         /// <summary>"keel play pacer [side] [depth]": off the ship's side (metres, negative to port) and how deep its middle runs, for
         /// pictures (shallow enough, its back breaks the waves). NaN: from the seed, as it comes on its own.</summary>
         internal static void Play(Ship ship, uint seed, float lateral, float depth)
@@ -54,6 +56,7 @@ namespace BelowTheKeel
         private float _duration, _lateral, _depth, _radius, _flow, _wave, _age;
         private Vector3 _heading;
         private Mesh _mesh;
+        private Material _glowMat;
         private Vector3[] _verts;
         private Vector2[] _uv;
 
@@ -81,6 +84,12 @@ namespace BelowTheKeel
             gameObject.AddComponent<MeshFilter>().sharedMesh = _mesh;
             var renderer = gameObject.AddComponent<MeshRenderer>();
             renderer.sharedMaterial = Look.DarkSerpent();
+            if (PacerOmen.Glow != 1f)   // ("keel play pacer ... glow <x>": for pictures, the fins' glow scaled; its own copy of the material)
+            {
+                _glowMat = new Material(renderer.sharedMaterial);
+                if (_glowMat.HasProperty("_EmissionColor")) _glowMat.SetColor("_EmissionColor", _glowMat.GetColor("_EmissionColor") * PacerOmen.Glow);
+                renderer.sharedMaterial = _glowMat;
+            }
             renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
 
             Build();
@@ -97,6 +106,7 @@ namespace BelowTheKeel
         private void OnDestroy()
         {
             if (_mesh != null) Destroy(_mesh);
+            if (_glowMat != null) Destroy(_glowMat);
         }
 
         private void Build()

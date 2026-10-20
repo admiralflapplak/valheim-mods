@@ -101,6 +101,15 @@ namespace BelowTheKeel
             }
         }
 
+        /// <summary>Every renderer of the omens showing (for "keel plate ... cut omens").</summary>
+        internal static List<Renderer> Renderers()
+        {
+            Live.RemoveAll(go => go == null);
+            var all = new List<Renderer>();
+            foreach (GameObject go in Live) all.AddRange(go.GetComponentsInChildren<Renderer>());
+            return all;
+        }
+
         internal static void ClearAll()
         {
             foreach (GameObject go in Live)

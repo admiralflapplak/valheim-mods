@@ -1,0 +1,3 @@
+# Icon drafts tried on the way (make_icon.py <name> rebuilds them) and Python caches
+drafts/
+__pycache__/
