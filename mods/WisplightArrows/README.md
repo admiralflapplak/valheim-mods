@@ -42,8 +42,9 @@ Everything is in the F1 Configuration Manager. The server decides all of them.
 - The glows are temporary objects every player's game sees. They're never saved with the world, and one goes when the player who shot it leaves.
 - Players without the mod don't see the glows, and the mist stays as it is for them.
 
-## Other mods
+## Other mods and known clashes
 
+- No clashes are known.
 - It clears the mist the way the game's own Wisplight does, so mods that change the mist or the Wisplight may change how it looks.
 - It adds its own arrow and changes nothing about the game's arrows or bows.
 
