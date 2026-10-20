@@ -11,7 +11,7 @@ namespace BelowTheKeel
     internal static class Commands
     {
         private const string Command = "keel";
-        private const string Usage = "keel status | keel next | keel play <eye [classic] [width] [depth] | eye [classic] at <seconds> | eye [classic] show [at <seconds>]|pacer [side] [depth] [glow x]|halfboat [near [metres]]|ransnet> | keel probe [off] | keel pose | keel hands [up] [out] [marks] | keel plate <name> <x> <y> <z> <yaw> <pitch> [fov] [size] [cut [omens]] | keel depths | keel shaders [text] | keel material <prefab>";
+        private const string Usage = "keel status | keel next | keel play <eye [classic] [width] [depth] | eye [classic] at <seconds> | eye [classic] show [at <seconds>]|pacer [side] [depth] [glow x]|halfboat [near [metres]]|ransnet [side <metres>]> | keel probe [off] | keel pose | keel hands [up] [out] [marks] | keel plate <name> <x> <y> <z> <yaw> <pitch> [fov] [size] [cut [omens]] | keel depths | keel shaders [text] | keel material <prefab>";
 
         private static readonly AccessTools.FieldRef<Dictionary<string, Terminal.ConsoleCommand>> TerminalCommands =
             AccessTools.StaticFieldRefAccess<Dictionary<string, Terminal.ConsoleCommand>>(AccessTools.Field(typeof(Terminal), "commands"));
@@ -114,6 +114,13 @@ namespace BelowTheKeel
                         try { PacerOmen.Play(ship, (uint)Random.Range(int.MinValue, int.MaxValue), side, depth); }
                         finally { PacerOmen.Glow = 1f; }
                         t.AddString($"Playing pacer {side:0} m to the side" + (float.IsNaN(depth) ? "" : $", its middle {depth:0.#} m down"));
+                        return;
+                    }
+                    if (omen is RansNetOmen && a.Length > 4 && a[3] == "side")
+                    {
+                        RansNetOmen.Side = float.Parse(a[4], System.Globalization.CultureInfo.InvariantCulture);
+                        omen.Play(ship, (uint)Random.Range(int.MinValue, int.MaxValue));
+                        t.AddString($"Playing ransnet {a[4]} m to the side");
                         return;
                     }
                     if (omen is HalfBoatOmen && a.Length > 3 && a[3] == "near")

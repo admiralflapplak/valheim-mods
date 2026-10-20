@@ -15,6 +15,9 @@ namespace BelowTheKeel
     internal sealed class RansNetOmen : Omen
     {
         internal override string Name => "ransnet";
+
+        /// <summary>For "keel play ransnet side &lt;metres&gt;" (pictures): the field this far to the ship's side (negative to port).</summary>
+        internal static float Side;
         protected override ConfigEntry<bool> Setting => Plugin.RansNet;
 
         internal override void Play(Ship ship, uint seed)
@@ -34,7 +37,8 @@ namespace BelowTheKeel
                         tilt: Range(rng, -8f, 8f), phase: Range(rng, 0f, 10f)))
                     break;
             }
-            net.Begin(duration, ship);
+            net.Begin(duration, ship, Side);
+            Side = 0f;
         }
 
         /// <summary>For "keel pose": one body hanging just above the water beside the ship, to see the pose and ropes clearly.</summary>
@@ -117,6 +121,7 @@ namespace BelowTheKeel
         private Vector3 _along = Vector3.forward;   // the course they lie on (fixed once FollowUntil passes)
         private float _field = FieldBase;
         private float _openAt = -1f;               // when the eyes opened (the ship came over them)
+        private float _side;                       // the field moved off to the ship's side (pictures)
         private float _duration, _age;
 
         internal bool Add(Vector3 offset, float depth, float yaw, float tilt, float phase)
@@ -220,8 +225,9 @@ namespace BelowTheKeel
         }
 
         /// <param name="ship">Lay the bodies out on its course, time the eyes to its arrival, end once it has left them (null: stay put).</param>
-        internal void Begin(float duration, Ship ship = null)
+        internal void Begin(float duration, Ship ship = null, float side = 0f)
         {
+            _side = side;
             _duration = duration;
             _ship = ship;
             if (ship == null) _openAt = EyesOpenAt;   // ("keel pose": nothing to wait for)
@@ -254,7 +260,7 @@ namespace BelowTheKeel
             {
                 _along = v.sqrMagnitude > 0.5f ? v.normalized : Flat(_ship.transform.forward);
                 _field = FieldBase + v.magnitude * FieldPerSpeed;
-                Vector3 centre = shipPos + v * ArriveIn;
+                Vector3 centre = shipPos + v * ArriveIn + _ship.transform.right * _side;
                 transform.position = new Vector3(centre.x, Sea.WaterLevel, centre.z);
                 Vector3 across = Vector3.Cross(Vector3.up, _along);
                 foreach (Body b in _bodies) b.Offset = _along * (b.Along * _field) + across * b.Across;
