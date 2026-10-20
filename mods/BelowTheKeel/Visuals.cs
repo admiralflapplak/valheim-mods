@@ -90,6 +90,17 @@ namespace BelowTheKeel
             }
         }
 
+        /// <summary>Where each one showing is (for "keel status": aiming a camera at one).</summary>
+        internal static IEnumerable<string> Where()
+        {
+            Live.RemoveAll(go => go == null);
+            foreach (GameObject go in Live)
+            {
+                Vector3 p = go.transform.position;
+                yield return $"{go.name.Replace("BelowTheKeel_", "")} at {p.x:0.0} {p.y:0.0} {p.z:0.0}, facing {go.transform.eulerAngles.y:0}";
+            }
+        }
+
         internal static void ClearAll()
         {
             foreach (GameObject go in Live)

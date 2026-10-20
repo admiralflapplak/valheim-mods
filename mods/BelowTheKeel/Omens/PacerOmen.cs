@@ -12,7 +12,11 @@ namespace BelowTheKeel
         internal override string Name => "pacer";
         protected override ConfigEntry<bool> Setting => Plugin.Pacer;
 
-        internal override void Play(Ship ship, uint seed)
+        internal override void Play(Ship ship, uint seed) => Play(ship, seed, float.NaN, float.NaN);
+
+        /// <summary>"keel play pacer [side] [depth]": off the ship's side (metres, negative to port) and how deep its middle runs, for
+        /// pictures (shallow enough, its back breaks the waves). NaN: from the seed, as it comes on its own.</summary>
+        internal static void Play(Ship ship, uint seed, float lateral, float depth)
         {
             var rng = new System.Random((int)seed);
             float duration = Range(rng, 45f, 60f);
@@ -20,8 +24,8 @@ namespace BelowTheKeel
             GameObject go = Visuals.Spawn("Pacer", ship.transform.position, Quaternion.identity, duration + 1f);
             var body = go.AddComponent<PacerBody>();
             body.Init(ship, duration,
-                lateral: Range(rng, -5f, 5f),
-                depth: Range(rng, 6.5f, 8f),
+                lateral: float.IsNaN(lateral) ? Range(rng, -5f, 5f) : lateral,
+                depth: float.IsNaN(depth) ? Range(rng, 6.5f, 8f) : depth,
                 radius: Range(rng, 3.2f, 4.2f),
                 flow: Range(rng, 1.5f, 3f),
                 wave: Range(rng, 4f, 6f));

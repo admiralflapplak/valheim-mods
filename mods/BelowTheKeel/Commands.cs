@@ -11,7 +11,7 @@ namespace BelowTheKeel
     internal static class Commands
     {
         private const string Command = "keel";
-        private const string Usage = "keel status | keel next | keel play <eye [width] [depth] | eye at <seconds>|pacer|halfboat [near]|ransnet> | keel probe [off] | keel pose | keel depths | keel shaders [text] | keel material <prefab>";
+        private const string Usage = "keel status | keel next | keel play <eye [width] [depth] | eye at <seconds>|pacer [side] [depth]|halfboat [near [metres]]|ransnet> | keel probe [off] | keel pose | keel hands [up] [out] [marks] | keel depths | keel shaders [text] | keel material <prefab>";
 
         private static readonly AccessTools.FieldRef<Dictionary<string, Terminal.ConsoleCommand>> TerminalCommands =
             AccessTools.StaticFieldRefAccess<Dictionary<string, Terminal.ConsoleCommand>>(AccessTools.Field(typeof(Terminal), "commands"));
@@ -45,6 +45,7 @@ namespace BelowTheKeel
                     bool deep = Sea.IsDeep(p, out string why);
                     t.AddString($"Depth {Sea.Depth(p):0} m, biome {WorldGenerator.instance.GetBiome(p)}: " + (deep ? "omens may come" : "no omens (" + why + ")"));
                     t.AddString($"Ship id {Director.ShipId(ship):X}, {Visuals.Count} omen object(s) showing");
+                    foreach (string w in Visuals.Where()) t.AddString("  " + w);
                     t.AddString($"Open sea since its last omen: {Director.OpenSeaSeconds(ship) / 60f:0.0} min (fail-safe at {Plugin.FailSafeMinutes.Value:0})");
                     t.AddString($"Weather {EnvMan.instance.GetCurrentEnvironment()?.m_name}, fog {RenderSettings.fogMode} density {RenderSettings.fogDensity:0.0000} (sight {Sea.SightDistance():0} m), night {EnvMan.IsNight()}");
                     return;
@@ -87,10 +88,19 @@ namespace BelowTheKeel
                         t.AddString($"Playing eye, {width:0} m across, top {(depth > 0f ? depth.ToString("0.#") + " m" : "6-7 m")} down");
                         return;
                     }
+                    if (omen is PacerOmen && a.Length > 3)
+                    {
+                        float side = float.Parse(a[3], System.Globalization.CultureInfo.InvariantCulture);
+                        float depth = a.Length > 4 ? float.Parse(a[4], System.Globalization.CultureInfo.InvariantCulture) : float.NaN;
+                        PacerOmen.Play(ship, (uint)Random.Range(int.MinValue, int.MaxValue), side, depth);
+                        t.AddString($"Playing pacer {side:0} m to the side" + (float.IsNaN(depth) ? "" : $", its middle {depth:0.#} m down"));
+                        return;
+                    }
                     if (omen is HalfBoatOmen && a.Length > 3 && a[3] == "near")
                     {
-                        HalfBoatOmen.Play(ship, (uint)Random.Range(int.MinValue, int.MaxValue), lateral: 12f);
-                        t.AddString($"Half-boat holding 12 m to starboard for a minute; ship at {ship.transform.position.x:0.0} {ship.transform.position.z:0.0}, heading {ship.transform.eulerAngles.y:0}");
+                        float off = a.Length > 4 && float.TryParse(a[4], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float o) ? o : 12f;
+                        HalfBoatOmen.Play(ship, (uint)Random.Range(int.MinValue, int.MaxValue), lateral: Mathf.Sign(off) * Mathf.Clamp(Mathf.Abs(off), 4f, 200f));   // (negative: to port)
+                        t.AddString($"Half-boat holding {Mathf.Abs(off):0} m to {(off < 0f ? "port" : "starboard")} for a minute; ship at {ship.transform.position.x:0.0} {ship.transform.position.z:0.0}, heading {ship.transform.eulerAngles.y:0}");
                         return;
                     }
                     omen.Play(ship, (uint)Random.Range(int.MinValue, int.MaxValue));   // only on this screen
@@ -102,6 +112,16 @@ namespace BelowTheKeel
                     if (a.Length > 2 && a[2] == "off") { Probe.Clear(); t.AddString("Probe removed."); return; }
                     if (ship == null) { t.AddString("Not aboard a ship."); return; }
                     t.AddString(Probe.Show(ship));
+                    return;
+                }
+                case "hands":
+                {
+                    if (Player.m_localPlayer == null || ship == null) { t.AddString("Stand aboard a ship, at its side, facing over it."); return; }
+                    Hands.Markers = System.Array.IndexOf(a, "marks") > 1;
+                    var nums = new List<float>();
+                    foreach (string arg in a)
+                        if (float.TryParse(arg, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float r)) nums.Add(r);
+                    t.AddString(Hands.Show(Player.m_localPlayer, ship, nums.Count > 0 ? nums[0] : 0f, nums.Count > 1 ? nums[1] : 0f));
                     return;
                 }
                 case "pose":
