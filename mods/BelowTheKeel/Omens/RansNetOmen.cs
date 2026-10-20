@@ -7,7 +7,7 @@ namespace BelowTheKeel
     /// <summary>
     /// Rán's net: the drowned hang under the ship, straight as the dead, arms at their sides, toes pointing down, one rope from the feet
     /// down into the dark, as if weighted and caught. They rise out of the murk on the ship's course, so it sails over them, heads bowed
-    /// and eyes dark. Then every pair of eyes opens at once, the heads come up and the bodies turn to look at you. Before the end the eyes
+    /// and eyes dark. Then every pair of eyes opens at once, the bodies turn to face you and the heads tip back to look up at you. Before the end the eyes
     /// go out and they all drop into the deep together, as if the net were drawn in. The bodies are the game's draugr, darkened and posed
     /// bone by bone; their eyes are the draugr's own glow.
     /// </summary>
@@ -78,9 +78,7 @@ namespace BelowTheKeel
         private const float EyesCloseBeforeEnd = 3.5f;
         private const float EyesCloseSeconds = 0.4f;
         private const float TurnSpeed = 22f;       // degrees per second, turning to the player
-        private const float LookUpSpeed = 15f;     // degrees per second, tipping back to look up (and back again)
-        private const float MaxLookUp = 30f;
-        private const float HeadFollow = 40f;     // the most the head turns from the body to follow the player (degrees)
+        private const float HeadFollow = 55f;     // the most the head turns from the body to follow the player (degrees): it does all the looking up
         private const float HeadLag = 2f;         // how quickly the head catches up with the player (higher is quicker)
         private const float RopeLength = 24f;      // reaches well past what the murk lets through
         private const float RopeThickness = 0.07f;
@@ -100,7 +98,7 @@ namespace BelowTheKeel
         {
             public Transform T;
             public Vector3 Offset;
-            public float Depth, Yaw, Tilt, Phase, TurnDelay, LookUp;
+            public float Depth, Yaw, Tilt, Phase, TurnDelay;
             public Quaternion HeadTurn = Quaternion.identity;   // on top of the body's facing: eases toward the player
             public readonly List<Aim> Limbs = new List<Aim>();
             public Aim Head;
@@ -222,19 +220,15 @@ namespace BelowTheKeel
                 float sway = 4f * Mathf.Sin((_age + b.Phase) * 0.3f);
                 b.T.localPosition = b.Offset + Vector3.down * (b.Depth + lower - bob);
 
-                // Once its eyes are open, each turns (a little after the others) to face the player and tips back to look up. Both ease
-                // in and out at a set speed, so nothing jumps when the eyes go out.
-                float lookUpTarget = 0f;
+                // Once its eyes are open, each turns (a little after the others) to face the player; the body stays straight up and down
+                // and only the head looks up (Pose).
                 if (player != null && _age > EyesOpenAt + b.TurnDelay && left > EyesCloseBeforeEnd)
                 {
                     Vector3 to = player.transform.position - b.T.position;
                     float targetYaw = Mathf.Atan2(to.x, to.z) * Mathf.Rad2Deg;
                     b.Yaw = Mathf.MoveTowardsAngle(b.Yaw, targetYaw, TurnSpeed * Time.deltaTime);
-                    float flat = new Vector2(to.x, to.z).magnitude;
-                    lookUpTarget = Mathf.Clamp(Mathf.Atan2(to.y, flat) * Mathf.Rad2Deg, 0f, MaxLookUp);
                 }
-                b.LookUp = Mathf.MoveTowards(b.LookUp, lookUpTarget, LookUpSpeed * Time.deltaTime);
-                b.T.localRotation = Quaternion.Euler(b.Tilt + sway * 0.5f * swayWeight - b.LookUp, b.Yaw + sway * swayWeight, sway * 0.7f * swayWeight);
+                b.T.localRotation = Quaternion.Euler((b.Tilt + sway * 0.5f) * swayWeight, b.Yaw + sway * swayWeight, sway * 0.7f * swayWeight);
 
                 Pose(b, eyes, player);
                 Ropes(b);
@@ -259,7 +253,7 @@ namespace BelowTheKeel
             if (b.Head == null) return;
 
             // Chin on the chest while the eyes are dark; the head comes up as they open.
-            Vector3 bowed = new Vector3(0f, 1f, 0.55f), raised = new Vector3(0f, 1f, -0.1f);
+            Vector3 bowed = new Vector3(0f, 1f, 0.55f), raised = new Vector3(0f, 1f, -0.2f);
             Point(b.Head, b.T.TransformDirection(Vector3.Lerp(bowed, raised, eyes).normalized));
 
             // With its eyes open the head follows the player, a little behind and only so far: the body does the rest of the turning.
