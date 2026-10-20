@@ -21,9 +21,10 @@ namespace BelowTheKeel
             var body = go.AddComponent<PacerBody>();
             body.Init(ship, duration,
                 lateral: Range(rng, -5f, 5f),
-                depth: Range(rng, 5f, 6.5f),
-                radius: Range(rng, 2.6f, 3.4f),
-                flow: Range(rng, 1.5f, 3f));
+                depth: Range(rng, 6.5f, 8f),
+                radius: Range(rng, 3.2f, 4.2f),
+                flow: Range(rng, 1.5f, 3f),
+                wave: Range(rng, 4f, 6f));
         }
 
         private static float Range(System.Random rng, float min, float max) => min + (float)rng.NextDouble() * (max - min);
@@ -46,14 +47,17 @@ namespace BelowTheKeel
         private const float TurnRate = 0.35f;      // how quickly its heading catches up with the ship's (per second)
 
         private Ship _ship;
-        private float _duration, _lateral, _depth, _radius, _flow, _age;
+        private float _duration, _lateral, _depth, _radius, _flow, _wave, _age;
         private Vector3 _heading;
         private Mesh _mesh;
         private Vector3[] _verts;
         private Vector2[] _uv;
 
-        internal void Init(Ship ship, float duration, float lateral, float depth, float radius, float flow)
+        /// <param name="flow">How fast the swellings slide forward along the body (metres a second).</param>
+        /// <param name="wave">How fast its swimming S runs along the body: faster than the swellings, so it writhes as it goes.</param>
+        internal void Init(Ship ship, float duration, float lateral, float depth, float radius, float flow, float wave)
         {
+            _wave = wave;
             _ship = ship;
             _duration = duration;
             _lateral = lateral;
@@ -100,11 +104,12 @@ namespace BelowTheKeel
             transform.SetPositionAndRotation(centre, Quaternion.identity);
 
             float scroll = _age * _flow;   // how far the body has slid forward since it came
-            Vector3 prev = Spine(-HalfLength - 1f, scroll, fwd, right);
+            float swim = _age * _wave;     // how far its swimming wave has run
+            Vector3 prev = Spine(-HalfLength - 1f, swim, fwd, right);
             for (int i = 0; i < Rings; i++)
             {
                 float s = Mathf.Lerp(-HalfLength, HalfLength, i / (float)(Rings - 1));
-                Vector3 p = Spine(s, scroll, fwd, right);
+                Vector3 p = Spine(s, swim, fwd, right);
                 Vector3 tangent = (p - prev).normalized;
                 prev = p;
                 Vector3 side = Vector3.Cross(Vector3.up, tangent).normalized;
@@ -125,12 +130,13 @@ namespace BelowTheKeel
             _mesh.RecalculateBounds();
         }
 
-        /// <summary>A point on the body's middle line, relative to its centre. The sway travels forward along the body with it.</summary>
-        private Vector3 Spine(float s, float scroll, Vector3 fwd, Vector3 right)
+        /// <summary>A point on the body's middle line, relative to its centre: a swimming S running forward along it, a faster ripple
+        /// on top, and a slower rise and fall.</summary>
+        private Vector3 Spine(float s, float swim, Vector3 fwd, Vector3 right)
         {
-            float u = s - scroll;
-            float sway = 2.5f * Mathf.Sin(u * 2f * Mathf.PI / 38f) + 0.8f * Mathf.Sin(u * 2f * Mathf.PI / 13f + 1.3f);
-            float heave = 0.7f * Mathf.Sin(u * 2f * Mathf.PI / 27f + 0.6f);
+            float u = s - swim;
+            float sway = 3.5f * Mathf.Sin(u * 2f * Mathf.PI / 34f) + 1f * Mathf.Sin(u * 2f * Mathf.PI / 12f + 1.3f);
+            float heave = 0.9f * Mathf.Sin(u * 2f * Mathf.PI / 27f + 0.6f);
             return fwd * s + right * sway + Vector3.up * heave;
         }
 
