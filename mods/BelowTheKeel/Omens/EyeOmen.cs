@@ -5,9 +5,11 @@ namespace BelowTheKeel
 {
     /// <summary>
     /// A vast eye opens below the ship. A dark scaled hide rises out of the murk under the hull, the eye in it shut; then the lids roll
-    /// apart and a glowing amber eye with a slit pupil looks up, finds whoever is looking down, follows them, blinks once, and closes.
-    /// The hide sinks away. Easy to miss; impossible to forget. Made here: the eyeball's texture is drawn in code, the lids are two
-    /// quarter-spheres turning on the eye's axis (their opening is the almond of an eye), the hide is the sea serpent's darkened scales.
+    /// apart and a glowing amber eye with a slit pupil looks up, finds whoever is looking down, follows them, blinks once (the upper
+    /// lid), and closes. Its upper lid is always the one away from the ship: looking down from the deck, the top.
+    /// The hide sinks away. Easy to miss; impossible to forget. Made here: the eyeball's texture is drawn in code, the lids are sphere
+    /// shells turning on the eye's long axis (their opening is the almond of an eye); the hide is the sea serpent's darkened scales.
+    /// (A milky third lid sweeping across was tried in 0.6.6-0.6.8 and taken out.)
     /// </summary>
     internal sealed class EyeOmen : Omen
     {
@@ -17,6 +19,9 @@ namespace BelowTheKeel
         internal const float Width = 36f;   // the eyeball across (metres): tried 6 to 36 in the game, the biggest won
 
         internal override void Play(Ship ship, uint seed) => Play(ship, seed, Width, 0f);
+
+        /// <summary>For "keel play eye at &lt;seconds&gt;": held still at that moment of its life, to look at.</summary>
+        internal static float FreezeAt = -1f;
 
         /// <param name="depth">How far under the surface the top of the eye is (0: 6.5 m, give or take a little from the seed: near the
         /// deepest one can see, so the glow carries and the rest comes and goes; 8.5 was too deep). "keel play eye [width] [depth]"
@@ -29,8 +34,8 @@ namespace BelowTheKeel
             GameObject go = Visuals.Spawn("Eye", ship.transform.position, Quaternion.identity, EyeBody.Duration + 1f);
             go.AddComponent<EyeBody>().Begin(ship, radius,
                 lateral: (rng.Next(2) == 0 ? -1f : 1f) * radius * (1.15f + (float)rng.NextDouble() * 0.35f),   // beside the hull: seen over the side
-                yaw: (float)rng.NextDouble() * 180f,
-                depth: depth);
+                depth: depth, freezeAt: FreezeAt);
+            FreezeAt = -1f;
         }
     }
 
@@ -45,22 +50,25 @@ namespace BelowTheKeel
         private const float BlinkAt = 14f;
         private const float CloseAt = 19.5f, CloseSeconds = 1.8f;
         private const float OpenAngle = 62f;       // how far each lid rolls back
+        private const float ShutUpper = -47f;      // shut, the upper lid comes all the way over...
+        private const float ShutLower = -45f;      // ...to meet the lower one, which only rises a little
         private const float MaxGaze = 35f;         // the most the eyeball turns in its socket
         private const float GazeLag = 2.5f;        // how quickly it catches up with the player
         private const float TurnRate = 0.35f;      // how quickly it follows the ship's turns
 
         private Ship _ship;
-        private float _radius, _lateral, _yaw, _depth, _age;
+        private float _radius, _lateral, _depth, _age, _freezeAt = -1f, _frozenFor;
         private Vector3 _heading;
         private Transform _socket, _ball, _lidA, _lidB;
         private Quaternion _gaze = Quaternion.identity;
 
-        internal void Begin(Ship ship, float radius, float lateral, float yaw, float depth)
+        internal void Begin(Ship ship, float radius, float lateral, float depth, float freezeAt)
         {
+            _freezeAt = freezeAt;
+            if (freezeAt >= 0f) _age = freezeAt;
             _radius = radius;
             _ship = ship;
             _lateral = lateral;
-            _yaw = yaw;
             _depth = depth;
             _heading = Flat(ship.transform.forward);
 
@@ -80,7 +88,9 @@ namespace BelowTheKeel
             Setup(hide.GetComponent<MeshRenderer>(), hideMat);
 
             _ball = Part("Eyeball", EyeMeshes.Sphere(radius, 0f, 180f, 0f, 360f, iris: true), Look.Eye());
-            _lidA = Part("LidA", EyeMeshes.Sphere(radius * LidGap, 0f, 90f, 0f, 180f, iris: false), hideMat);
+            // Lid A (the upper, away from the ship) is a half-shell, so it can cover the whole eye on its own when it blinks; lid B a
+            // quarter.
+            _lidA = Part("LidA", EyeMeshes.Sphere(radius * LidGap, 0f, 180f, 0f, 180f, iris: false), hideMat);
             _lidB = Part("LidB", EyeMeshes.Sphere(radius * LidGap, 0f, 90f, 180f, 360f, iris: false), hideMat);
 
             Place(0f);
@@ -104,7 +114,8 @@ namespace BelowTheKeel
         private void LateUpdate()
         {
             if (_ship == null) { Destroy(gameObject); return; }
-            _age += Time.deltaTime;
+            if (_freezeAt < 0f) _age += Time.deltaTime;
+            else if ((_frozenFor += Time.deltaTime) > 60f) { Destroy(gameObject); return; }
             Place(Time.deltaTime);
         }
 
@@ -121,11 +132,14 @@ namespace BelowTheKeel
             Vector3 p = _ship.transform.position + right * _lateral;
             p.y = Sea.WaterLevel - _depth - _radius - Lower();
             _socket.position = p;
-            _socket.rotation = Quaternion.LookRotation(_heading) * Quaternion.Euler(0f, _yaw, 0f);
+            _socket.rotation = Quaternion.LookRotation(right * Mathf.Sign(_lateral));   // +z, where the upper lid is, away from the ship: from the deck it is the top
 
-            float open = Open();
-            _lidA.localRotation = Quaternion.Euler(-2f + OpenAngle * open, 0f, 0f);   // (a little overlap when shut: no seam of light)
-            _lidB.localRotation = Quaternion.Euler(2f - OpenAngle * open, 0f, 0f);
+            // Shut, the upper lid comes all the way down to the lower one, which sits low on the ship's side (from the deck the eye
+            // bulges toward you, so a seam at the very top would make the lower lid seem to do the closing). Opening, closing and the
+            // blink all run between the same two poses: the upper lid always moves, from the top.
+            float open = Open(), o = open * (1f - Blink());
+            _lidA.localRotation = Quaternion.Euler(Mathf.Lerp(ShutUpper, OpenAngle, o), 0f, 0f);
+            _lidB.localRotation = Quaternion.Euler(Mathf.Lerp(ShutLower, -OpenAngle, o), 0f, 0f);
 
             // The eyeball turns toward the player, only so far and a little behind; it rests looking straight up while shut.
             Quaternion want = Quaternion.identity;
@@ -151,16 +165,21 @@ namespace BelowTheKeel
             return 0f;
         }
 
-        /// <summary>How open the lids are, 0 to 1: a slow opening, one quick blink, a slow closing.</summary>
+        /// <summary>How open the lids are, 0 to 1: a slow opening, a slow closing.</summary>
         private float Open()
         {
             if (_age < OpenAt) return 0f;
             if (_age >= CloseAt) return 1f - Mathf.SmoothStep(0f, 1f, (_age - CloseAt) / CloseSeconds);
-            float open = Mathf.SmoothStep(0f, 1f, (_age - OpenAt) / OpenSeconds);
+            return Mathf.SmoothStep(0f, 1f, (_age - OpenAt) / OpenSeconds);
+        }
+
+        /// <summary>The blink, 0 to 1 (shut): the upper lid down fast, up a little slower.</summary>
+        private float Blink()
+        {
             float b = _age - BlinkAt;
-            if (b >= 0f && b < 0.15f) open *= 1f - b / 0.15f;             // down fast
-            else if (b >= 0.15f && b < 0.45f) open *= (b - 0.15f) / 0.3f;  // up a little slower
-            return open;
+            if (b >= 0f && b < 0.15f) return b / 0.15f;
+            if (b >= 0.15f && b < 0.45f) return 1f - (b - 0.15f) / 0.3f;
+            return 0f;
         }
 
         private static Vector3 Flat(Vector3 v)
@@ -207,7 +226,11 @@ namespace BelowTheKeel
                     tris[t++] = a; tris[t++] = b; tris[t++] = c;
                     tris[t++] = b; tris[t++] = e; tris[t++] = c;
                 }
-            var mesh = new Mesh { name = "BelowTheKeel_EyePart", vertices = verts, normals = normals, uv = uv, triangles = tris };
+            var mesh = new Mesh { name = "BelowTheKeel_EyePart" };
+            mesh.vertices = verts;
+            mesh.normals = normals;
+            mesh.uv = uv;
+            mesh.triangles = tris;
             mesh.RecalculateBounds();
             return mesh;
         }
