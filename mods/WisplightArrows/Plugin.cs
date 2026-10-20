@@ -12,7 +12,7 @@ namespace WisplightArrows
     {
         public const string Guid = "nick.valheim.wisplightarrows";
         public const string Name = "WisplightArrows";
-        public const string Version = "0.4.5";
+        public const string Version = "0.7.3";
 
         internal static Plugin Instance;
         internal static BepInEx.Logging.ManualLogSource Log;
@@ -60,8 +60,8 @@ namespace WisplightArrows
                 "The arrow's own pierce damage, added to the bow's (a wooden arrow has 22). It is a light to see by more than a weapon.",
                 new AcceptableValueRange<float>(0f, 100f));
 
-            Cost = Synced.Bind("3 - Crafting", "Cost", "Wood:8, Wisp:1, Silver:1",
-                "What one craft costs (a craft of wooden arrows is Wood:8). " + Costs.Help);
+            Cost = Synced.Bind("3 - Crafting", "Cost", "Wood:4, Feathers:1, Silver:1, Wisp:1",
+                "What one craft costs. " + Costs.Help);
             Station = Synced.Bind("3 - Crafting", "Station", "piece_workbench:1",
                 "Where they are crafted, and the station's level. " + Costs.StationHelp);
             PerCraft = Synced.Bind("3 - Crafting", "Arrows per craft", 10,

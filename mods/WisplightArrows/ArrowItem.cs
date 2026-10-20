@@ -27,8 +27,6 @@ namespace WisplightArrows
         internal static GameObject TrailPoint;   // a bare clear zone the flying arrow leaves behind it (MistTrail)
         private static Recipe _recipe;
 
-        private static readonly Color Tint = new Color(0.75f, 0.9f, 1f);   // the shaft and fletching, washed pale like the wisp
-
         /// <summary>Registers (and builds, the first time) the arrow, its projectile and glow, and its recipe in whatever of ZNetScene and
         /// ObjectDB exists.</summary>
         public static void Register(ZNetScene scene, ObjectDB db)
@@ -83,6 +81,7 @@ namespace WisplightArrows
             Prefab = null;
             _projectile = _glow = TrailPoint = NockTemplate = null;   // the prefabs and their holder stay alive for arrows already out there; the next copy replaces them by name
             _recipe = null;
+            ArrowModel.Forget();
         }
 
         // ---- when the game registers its own ---------------------------------------------------------------------
@@ -175,12 +174,36 @@ namespace WisplightArrows
 
             try
             {
-                TintModel(Prefab);
-                TintModel(_projectile);
+                ArrowModel.Dress(Prefab, ball, scene, glow: true);         // (lying on the ground: a faint glow at the orb)
+                ArrowModel.Dress(_projectile, ball, scene, glow: false);   // (in flight the wisp riding on it lights it)
             }
-            catch (Exception e) { Plugin.Log.LogWarning("Could not tint the arrow: " + e.Message); }
-            try { Icon.MakeItem(Prefab, setIcon: true); }
-            catch (Exception e) { Plugin.Log.LogWarning("Could not draw the wisplight arrow icon: " + e.Message); }
+            catch (Exception e) { Plugin.Log.LogWarning("Could not put the orb on the arrow: " + e); }
+            // The icon: the game's silver arrow icon with the orb painted on (ArrowIcon). Failing that, drawn from the model flat, seen
+            // from the side with the tip to the right, as the game's own arrow icons are (looking along +X, the picture's right is the
+            // arrow's -Z end, its tip).
+            Sprite icon = null;
+            try { icon = ArrowIcon.FromGame(scene); }
+            catch (Exception e) { Plugin.Log.LogInfo("Could not paint the icon from the game's: " + e.Message); }
+            if (icon != null) SetIcon(drop, icon);
+            else
+            {
+                try
+                {
+                    ArrowModel.IconLook(Prefab, true);
+                    ArrowIcon.AddHaze(Icon.MakeItem(Prefab, setIcon: true, look: Quaternion.LookRotation(Vector3.right, Vector3.up)));
+                }
+                catch (Exception e) { Plugin.Log.LogWarning("Could not draw the wisplight arrow icon: " + e.Message); }
+                finally { ArrowModel.IconLook(Prefab, false); }
+            }
+        }
+
+        /// <summary>The item's first icon (a new array: never write into one shared with the wooden arrow it was copied from).</summary>
+        private static void SetIcon(ItemDrop drop, Sprite icon)
+        {
+            ItemDrop.ItemData.SharedData s = drop.m_itemData.m_shared;
+            Sprite[] icons = s.m_icons != null && s.m_icons.Length > 1 ? (Sprite[])s.m_icons.Clone() : new Sprite[1];
+            icons[0] = icon;
+            s.m_icons = icons;
         }
 
         /// <summary>The ball the Wisplight's status effect floats over the player (null if the game changed it).</summary>
@@ -207,8 +230,6 @@ namespace WisplightArrows
                 if (d.m_disableForcefieldDelay > 0f) Plugin.Log.LogInfo($"The wisp ball's force field switched itself off after {d.m_disableForcefieldDelay} s: kept on");
                 d.m_disableForcefieldDelay = 0f;
             }
-            foreach (ParticleSystemForceField f in wisp.GetComponentsInChildren<ParticleSystemForceField>(true))
-                Plugin.Log.LogInfo($"Wisp ball force field '{f.name}': end range {f.endRange} (the Wisplight's clear radius)");
         }
 
         /// <summary>Only the wisp ball's force field and Demister, nothing to see or hit, for the trail's points (null if the ball has none).</summary>
@@ -230,23 +251,6 @@ namespace WisplightArrows
         {
             if (prefab == null) return;
             foreach (ParticleSystemForceField f in prefab.GetComponentsInChildren<ParticleSystemForceField>(true)) f.endRange = radius;
-        }
-
-        /// <summary>The wooden arrow's own parts (not the wisp) in copies of their materials, washed pale.</summary>
-        private static void TintModel(GameObject go)
-        {
-            Transform wisp = go.transform.Find("wisp");
-            foreach (Renderer r in go.GetComponentsInChildren<Renderer>(true))
-            {
-                if (r is ParticleSystemRenderer || (wisp != null && r.transform.IsChildOf(wisp))) continue;
-                Material[] mats = r.sharedMaterials;
-                for (int i = 0; i < mats.Length; i++)
-                {
-                    if (mats[i] == null || !mats[i].HasProperty("_Color")) continue;
-                    mats[i] = new Material(mats[i]) { color = mats[i].color * Tint };
-                }
-                r.sharedMaterials = mats;
-            }
         }
     }
 }
