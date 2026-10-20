@@ -81,8 +81,10 @@ namespace BelowTheKeel
         private const float HeadFollow = 55f;     // the most the head turns from the body to follow the player (degrees): it does all the looking up
         private const float HeadLag = 2f;         // how quickly the head catches up with the player (higher is quicker)
         private const float RopeLength = 24f;      // reaches well past what the murk lets through
-        private const float GlowWidth = 5f;      // the pool of light under each body (metres across)
-        private const float GlowBelow = 2.4f;      // how far under the body's middle it lies
+        private const float GlowRange = 11f;       // how far the light under each body reaches (metres)
+        private const float GlowIntensity = 7f;
+        private const float GlowBelow = 2.2f;      // how far under the body's middle it lies
+        private static readonly Color GhostColour = new Color(0.25f, 1f, 0.82f);   // the draugr's own teal
         private const float RopeThickness = 0.07f;
 
         private static readonly int EmissionColor = Shader.PropertyToID("_EmissionColor");
@@ -187,21 +189,21 @@ namespace BelowTheKeel
         }
 
         /// <summary>
-        /// A soft pool of teal light in the water under a body, so from the deck it shows as a dark shape against it (the murk swallows a
-        /// dark body on dark water). A flat disc, opaque but glowing, brightest at the middle and black at the rim: only what glows or is
-        /// dark shows through Valheim's water, and see-through things vanish.
+        /// A teal light in the water under a body, so it shows against the dark: lit from below (legs, arms, the underside of the face),
+        /// the water and anything near tinted a ghostly teal. A real light, nothing to see of it itself (0.12.1 tried glowing discs,
+        /// which showed as discs).
         /// </summary>
         private Transform GlowPool()
         {
-            GameObject disc = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            Destroy(disc.GetComponent<Collider>());
-            disc.name = "GlowPool";
-            disc.transform.SetParent(transform, false);
-            disc.transform.localScale = new Vector3(GlowWidth, 0.15f, GlowWidth);
-            var r = disc.GetComponent<MeshRenderer>();
-            r.sharedMaterial = Look.GhostLight();
-            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            return disc.transform;
+            var go = new GameObject("GhostLight");
+            go.transform.SetParent(transform, false);
+            var light = go.AddComponent<Light>();
+            light.type = LightType.Point;
+            light.color = GhostColour;
+            light.range = GlowRange;
+            light.intensity = 0f;
+            light.shadows = LightShadows.None;
+            return go.transform;
         }
 
         private Transform Rope()
@@ -320,11 +322,7 @@ namespace BelowTheKeel
                 if (b.Glow != null)
                 {
                     b.Glow.position = b.T.position + Vector3.down * GlowBelow;
-                    b.Glow.rotation = Quaternion.identity;
-                    var gr = b.Glow.GetComponent<Renderer>();
-                    gr.GetPropertyBlock(_block);
-                    _block.SetColor(EmissionColor, Look.GhostLightColour * light);
-                    gr.SetPropertyBlock(_block);
+                    b.Glow.GetComponent<Light>().intensity = GlowIntensity * light;
                 }
 
                 for (int i = 0; i < b.Glows.Count; i++)

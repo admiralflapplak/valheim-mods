@@ -111,35 +111,6 @@ namespace BelowTheKeel
             return _wood;
         }
 
-        private static Material _ghost;
-        private static Texture2D _ghostTex;
-        internal static readonly Color GhostLightColour = new Color(0.12f, 0.8f, 0.65f);   // the draugr's own teal, toned well down: a faint light, not a lamp
-
-        /// <summary>The light under Rán's drowned: black, glowing teal from a soft round spot (the glow is set per body, as they rise).</summary>
-        internal static Material GhostLight()
-        {
-            if (_ghost != null) return _ghost;
-            const int size = 128;
-            _ghostTex = new Texture2D(size, size, TextureFormat.RGBA32, true) { name = "BelowTheKeel_GhostLight", wrapMode = TextureWrapMode.Clamp };
-            var px = new Color[size * size];
-            for (int y = 0; y < size; y++)
-                for (int x = 0; x < size; x++)
-                {
-                    float u = x / (size - 1f) * 2f - 1f, v = y / (size - 1f) * 2f - 1f;
-                    float k = Mathf.Clamp01(1f - Mathf.Sqrt(u * u + v * v));
-                    k = k * k * k;   // falls away fast: bright only near the middle, nothing at the rim
-                    px[y * size + x] = new Color(k, k, k, 1f);
-                }
-            _ghostTex.SetPixels(px);
-            _ghostTex.Apply(true);
-            _ghost = new Material(DarkHide()) { name = "BelowTheKeel_GhostLight", color = Color.black };
-            if (_ghost.HasProperty("_MainTex")) _ghost.SetTexture("_MainTex", null);
-            if (_ghost.HasProperty("_BumpMap")) _ghost.SetTexture("_BumpMap", null);
-            _ghost.SetTexture("_EmissionMap", _ghostTex);
-            _ghost.SetColor("_EmissionColor", GhostLightColour);
-            return _ghost;
-        }
-
         internal static Shader FindShader(string name)
         {
             foreach (Shader sh in Resources.FindObjectsOfTypeAll<Shader>())
@@ -156,10 +127,6 @@ namespace BelowTheKeel
             _drowned.Clear();
             if (_rope != null) Object.Destroy(_rope);
             _rope = null;
-            if (_ghost != null) Object.Destroy(_ghost);
-            if (_ghostTex != null) Object.Destroy(_ghostTex);
-            _ghost = null;
-            _ghostTex = null;
             if (_wood != null) Object.Destroy(_wood);
             _wood = null;
             if (_eye != null) Object.Destroy(_eye);
