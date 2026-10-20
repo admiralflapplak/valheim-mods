@@ -1,3 +1,5 @@
 # Icon drafts tried on the way (make_icon.py <name> rebuilds them) and Python caches
 drafts/
 __pycache__/
+# Game renders and staged shots the icon drafts are built from: the game's art, kept off the repository (as Heave Ho's render is)
+sources/
