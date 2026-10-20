@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Paths, framework, shared references and deploying to BepInEx/scripts come from ../Directory.Build.props. -->
+  <PropertyGroup>
+    <AssemblyName>BelowTheKeel</AssemblyName>
+    <RootNamespace>BelowTheKeel</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="../Shared/ServerSettings.cs" Link="Shared/ServerSettings.cs" />
+  </ItemGroup>
+
+  <!-- Unity modules beyond ../Directory.Build.props: stripping sounds off the game's models we borrow -->
+  <ItemGroup>
+    <Reference Include="UnityEngine.AudioModule"><HintPath>$(ManagedDir)/UnityEngine.AudioModule.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+</Project>
