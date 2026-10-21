@@ -1,3 +1,6 @@
+## 1.9.3
+- He comes with his own voice: a yell as he arrives, taunts, "gotta go!", his poof and a dancing hum (the author's own recordings). Your own recordings in the sounds folder still win, moment by moment.
+
 ## 1.9.1
 - Uninvited scenes only wait while a creature nearby is actually alerted or after someone; wildlife minding its own business (a Neck by the water) no longer holds them up.
 

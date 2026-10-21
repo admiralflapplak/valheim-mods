@@ -24,6 +24,10 @@ source = "./bin/Release/net48/FulingHeckler.dll"
 target = "plugins/FulingHeckler.dll"
 
 [[build.copy]]
+source = "./sounds"
+target = "plugins/FulingHeckler_sounds"
+
+[[build.copy]]
 source = "./CHANGELOG.md"
 target = "CHANGELOG.md"
 

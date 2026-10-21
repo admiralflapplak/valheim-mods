@@ -24,4 +24,11 @@
     <Reference Include="UnityEngine.AudioModule"><HintPath>$(ManagedDir)/UnityEngine.AudioModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.UnityWebRequestAudioModule"><HintPath>$(ManagedDir)/UnityEngine.UnityWebRequestAudioModule.dll</HintPath><Private>false</Private></Reference>
   </ItemGroup>
+  <!-- His built-in voice (the author's own recordings): beside the DLL, as the package puts them -->
+  <ItemGroup>
+    <SoundFiles Include="sounds/**/*.wav;sounds/**/*.ogg" />
+  </ItemGroup>
+  <Target Name="DeploySounds" AfterTargets="DeployToValheim" Condition="'$(DeployToGame)' == 'true'">
+    <Copy SourceFiles="@(SoundFiles)" DestinationFiles="@(SoundFiles->'$(DeployDir)/FulingHeckler_sounds/%(RecursiveDir)%(Filename)%(Extension)')" />
+  </Target>
 </Project>

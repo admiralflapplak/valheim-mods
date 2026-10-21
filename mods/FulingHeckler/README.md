@@ -117,17 +117,17 @@ Fits are stored in **Saved Fits** (advanced), so you can copy that setting to fr
 
 He comes recoloured by default. Untick **Recolour** (3 - Look) for the game's own Fuling colours, or drag **Hue**, **Saturation** and **Brightness**: changes show live, so tick **Fitting Mode** to keep him standing in front of you while you adjust.
 
-## Your own sounds
+## His voice, and your own sounds
 
-F1 → **8 - Smoke & Sounds** → **Open Sounds Folder**. Drop `.ogg`, `.wav` or `.mp3` files (short, mono, trimmed tight) into these folders, then press **Reload Sounds**:
+He comes with his own voice: a yell as he runs over, five taunts, two "gotta go!"s, his poof, and a hum while he dances on your grave, all recorded by the mod's author. To give him your own, F1 → **8 - Smoke & Sounds** → **Open Sounds Folder**, drop `.ogg`, `.wav` or `.mp3` files (short, mono, trimmed tight) into these folders, then press **Reload Sounds**. A folder with your files in it always wins; one left empty uses his own voice, or the one in brackets:
 
 | Folder | When | If empty, uses |
 |---|---|---|
-| `arrive` | he yells it as he runs over | silence |
-| `taunt` | his bit (emote, swing, play dead) | silence |
-| `poof` | as he vanishes | silence |
-| `flee` | "Gotta go!" when you get too close | silence |
-| `dance` | while he dances on your grave, clip after clip | silence |
+| `arrive` | he yells it as he runs over | his own |
+| `taunt` | his bit (emote, swing, play dead) | his own |
+| `poof` | as he vanishes | his own |
+| `flee` | "Gotta go!" when you get too close | his own |
+| `dance` | while he dances on your grave, clip after clip | his own |
 | `caught` | you catch him dancing | `flee` |
 | `spotted` | you spot the Lurker | `flee` |
 | `bored` | the Lurker gives up | silence |

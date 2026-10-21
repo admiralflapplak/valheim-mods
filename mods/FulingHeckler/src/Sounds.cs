@@ -14,8 +14,9 @@ namespace FulingHeckler
     public enum SoundMoment { Arrive, Taunt, Poof, Flee, Dance, Caught, Spotted, Bored, Boo, Steal, CoinDrop, Gift }
 
     /// <summary>
-    /// Your own recordings: BepInEx/config/FulingHeckler_sounds/{arrive,taunt,poof,flee}/*.ogg|*.wav.
-    /// One file per moment is picked at random each time. Empty folder = silence for that moment.
+    /// His voice: your own recordings in BepInEx/config/FulingHeckler_sounds/{arrive,taunt,poof,flee...}/*.ogg|*.wav, or, for a moment
+    /// whose folder there is empty, the built-in ones that come with the mod (FulingHeckler_sounds next to the DLL).
+    /// One file per moment is picked at random each time. Neither = silence for that moment.
     /// </summary>
     internal class Sounds : MonoBehaviour
     {
@@ -36,6 +37,39 @@ namespace FulingHeckler
         }
 
         public static string FolderFor(SoundMoment m) => Path.Combine(Folder, FolderName(m));
+
+        /// <summary>
+        /// The recordings that come with the mod: FulingHeckler_sounds beside the DLL. A mod manager puts both in the mod's own folder in
+        /// BepInEx/plugins; a dev build puts them in BepInEx/scripts. Where the DLL was loaded from isn't always known (a loader can load
+        /// it from memory), so those two places are searched too. Null when there are none.
+        /// </summary>
+        private static string BuiltInFolder
+        {
+            get
+            {
+                var candidates = new List<string>();
+                try
+                {
+                    string dll = Plugin.Instance != null ? Plugin.Instance.Info.Location : null;
+                    if (string.IsNullOrEmpty(dll)) dll = typeof(Sounds).Assembly.Location;
+                    if (!string.IsNullOrEmpty(dll)) candidates.Add(Path.Combine(Path.GetDirectoryName(dll), "FulingHeckler_sounds"));
+                }
+                catch { /* try the others */ }
+                try
+                {
+                    candidates.Add(Path.Combine(Path.Combine(BepInEx.Paths.BepInExRootPath, "scripts"), "FulingHeckler_sounds"));
+                    if (Directory.Exists(BepInEx.Paths.PluginPath))
+                        candidates.AddRange(Directory.GetDirectories(BepInEx.Paths.PluginPath, "FulingHeckler_sounds", SearchOption.AllDirectories));
+                }
+                catch { /* not found */ }
+                return candidates.FirstOrDefault(Directory.Exists);
+            }
+        }
+
+        private static string[] AudioFiles(string dir) =>
+            dir != null && Directory.Exists(dir)
+                ? Directory.GetFiles(dir).Where(f => TypeFor(f) != AudioType.UNKNOWN).OrderBy(f => f).ToArray()
+                : new string[0];
 
         private static string FolderName(SoundMoment m) => m == SoundMoment.CoinDrop ? "coin_drop" : m.ToString().ToLowerInvariant();
 
@@ -60,6 +94,7 @@ namespace FulingHeckler
                 // Always rewrite the README so it lists every folder, including new ones.
                 File.WriteAllText(Path.Combine(Folder, "README.txt"),
                     "Put your Fuling recordings here (.ogg, .wav or .mp3). Short, mono, trimmed tight works best.\n" +
+                    "A folder you leave empty uses the mod's own recordings, if it has some for it; yours always win.\n" +
                     "Several files in a folder = he picks one at random each time.\n" +
                     "After adding or changing files, press 'Reload Sounds' in the F1 menu (8 - Smoke & Sounds). No restart needed.\n\n" +
                     "  arrive/     he yells one of these as he runs over\n" +
@@ -92,15 +127,19 @@ namespace FulingHeckler
         {
             _loading = true;
             var fresh = new Dictionary<SoundMoment, List<AudioClip>>();
+            var builtInUsed = new List<string>();
             int total = 0;
+            string builtIn = BuiltInFolder;
 
             foreach (SoundMoment m in Enum.GetValues(typeof(SoundMoment)))
             {
                 var list = new List<AudioClip>();
-                string dir = FolderFor(m);
-                string[] files = Directory.Exists(dir)
-                    ? Directory.GetFiles(dir).Where(f => TypeFor(f) != AudioType.UNKNOWN).OrderBy(f => f).ToArray()
-                    : new string[0];
+                string[] files = AudioFiles(FolderFor(m));   // yours first
+                if (files.Length == 0 && builtIn != null)
+                {
+                    files = AudioFiles(Path.Combine(builtIn, FolderName(m)));   // else the mod's own
+                    if (files.Length > 0) builtInUsed.Add(FolderName(m));
+                }
 
                 foreach (var file in files)
                 {
@@ -133,7 +172,8 @@ namespace FulingHeckler
             foreach (var kv in fresh) _clips[kv.Key] = kv.Value;
 
             Plugin.Log.LogInfo("Sounds loaded: " + string.Join(", ",
-                _clips.Where(kv => kv.Value.Count > 0).Select(kv => $"{FolderName(kv.Key)} {kv.Value.Count}").DefaultIfEmpty("none").ToArray()) + $" (in {Folder}).");
+                _clips.Where(kv => kv.Value.Count > 0).Select(kv => $"{FolderName(kv.Key)} {kv.Value.Count}").DefaultIfEmpty("none").ToArray()) +
+                (builtInUsed.Count > 0 ? $" (built-in for {string.Join(", ", builtInUsed.ToArray())}, from {builtIn}; yours in {Folder})." : $" (in {Folder})."));
             _loading = false;
             if (total == 0) Plugin.DebugLog("No custom sounds yet; he stays quiet.");
         }
