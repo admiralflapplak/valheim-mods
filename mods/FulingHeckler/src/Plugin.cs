@@ -138,14 +138,12 @@ namespace FulingHeckler
         internal static string LootFilePath => Path.Combine(Paths.ConfigPath, "FulingHeckler.loot.txt");
         internal static string QuipFilePath => Path.Combine(Paths.ConfigPath, "FulingHeckler.quips.txt");
         internal static string MemoryFolder => Path.Combine(Paths.ConfigPath, "FulingHeckler_memory");
-        private static string OldRavensMemoryFolder => Path.Combine(Paths.ConfigPath, "RavensRemember_memory");
 
         private void Awake()
         {
             Instance = this;
             Log = Logger;
 
-            MoveOldSettings();
             Synced = new ServerSettings(Guid, Config, Logger);
             BindConfig();
 
@@ -157,7 +155,6 @@ namespace FulingHeckler
             ReloadLoot();
             Synced.AddText("Loot", () => LootText, UseLoot);
             Memory = new DeathMemory(MemoryFolder);
-            Memory.MigrateFrom(OldRavensMemoryFolder); // keep tallies from Ravens Remember
             Scenes.FindLoadedFires();
             Courier = gameObject.AddComponent<Delivery>();
             gameObject.AddComponent<Sounds>();
@@ -191,19 +188,6 @@ namespace FulingHeckler
             Scenes.Fires.Clear();
         }
 
-        /// <summary>Before its first release the mod's id was nick.FulingHeckler: copy that settings file to the new name once (the old one stays as a backup).</summary>
-        private void MoveOldSettings()
-        {
-            try
-            {
-                string old = Path.Combine(Paths.ConfigPath, "nick.FulingHeckler.cfg");
-                if (File.Exists(Config.ConfigFilePath) || !File.Exists(old)) return;
-                File.Copy(old, Config.ConfigFilePath);
-                Config.Reload();
-                Log.LogInfo($"Settings carried over from nick.FulingHeckler.cfg to {Path.GetFileName(Config.ConfigFilePath)}.");
-            }
-            catch (Exception e) { Log.LogWarning($"Couldn't carry over the old settings file ({e.Message}); starting from the defaults."); }
-        }
 
         /// <summary>Hooks the game's emote function for the Copycat. Done by hand so a mismatch only disables the Copycat.</summary>
         private void PatchEmotes()

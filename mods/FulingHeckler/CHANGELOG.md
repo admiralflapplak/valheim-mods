@@ -2,12 +2,11 @@
 - First release.
 - Tested in single player; multiplayer and dedicated servers are untested for this release.
 - When you die, a Fuling runs over, laughs at you and runs off. He keeps count of every way you've died, per character, and always comes for first-time deaths and milestones; repeat deaths get a line in the chat window (or a screen corner, mid-screen, or nothing: Text Position).
-- He taunts with the player emotes, sometimes acts out your death, wears a fishing hat (player helmets can be fitted to his head by eye), and brings a torch on some nights.
+- Rocko taunts with the player emotes, sometimes acts out your death, never goes anywhere without his fishing hat, and brings a torch on some nights.
 - Uninvited scenes every 20-40 minutes: the Lurker, Red Light Green Light and the Copycat; the Tombstone Dancer on your way back to your grave; the Campfire Squatter by a fire at night, on a chair or bench when one is near.
 - Two pranks with real items, off by default: the Coin Thief (drops every coin back along his trail) and the Gifter (mostly junk, now and then something nice).
 - He finds his way like a real Fuling: the game's own routes, a Fuling's step height, and only spots he can walk to you from.
-- His own voice (the author's recordings), changeable in his sounds folder beside the mod.
-- 121 quips in English, German, French, Spanish, Brazilian Portuguese, Russian, Polish, Turkish and Chinese, following the game's language until you write your own.
+- His own voice, recorded by the author.
+- 121 lines in English, German, French, Spanish, Brazilian Portuguese, Russian, Polish, Turkish and Chinese, following the game's language.
 - On a server with the mod, everyone shares one goblin and sees him heckle each other; the server decides the Gifter, its loot table and the Coin Thief's fee.
-- Settings in F1, in nine sections with the fine-tuning behind Advanced; the console command `heckler` starts any scene.
-- Players of the earlier Fuling Heckler (or Ravens Remember) keep their settings and death tallies: both are carried over.
+- Settings in F1, with the fine-tuning behind Advanced; the console command `heckler` starts any scene.

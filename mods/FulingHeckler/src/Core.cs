@@ -360,19 +360,6 @@ namespace FulingHeckler
 
         public DeathMemory(string folder) { _folder = folder; }
 
-        /// <summary>Copies tallies from an older folder (e.g. Ravens Remember) the first time, so nothing is lost.</summary>
-        public void MigrateFrom(string oldFolder)
-        {
-            try
-            {
-                if (Directory.Exists(_folder) || !Directory.Exists(oldFolder)) return;
-                Directory.CreateDirectory(_folder);
-                foreach (var f in Directory.GetFiles(oldFolder, "*.txt"))
-                    File.Copy(f, Path.Combine(_folder, Path.GetFileName(f)));
-            }
-            catch { /* best effort */ }
-        }
-
         public int Increment(string playerName, string key)
         {
             var tallies = Load(playerName);
