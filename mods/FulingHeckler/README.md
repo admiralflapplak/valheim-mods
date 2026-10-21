@@ -68,7 +68,7 @@ Everything is in the F1 Configuration Manager, grouped by what it's for. Tick **
 | **9 - Tools** | Summon him, reload the quips file, make him forget your deaths. *(Advanced: debug logging, **Echo Test**, and tests for the torch, outfit, emotes and puffs.)* |
 
 Files the mod keeps in `BepInEx\config\`:
-- `nick.valheim.fulingheckler.cfg`: the settings above. (Before 1.6.0 it was `nick.FulingHeckler.cfg`; your old settings are copied over the first time.)
+- `nick.valheim.fulingheckler.cfg`: the settings above. (Earlier versions used `nick.FulingHeckler.cfg`; your old settings are copied over the first time.)
 - `FulingHeckler.quips.txt`: everything he can say, in English. Edit freely (see below).
 - `FulingHeckler.loot.txt`: what the Gifter slips into your pockets.
 - `FulingHeckler_memory\<character>.txt`: his death tallies.

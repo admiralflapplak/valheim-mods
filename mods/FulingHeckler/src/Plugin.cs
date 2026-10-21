@@ -34,7 +34,7 @@ namespace FulingHeckler
     {
         public const string Guid = "nick.valheim.fulingheckler";
         public const string Name = "Fuling Heckler";
-        public const string Version = "1.9.4";
+        public const string Version = "1.0.0";
 
         internal static Plugin Instance;
         internal static ManualLogSource Log;
@@ -191,7 +191,7 @@ namespace FulingHeckler
             Scenes.Fires.Clear();
         }
 
-        /// <summary>Up to 1.5.0 the mod's id was nick.FulingHeckler: copy that settings file to the new name once (the old one stays as a backup).</summary>
+        /// <summary>Before its first release the mod's id was nick.FulingHeckler: copy that settings file to the new name once (the old one stays as a backup).</summary>
         private void MoveOldSettings()
         {
             try
@@ -623,7 +623,7 @@ namespace FulingHeckler
             "9 - Tools/Test Exit Poof*", "9 - Tools/Test Next Emote*", "9 - Tools/Emote Test*",
         };
 
-        /// <summary>Settings that moved or were renamed (1.8.0, and the voice settings in 1.9.4): (old section, old key, new section, new key). Their values come along.</summary>
+        /// <summary>Settings that moved or were renamed before the first release: (old section, old key, new section, new key). Their values come along.</summary>
         private static readonly (string, string, string, string)[] Moved =
         {
             ("8 - Server", "Share Goblin On My Server", "1 - General", "Share Goblin On My Server"),
