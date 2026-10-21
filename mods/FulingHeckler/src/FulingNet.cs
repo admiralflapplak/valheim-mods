@@ -172,6 +172,16 @@ namespace FulingHeckler
 
         internal static FulingActor FindPuppet(string key) => Puppets.TryGetValue(key, out var a) && a != null ? a : null;
 
+        /// <summary>The mod is unloading (a hot reload): every goblin this copy made goes with it, and its hidden staging object.</summary>
+        internal static void RemoveAll()
+        {
+            if (_current != null) Destroy(_current.gameObject);
+            foreach (var a in Puppets.Values) if (a != null) Destroy(a.gameObject);
+            Puppets.Clear();
+            FailedPuppets.Clear();
+            if (_staging != null) Destroy(_staging);
+        }
+
         /// <summary>Draws another player's goblin. Returns null if it can't (wrong body name, no animator...).</summary>
         internal static FulingActor SpawnPuppet(string key, int visit, ZPackage state, bool echo)
         {
@@ -382,7 +392,7 @@ namespace FulingHeckler
     /// <summary>The network side of sharing visits.</summary>
     internal static class Visits
     {
-        private const string RpcVisit = "FulingHeckler_Visit";
+        internal const string RpcVisit = "FulingHeckler_Visit";
         public const int MsgState = 1, MsgMove = 2, MsgTrigger = 3, MsgBool = 4, MsgEmote = 5, MsgSay = 6,
                          MsgSound = 7, MsgPoof = 8, MsgEnd = 9, MsgPoke = 10;
 
@@ -452,14 +462,29 @@ namespace FulingHeckler
         /// </summary>
         public static void Send(ZPackage p)
         {
-            if (IsServer) Relay(p.GetArray(), except: 0L);
+            if (IsServer) Relay(p.GetArray(), except: 0L, near: Player.m_localPlayer != null ? Player.m_localPlayer.transform.position : (Vector3?)null);
             else ZRoutedRpc.instance.InvokeRoutedRPC(Net.ServerId, RpcVisit, p);
         }
 
-        private static void Relay(byte[] raw, long except)
+        /// <summary>
+        /// How far from the player he's visiting another player may be and still be sent his news. He stays within about 80 m of that
+        /// player and a puppet is only drawn within 150 m of him, so anyone further can't see him: nothing is sent to them. Someone who
+        /// walks into range mid-visit gets him with his next description (once a second).
+        /// </summary>
+        private const float RelayRange = 250f;
+
+        private static void Relay(byte[] raw, long except, Vector3? near)
         {
             foreach (long peer in Net.ModPeers.ToList())
-                if (peer != except) ZRoutedRpc.instance.InvokeRoutedRPC(peer, RpcVisit, new ZPackage(raw));
+            {
+                if (peer == except) continue;
+                if (near.HasValue)
+                {
+                    var zp = ZNet.instance != null ? ZNet.instance.GetPeer(peer) : null;
+                    if (zp != null && Vector3.Distance(zp.m_refPos, near.Value) > RelayRange) continue;
+                }
+                ZRoutedRpc.instance.InvokeRoutedRPC(peer, RpcVisit, new ZPackage(raw));
+            }
         }
 
         public static void SendPoke(long director, int visit, int kind)
@@ -492,7 +517,8 @@ namespace FulingHeckler
                 if (IsServer && sender != MyId() && type != MsgPoke)
                 {
                     if (echo) { ZRoutedRpc.instance.InvokeRoutedRPC(sender, RpcVisit, new ZPackage(raw)); return; }
-                    if (Plugin.ShareLook.Value) Relay(raw, except: sender);
+                    var director = ZNet.instance != null ? ZNet.instance.GetPeer(sender) : null;
+                    if (Plugin.ShareLook.Value) Relay(raw, except: sender, near: director != null ? director.m_refPos : (Vector3?)null);
                     // ...and if the server is also someone playing (hosting), they see it too: carry on below.
                 }
 

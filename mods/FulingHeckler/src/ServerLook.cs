@@ -177,6 +177,22 @@ namespace FulingHeckler
 
         private void Awake() => Instance = this;
 
+        /// <summary>
+        /// The mod is unloading (a hot reload): its message handlers leave the game's table, so the next copy can put its own there.
+        /// (The game has no way to unregister one: ZRoutedRpc.m_functions, by the name's hash, as Register adds them.)
+        /// </summary>
+        internal static void Unregister()
+        {
+            try
+            {
+                if (ZRoutedRpc.instance == null) return;
+                if (!(AccessTools.Field(typeof(ZRoutedRpc), "m_functions")?.GetValue(ZRoutedRpc.instance) is System.Collections.IDictionary functions)) return;
+                foreach (string name in new[] { RpcHello, RpcLook, Visits.RpcVisit }) functions.Remove(name.GetStableHashCode());
+            }
+            catch (Exception e) { Plugin.Log.LogWarning($"Server sync: couldn't let go of its messages ({e.Message}); rejoin the world after a reload."); }
+            _registeredOn = null;
+        }
+
         /// <summary>Hooks world start so the mod's messages are set up each time you join or host. Patched by hand: a mismatch only disables syncing.</summary>
         public static void Patch(Harmony harmony)
         {
@@ -201,7 +217,8 @@ namespace FulingHeckler
 
         private static object _registeredOn;
 
-        private static void OnGameStart()
+        /// <summary>The mod's messages, for setting up in a world (also after a hot reload in one).</summary>
+        internal static void OnGameStart()
         {
             if (ZRoutedRpc.instance == null || ReferenceEquals(_registeredOn, ZRoutedRpc.instance)) return; // already set up for this world
             _registeredOn = ZRoutedRpc.instance;

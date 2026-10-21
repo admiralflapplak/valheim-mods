@@ -1,4 +1,5 @@
-## 1.8.5
+## 1.8.6
+- On a server, his news (where he is, his moves, lines and sounds) only goes to players near him, not to everyone in the world.
 - The Campfire Squatter sits on a seat by the fire when there is one (chairs, stools, benches, log benches, thrones, other mods' seats), in the player's sitting pose, and never brings a torch to a fire. He only picks real fires (campfire, hearth, bonfire, braziers), not sconces or standing torches, and no longer ends up on the roof over an indoor fire; the Tombstone Dancer no longer dances on the roof over an indoor grave.
 - New Advanced settings (6 - Scenes): Seat Height and Seat Forward, to fit him to the seat.
 - The F1 sections now show in order, 1 to 9.

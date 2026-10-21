@@ -34,7 +34,7 @@ namespace FulingHeckler
     {
         public const string Guid = "nick.valheim.fulingheckler";
         public const string Name = "Fuling Heckler";
-        public const string Version = "1.8.5";
+        public const string Version = "1.8.6";
 
         internal static Plugin Instance;
         internal static ManualLogSource Log;
@@ -168,6 +168,7 @@ namespace FulingHeckler
             PatchEmotes();
             gameObject.AddComponent<Net>();
             Net.Patch(_harmony);
+            if (ZRoutedRpc.instance != null) Net.OnGameStart();   // loaded in a world (a hot reload): set up for it now
 
             Log.LogInfo($"{Name} {Version} loaded. A Fuling is watching.");
         }
@@ -176,6 +177,11 @@ namespace FulingHeckler
 
         private void OnDestroy()
         {
+            // A hot reload: nothing of this copy may keep running (a goblin left standing, messages handled by old code).
+            FulingActor.RemoveAll();
+            Net.Unregister();
+            foreach (var c in new MonoBehaviour[] { Courier, Sounds.Instance, Scenes.Instance, Net.Instance })
+                if (c != null) Destroy(c);
             Localization.OnLanguageChange -= ReloadQuips;
             Translations.Unload();
             Synced?.Dispose();

@@ -123,7 +123,7 @@ To set it up, install the mod on the server too, start it once so it writes its 
 
 Players without the mod can still join: they never see him and are never sent anything. A player on a different version is told to update, and keeps their own goblin until they do.
 
-**How it works:** the player he's visiting runs him. Their game tells the server what he's doing (where he is, his moves, lines, sounds, puffs) about ten times a second, and the server passes it on to the other players with the mod, whose games draw a copy that follows along. If a player leaves mid-scene, their goblin fades out for everyone else.
+**How it works:** the player he's visiting runs him. Their game tells the server what he's doing (where he is, his moves, lines, sounds, puffs) about ten times a second, and the server passes it on to the other players with the mod within about 250 m, whose games draw a copy that follows along. If a player leaves mid-scene, their goblin fades out for everyone else.
 
 ### Testing sharing alone (Echo Test)
 

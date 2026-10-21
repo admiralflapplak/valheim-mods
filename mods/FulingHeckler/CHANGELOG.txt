@@ -1,4 +1,5 @@
-1.8.5
+1.8.6
+- On a server, his news only goes to players near him.
 - The Campfire Squatter sits on chairs and benches by the fire, only at real fires, and never brings a torch.
 - Lava and incinerator deaths get their own quips.
 - Tidier settings: clearer sections, fine-tuning behind Advanced; your values are kept.
