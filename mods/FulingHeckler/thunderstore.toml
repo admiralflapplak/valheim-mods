@@ -6,7 +6,7 @@ schemaVersion = "0.0.1"
 [package]
 namespace = "Flap"
 name = "Fuling_Heckler"
-versionNumber = "1.9.4"
+versionNumber = "1.0.0"
 description = "Comedy mod: a funny goblin (Fuling) heckles and taunts you when you die. Death counter that remembers every way you died, mocking emotes, and pranks: lurking, sneaking up, grave dancing, copying emotes, gifts. Server-shared. Harmless."
 websiteUrl = "https://github.com/admiralflapplak/valheim-mods"
 containsNsfwContent = false
