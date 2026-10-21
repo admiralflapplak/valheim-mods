@@ -61,7 +61,7 @@ namespace FulingHeckler
                 File.WriteAllText(Path.Combine(Folder, "README.txt"),
                     "Put your Fuling recordings here (.ogg, .wav or .mp3). Short, mono, trimmed tight works best.\n" +
                     "Several files in a folder = he picks one at random each time.\n" +
-                    "After adding or changing files, press 'Reload sounds' in the F1 menu (5 - Puffs & Sounds). No restart needed.\n\n" +
+                    "After adding or changing files, press 'Reload Sounds' in the F1 menu (8 - Smoke & Sounds). No restart needed.\n\n" +
                     "  arrive/     he yells one of these as he runs over\n" +
                     "  taunt/      when he does his bit (emote, swing, play dead)\n" +
                     "  poof/       as he vanishes in smoke\n" +
@@ -239,7 +239,7 @@ namespace FulingHeckler
             _lookedForMixer = true;
             try
             {
-                var prefabs = Traverse.Create(ZNetScene.instance).Field("m_prefabs").GetValue<List<GameObject>>();
+                var prefabs = ZNetScene.instance.m_prefabs;
                 if (prefabs != null)
                     foreach (var p in prefabs.Where(p => p != null && p.name.StartsWith("sfx_", StringComparison.OrdinalIgnoreCase)))
                     {

@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using BepInEx.Configuration;
 using HarmonyLib;
+using Nick.Shared;   // (Shared/Translations.cs)
+using ServerSettings = HeaveHo.Shared.ServerSettings;   // (mods/Shared/ServerSettings.cs, still in the namespace of the mod it was first copied for)
 using UnityEngine;
 
 namespace FulingHeckler
@@ -41,6 +43,23 @@ namespace FulingHeckler
             foreach (var kv in FitBook.Parse(Server.Fits).Fits) book.Fits[kv.Key] = kv.Value;
             return book;
         }
+    }
+
+    /// <summary>
+    /// The scenes that hand out or keep real items (the Gifter, the Coin Thief's fee). Their settings and the loot table are the server's
+    /// on a server with the mod (Plugin.Synced), whether or not it shares its look: otherwise any player could edit their own loot file
+    /// and give themselves anything. In single player, when hosting, and on a server without the mod, your own settings are used.
+    /// </summary>
+    internal static class Rules
+    {
+        /// <summary>On someone else's server and it hasn't said yet whether it has the mod: no Gifter until it has.</summary>
+        internal static bool Waiting => Plugin.Synced != null && Plugin.Synced.Server == ServerSettings.ServerMod.Checking;
+
+        internal static bool GifterEnabled => !Waiting && Plugin.GifterEnabled.Value;
+
+        /// <summary>Test buttons that hand out items: in single player or as the host, or with the game's cheats on (devcommands).</summary>
+        internal static bool CanTestGifts =>
+            ZNet.instance == null || ZNet.instance.IsServer() || (Console.instance != null && Console.instance.IsCheatsEnabled());
     }
 
     /// <summary>
@@ -299,6 +318,9 @@ namespace FulingHeckler
         private static void OnLook(long sender, ZPackage pkg)
         {
             if (IsServer) return;
+            // Only the server decides the goblin and his rules; a message claiming to be from it but sent by a player is ignored.
+            var serverPeer = ZNet.instance != null ? ZNet.instance.GetServerPeer() : null;
+            if (serverPeer != null && sender != serverPeer.m_uid) return;
             try
             {
                 int protocol = pkg.ReadInt();
@@ -310,7 +332,8 @@ namespace FulingHeckler
                 if (protocol != Protocol)
                 {
                     if (firstReply) Warn($"The server has Fuling Heckler {serverVersion} and you have {Plugin.Version}. " +
-                                         "Update to match to get the server's goblin; until then you get your own.");
+                                         "Update to match to get the server's goblin; until then you get your own.",
+                                         Translations.T("fulingheckler_update", serverVersion, Plugin.Version));
                     return;
                 }
                 if (firstReply && serverVersion != Plugin.Version)
@@ -319,15 +342,13 @@ namespace FulingHeckler
                 ServerCompatible = true;
                 bool share = pkg.ReadBool();
                 ServerShares = share;
+                Look.Server = share ? SharedLook.ReadFrom(pkg) : null;
+
                 if (!share)
                 {
-                    Look.Server = null;
                     if (firstReply) Plugin.Log.LogInfo("Server sync: the server has the mod but doesn't share its look. Using your own goblin.");
-                    return;
                 }
-
-                Look.Server = SharedLook.ReadFrom(pkg);
-                Plugin.Log.LogInfo(firstReply
+                else Plugin.Log.LogInfo(firstReply
                     ? $"Server sync: using the server's goblin ('{Look.Server.Name}'). Your own look settings are kept for other worlds."
                     : $"Server sync: the server updated its goblin ('{Look.Server.Name}').");
             }
@@ -338,10 +359,10 @@ namespace FulingHeckler
             }
         }
 
-        private static void Warn(string msg)
+        private static void Warn(string msg, string onScreen)
         {
             Plugin.Log.LogWarning("Server sync: " + msg);
-            try { Delivery.ShowPlainText("Fuling Heckler: " + msg); } catch { /* not important */ }
+            try { Delivery.ShowPlainText("Fuling Heckler: " + onScreen); } catch { /* not important */ }
         }
     }
 }

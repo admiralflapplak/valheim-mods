@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using HarmonyLib;
 using UnityEngine;
 
+using Nick.Shared;   // (Shared/Translations.cs)
+
 namespace FulingHeckler
 {
     /// <summary>
@@ -34,7 +36,7 @@ namespace FulingHeckler
 
                 if (dist <= reach + 0.2f) break;
                 Vector3 to = Flat(p.transform.position - transform.position);
-                MoveToward(to.normalized, Mathf.Min(creepSpeed * Time.deltaTime, dist - reach), creepSpeed);
+                MoveToward(to.normalized, Mathf.Min(creepSpeed * Time.deltaTime, dist - reach), creepSpeed, p.transform.position);
 
                 t += Time.deltaTime;
                 yield return null;
@@ -77,7 +79,7 @@ namespace FulingHeckler
                 yield break;
             }
 
-            Delivery.ShowPlainText(onGround > 0 ? "Your pockets feel heavier... and something fell out." : "Your pockets feel heavier...");
+            Delivery.ShowPlainText(Translations.T(onGround > 0 ? "fulingheckler_pockets_fell" : "fulingheckler_pockets"));
             Sfx(SoundMoment.Gift);
             string line;
             switch (best)
@@ -174,14 +176,7 @@ namespace FulingHeckler
             item.m_stack = stack;
             item.m_quality = 1;
             item.m_durability = item.GetMaxDurability();
-            try
-            {
-                // Newer game versions scale items by world level; match the world you're in. Older versions don't have it.
-                var level = Traverse.Create(typeof(Game)).Field("m_worldLevel");
-                var field = Traverse.Create(item).Field("m_worldLevel");
-                if (level.FieldExists() && field.FieldExists()) field.SetValue(level.GetValue());
-            }
-            catch { /* not important */ }
+            item.m_worldLevel = Game.m_worldLevel; // items scale with the world's level: match the world you're in
             if (Plugin.SignGifts.Value && item.m_shared.m_maxStackSize <= 1)
             {
                 item.m_crafterID = FulingCrafterID;

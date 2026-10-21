@@ -1,0 +1,131 @@
+# Fuling Heckler: yerleşik sözler (Türkçe). Kendi sözlerini yazmak için FulingHeckler.quips.txt dosyasını düzenle (README'ye bak).
+
+generic | first     | Hah! Yeni ölme yolu! {me} bunu hiç görmedi!
+generic | first     | Uzunbacak devrildi! {me} bakmaya geldi. Koşmaya değdi.
+generic | first     | {me} çığlığı ta uzaktan duydu. {me} ÇOK hızlı koştu.
+generic | repeat    | Yine mi?! Hehehe. {me} bütün köye anlatacak.
+generic | repeat    | Uzunbacak {n} kere öldü. {me} parmakla sayıyor. Daha çok parmak lazım.
+generic | repeat    | {me} dövüşmek zorunda bile değil. Sen kendin yapıyorsun!
+generic | repeat    | {me} yemek yiyordu. {me} bunun için yemeği bıraktı. Değdi.
+generic | repeat    | {me} artık seni takip ediyor, biliyor musun? Her yere. Bütün diyarların en iyi gösterisi.
+generic | milestone | {n}! {me} totemine kazıyacak. Büyük totem.
+generic | milestone | {n} kere! Fuling şamanı sen lanetli diyor. {me} sen bu işte kötüsün diyor.
+generic | milestone | {n}! {me} parti veriyor. Sen davetli değil. Sen ölü.
+
+flee | any | Gitmem lazım!
+flee | any | Çok yakın! {me} gidiyor!
+flee | any | Kişisel alan! Hoşça kal!
+flee | any | YOK ARTIK!
+flee | any | {me} sana dokunmadı! Bay bay!
+flee | any | AAH! Kıpırdıyor! {me} kaçıyor!
+
+spotted   | any | İik!
+spotted   | any | {me} burada değil!
+spotted   | any | Sen hiçbir şey görmedin! Hiçbir şey!
+spotted   | any | {me} hiç burada olmadı.
+bored     | any | Sıkıcı.
+bored     | any | Uzunbacak hiç bakmıyor. {me} eve gidiyor.
+bored     | any | {me} seni ÇOK uzun izledi. Sen hiç fark etmedin. Kaba.
+boo       | any | BÖ!
+boo       | any | BÖ! Hehehe!
+boo       | any | Yakaladım seni, uzunbacak!
+tombstone | any | {me} eşyalarına dokunmadı! {me} sadece dans ediyor!
+tombstone | any | {me} geldiğinde zaten böyleydi!
+tombstone | any | Güzel mezar. Dans etmeye iyi. Hoşça kal!
+tombstone | any | {me} sadece... saygısını sunuyor. Hoşça kal!
+
+copycat_bye  | any | Eğlenceli oyun. Hoşça kal!
+copycat_bye  | any | {me} şimdi yorgun. Bay bay!
+copycat_bye  | any | {me} daha iyi dans ediyor. Hoşça kal!
+copycat_rude | any | Kaba!
+copycat_rude | any | {me} parmakla gösterme!
+copycat_rude | any | {me} parmakla gösterilecek şey değil!
+campfire     | any | {me} sadece ellerini ısıtıyor! Hoşça kal!
+campfire     | any | Güzel ateş. {me} şimdi gidiyor.
+campfire     | any | Soğuktu! {me} hiçbir şeye dokunmadı!
+thief_steal  | any | Parlak! {me} alıyor!
+thief_steal  | any | Ooo, paralar! Artık benim!
+thief_steal  | any | {me} bunları ödünç alıyor!
+thief_oops   | any | Hoppala! Cepte delik var!
+thief_oops   | any | Dur... parlak nereye gitti?
+thief_oops   | any | {me} çalmakta kötü.
+thief_fee    | any | {me} {n} tanesini tutuyor. Ücret!
+thief_fee    | any | Bulana ödül! Hehehe!
+thief_nope   | any | {me} parlak istiyor... bir dahaki sefere.
+gift_junk     | any | Hediye! Hehehe!
+gift_junk     | any | {me} paylaşıyor. {me} cömert.
+gift_junk     | any | {me} ceplerini boşalttı. SENİN ceplerine.
+gift_junk     | any | Artık sen taşı. {me} yorgun.
+gift_nice     | any | {me} bunu yaptı. Rica ederim.
+gift_nice     | any | {me} hepsini kendi yaptı! Çantana bak!
+gift_nice     | any | Bu sefer iyi hediye. {me} kendini iyi hissediyor. Tuhaf.
+gift_treasure | any | {me} bunu buldu. {me} istemiyor. Senin olsun.
+gift_treasure | any | Şşş! Şamana {me} bunu sana verdi deme!
+gift_caught   | any | {me} burada değil! Bu hediye! Hoşça kal!
+gift_caught   | any | İik! Sürpriz bozuldu!
+gift_caught   | any | Al! Al! {me} gidiyor!
+
+drowning   | first  | Su balıklar için, uzunbacak! Balıklar da gülüyor.
+drowning   | repeat | Yine boğuldu! {me} asla suya girmez. {me} akıllı.
+drowning   | repeat | Glup glup glup! Hehehe! O sendin!
+fall       | first  | Hah! Yer kazandı! Yer hep kazanır!
+fall       | repeat | Uzunbacak zıplıyor, uzunbacak şap diye düşüyor. {n} kere şap! {me} bu oyuna bayılıyor.
+fall       | repeat | {me} senin uçtuğunu gördü! Sonra {me} senin uçmadığını gördü!
+burning    | first  | Yemek kokusu! {me} bir dahaki sefere sos getirecek.
+burning    | repeat | Yine yanıyor! {me} yakına oturuyor. Sıcacık.
+freezing   | any    | Soğuktan ölüm! Uzunbacak pelerinini unuttu. {me} pelerinsiz ve {me} iyi.
+poison     | any    | Yeşil hastalık! Uzunbacak yanlış mantar mı yedi? Hehehe.
+smoke      | any    | Çok fazla duman! {me} çatıya delik açar. Uzunbacak hiç öğrenmiyor.
+edge       | any    | Uzunbacak dünyadan düştü! {me} dünyanın kenarı OLDUĞUNU bilmiyordu!
+boiled     | any    | Sıcak deniz uzunbacağı pişirdi! {me} yanan diyara gitmez. {me} aptal değil.
+tree       | first  | Ağaç uzunbacağın üstüne düştü! Ağaç kazandı! {me} ağacı tutuyor!
+tree       | repeat | Ağaç seni {n} kere öldürdü. {me} ağaçların Fuling tarafında olduğunu düşünüyor.
+tree       | repeat | Sen ağaca vurdun. Ağaç sana vurdu. Adil!
+stalactite | any    | Gökten taş düştü! YUKARI bak, uzunbacak!
+lava       | first  | Yer lav! Uzunbacak oyunu bilmiyor mu? {me} oyunu biliyor. {me} oyunu KAZANIYOR.
+lava       | repeat | Yine sıcak taş! {me} kokunu ta uzaktan aldı. Çıtır çıtır.
+lava       | repeat | Uzunbacak ateş suyunda yüzmeye gitti. {me} soğuk taşta kalıyor. Akıllı {me}.
+incinerator | any    | Uzunbacak koca çöp kutusuna atladı! Kutu uzunbacağı yedi! {me} oraya çöp atar, uzunbacak değil!
+incinerator | any    | Puf! Uzunbacak gitti! Çöp gibi! {me} ÇOK gülüyor!
+
+self       | any    | Uzunbacak uzunbacağı öldürdü! {me} hiçbir şey yapmak zorunda değil! En güzel gün!
+friend     | first  | {killer} sana vurdu! {me} {killer} seviyor. {me} için iyi arkadaş.
+friend     | repeat | {killer} YİNE yaptı! Hehehe. {me} {killer} Fuling köyünde istiyor.
+friend     | repeat | {me} {killer} seni pek sevmiyor sanıyor.
+cart       | any    | Araba uzunbacağı ezdi! {me} arabaya asla güvenmez.
+boat       | any    | Tekne kazandı! {me} teknenin dövüşebildiğini bilmiyordu!
+structural | any    | Ev uzunbacağın üstüne çöktü! Fuling evi çubuktan. Asla çökmez. Yani. Bazen.
+siege      | any    | Büyük taş atıcı seni yakaladı! İyi nişan. {me} etkilendi.
+
+enemy | first     | {killer} seni yendi! {me} bunu yazacak. {me} yazmayı bilmiyor. {me} hatırlayacak.
+enemy | repeat    | {killer} yine kazandı! {me} {killer} üstüne bahse girdi. {me} artık zengin.
+enemy | repeat    | {killer}! Yine! Belki {killer} ile özür dile? Arkadaş ol?
+enemy | milestone | {killer} seni {n} kere yendi! {me} {killer} için şapka yapacak.
+
+enemy:deer          | any    | GEYİK Mİ?! {me} kahvaltıda geyik yer! Hehehehe!
+enemy:deer          | repeat | Geyik seni {n} kere yakaladı. Geyik kızgın bile değil. Geyik sadece yürüyor.
+enemy:boar          | any    | Domuzcuk seni öldürdü! Minik domuzcuk! {me} gülmekten ağlıyor!
+enemy:neck          | any    | Kertenkele-balık kazandı! Bütün dünyanın en küçük şeyi kazandı!
+enemy:greyling      | any    | Küçük ağaç-şey seni yendi. {me} senin yerine utandı.
+enemy:greydwarf     | any    | Taş atan çubuk adam seni yakaladı! {me} daha iyi taş atar.
+enemy:troll         | first  | Koca mavi seni dümdüz etti! {me} de trolden saklanır. Ama {me} ÖLMEZ.
+enemy:troll         | repeat | Yine trol! Trol seni hatırlamıyor bile. {me} hatırlıyor. {me} HEP hatırlıyor.
+enemy:troll         | repeat | Trolden kaç, uzunbacak! {me} trolden kaçar. {me} hayatta.
+enemy:draugr        | any    | Kokuşmuş ölü adam seni yakaladı! Artık sen de kokuşmuş ölü adamsın!
+enemy:blob          | any    | Su birikintisi seni yendi. Kızgın birikinti. {me} artık her şeyi gördü.
+enemy:wolf          | any    | Kuçukuçular! Bir sürü kuçukuçu! {me} sayıyor. {me} parmakları bitti.
+enemy:hatchling     | any    | Buz kuşu seni dondurdu! {me} dağdan uzak durur. Dağ kötü.
+enemy:fenring       | any    | Kurt adam seni gece yakaladı! {me} gece uyur. Akıllı {me}.
+enemy:deathsquito   | first  | Vızzzz! Isıran böcek seni yakaladı! {me} böceği tanıyor. Böcek {me} arkadaşı.
+enemy:deathsquito   | repeat | Yine böcek! {me} böceği eğitti. Aferin böcek.
+enemy:lox           | any    | Koca tüylü canavarı mı dürttün?! Neden?! {me} lox'u asla dürtmez!
+enemy:goblin        | any    | Kuzenim seni yakaladı! Kuzen çok mutlu olacak! {me} pasta getirir.
+enemy:goblinarcher  | any    | Yaylı kuzen! İyi atış, kuzen!
+enemy:goblinbrute   | any    | Koca kuzen eziyor! Koca kuzen çok güçlü. Koca kuzen akıllı değil. Ama güçlü!
+enemy:goblinshaman  | any    | Şaman seni yakaladı! {me} söyledi: şaman korkunç. Kimse {me} dinlemiyor.
+enemy:seeker        | any    | Siste böcek-şey! {me} sise asla girmez. Sis aptallar için.
+
+boss              | first  | {killer} sana göre çok güçlü! {me} {killer} ile denemez bile. {me} deli değil.
+boss              | repeat | YİNE mi {killer}?! {me} bir dahaki sefere atıştırmalık getirir. Uzun gösteri.
+enemy:eikthyr     | any    | Koca geyik! Şimşekli koca geyik! Yine de geyik! Hehehehe!
+enemy:goblinking  | any    | Yagluth! Ölü bile olsa Yagluth kazanır! {me} Yagluth'a eğilir!

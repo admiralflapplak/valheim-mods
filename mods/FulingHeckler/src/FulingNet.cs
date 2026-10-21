@@ -431,17 +431,7 @@ namespace FulingHeckler
 
         private static long LookUpMyId()
         {
-            try
-            {
-                var m = Traverse.Create(typeof(ZDOMan)).Method("GetSessionID");
-                if (m.MethodExists()) return m.GetValue<long>();
-            }
-            catch { /* try the next way */ }
-            try
-            {
-                var f = Traverse.Create(ZRoutedRpc.instance).Field("m_id");
-                if (f.FieldExists()) return f.GetValue<long>();
-            }
+            try { return ZDOMan.GetSessionID(); }
             catch { /* give up */ }
             if (!_loggedNoId) { _loggedNoId = true; Plugin.Log.LogWarning("Shared goblin: couldn't find this game's network ID; other players can't nudge your goblin."); }
             return 0L;

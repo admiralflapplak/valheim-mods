@@ -1,0 +1,131 @@
+# Fuling Heckler: eingebaute Sprüche (Deutsch). Eigene Sprüche: FulingHeckler.quips.txt bearbeiten (siehe README).
+
+generic | first     | Hah! Neue Art zu sterben! {me} hat das noch nie gesehen!
+generic | first     | Langbein umgefallen! {me} kommt gucken. Lohnt sich.
+generic | first     | {me} hört Schrei von ganz weit weg. {me} rennt SO schnell.
+generic | repeat    | Schon wieder?! Hehehe. {me} erzählt ganzes Dorf.
+generic | repeat    | Langbein stirbt {n} Mal. {me} zählt an Fingern. Braucht mehr Finger.
+generic | repeat    | {me} muss nicht mal kämpfen. Du machst das selbst!
+generic | repeat    | {me} war am Essen. {me} hört auf mit Essen für das hier. Lohnt sich.
+generic | repeat    | Weißt du, {me} folgt dir jetzt? Überallhin. Beste Vorstellung im ganzen Land.
+generic | milestone | {n}! {me} ritzt es in Totem. Großes Totem.
+generic | milestone | {n} Mal! Fuling-Schamane sagt, du bist verflucht. {me} sagt, du bist schlecht darin.
+generic | milestone | {n}! {me} macht Feier. Du nicht eingeladen. Du tot.
+
+flee | any | Muss los!
+flee | any | Zu nah! {me} geht!
+flee | any | Abstand! Tschüss!
+flee | any | NÖ!
+flee | any | {me} fasst dich nicht an! Tschüss tschüss!
+flee | any | AAH! Es bewegt sich! {me} weg!
+
+spotted   | any | Iiek!
+spotted   | any | {me} nicht hier!
+spotted   | any | Du siehst nichts! Gar nichts!
+spotted   | any | {me} war nie hier.
+bored     | any | Langweilig.
+bored     | any | Langbein guckt nie. {me} geht heim.
+bored     | any | {me} guckt dich SO lange an. Du merkst nie. Unhöflich.
+boo       | any | BUH!
+boo       | any | BUH! Hehehe!
+boo       | any | Erwischt, Langbein!
+tombstone | any | {me} fasst deine Sachen nicht an! {me} tanzt nur!
+tombstone | any | War schon so, als {me} kam!
+tombstone | any | Schönes Grab. Gut zum Tanzen. Tschüss!
+tombstone | any | {me} erweist nur... die letzte Ehre. Tschüss!
+
+copycat_bye  | any | Lustiges Spiel. Tschüss!
+copycat_bye  | any | {me} jetzt müde. Tschüss tschüss!
+copycat_bye  | any | {me} tanzt besser. Tschüss!
+copycat_rude | any | Unhöflich!
+copycat_rude | any | Nicht auf {me} zeigen!
+copycat_rude | any | {me} ist kein Ding zum Draufzeigen!
+campfire     | any | {me} wärmt nur Hände! Tschüss!
+campfire     | any | Schönes Feuer. {me} geht jetzt.
+campfire     | any | War kalt! {me} hat nichts angefasst!
+thief_steal  | any | Glänzi! {me} nimmt!
+thief_steal  | any | Ooh, Münzen! Jetzt meine!
+thief_steal  | any | {me} leiht die nur!
+thief_oops   | any | Uups! Loch in Tasche!
+thief_oops   | any | Moment... wo Glänzi hin?
+thief_oops   | any | {me} schlecht im Klauen.
+thief_fee    | any | {me} behält {n}. Gebühr!
+thief_fee    | any | Finderlohn! Hehehe!
+thief_nope   | any | {me} will Glänzi... nächstes Mal.
+gift_junk     | any | Geschenk! Hehehe!
+gift_junk     | any | {me} teilt. {me} großzügig.
+gift_junk     | any | {me} räumt Taschen aus. In DEINE Taschen.
+gift_junk     | any | Du trägst jetzt. {me} müde.
+gift_nice     | any | {me} hat das gemacht. Bitte schön.
+gift_nice     | any | {me} hat alles selbst gebaut! Tasche gucken!
+gift_nice     | any | Gutes Geschenk diesmal. {me} fühlt sich nett. Komisch.
+gift_treasure | any | {me} hat das gefunden. {me} will das nicht. Deins.
+gift_treasure | any | Pssst! Nicht Schamane sagen, dass {me} dir das gibt!
+gift_caught   | any | {me} nicht hier! Ist Geschenk! Tschüss!
+gift_caught   | any | Iiek! Überraschung kaputt!
+gift_caught   | any | Nimm! Nimm! {me} geht!
+
+drowning   | first  | Wasser ist für Fische, Langbein! Fische lachen auch.
+drowning   | repeat | Wieder ertrunken! {me} geht nie ins Wasser. {me} schlau.
+drowning   | repeat | Blubb blubb blubb! Hehehe! Das warst du!
+fall       | first  | Hah! Boden gewinnt! Boden gewinnt immer!
+fall       | repeat | Langbein springt, Langbein macht platsch. {n} Mal platsch! {me} liebt dieses Spiel.
+fall       | repeat | {me} sieht dich fliegen! Dann sieht {me} dich nicht mehr fliegen!
+burning    | first  | Riecht nach Kochen! {me} bringt nächstes Mal Soße.
+burning    | repeat | Schon wieder Feuer! {me} sitzt nah dran. Warm.
+freezing   | any    | Kältetod! Langbein vergisst Umhang. {me} hat keinen Umhang und {me} geht gut.
+poison     | any    | Grün krank! Langbein isst falschen Pilz? Hehehe.
+smoke      | any    | Zu viel Rauch! {me} macht Loch in Dach. Langbein lernt nie.
+edge       | any    | Langbein fällt von Welt! {me} wusste nicht, Welt HAT Rand!
+boiled     | any    | Heißes Meer kocht Langbein! {me} geht nicht in brennendes Land. {me} nicht dumm.
+tree       | first  | Baum fällt auf Langbein! Baum gewinnt! {me} jubelt für Baum!
+tree       | repeat | Baum tötet dich {n} Mal. {me} glaubt, Bäume sind auf Fuling-Seite.
+tree       | repeat | Du haust Baum. Baum haut zurück. Fair!
+stalactite | any    | Stein fällt vom Himmel! Guck NACH OBEN, Langbein!
+lava       | first  | Der Boden ist Lava! Langbein kennt Spiel nicht? {me} kennt Spiel. {me} GEWINNT Spiel.
+lava       | repeat | Schon wieder heißer Stein! {me} riecht dich von weit weg. Knusprig.
+lava       | repeat | Langbein geht schwimmen in Feuerwasser. {me} bleibt auf kaltem Stein. Schlauer {me}.
+incinerator | any    | Langbein springt in große Müllkiste! Kiste frisst Langbein! {me} tut Müll da rein, nicht Langbeine!
+incinerator | any    | Puff! Langbein weg! Wie Müll! {me} lacht SO doll!
+
+self       | any    | Langbein tötet Langbein! {me} muss gar nichts machen! Bester Tag!
+friend     | first  | {killer} haut dich! {me} mag {killer}. Guter Freund für {me}.
+friend     | repeat | {killer} macht es SCHON WIEDER! Hehehe. {me} will {killer} im Fuling-Dorf.
+friend     | repeat | {me} glaubt, {killer} mag dich nicht so sehr.
+cart       | any    | Karren zerquetscht Langbein! {me} traut Karren nie.
+boat       | any    | Boot gewinnt! {me} wusste nicht, Boot kann kämpfen!
+structural | any    | Haus fällt auf Langbein! Fuling-Haus aus Stöcken. Fällt nie. Na ja. Manchmal.
+siege      | any    | Großer Steinwerfer erwischt dich! Gut gezielt. {me} beeindruckt.
+
+enemy | first     | {killer} besiegt dich! {me} schreibt das auf. {me} kann nicht schreiben. {me} merkt es sich.
+enemy | repeat    | {killer} gewinnt wieder! {me} wettet auf {killer}. {me} jetzt reich.
+enemy | repeat    | {killer}! Wieder! Vielleicht Entschuldigung bei {killer}? Freunde werden?
+enemy | milestone | {n} Mal besiegt {killer} dich! {me} macht {killer} einen Hut.
+
+enemy:deer          | any    | HIRSCH?! {me} isst Hirsch zum Frühstück! Hehehehe!
+enemy:deer          | repeat | Hirsch erwischt dich {n} Mal. Hirsch ist nicht mal wütend. Hirsch geht nur spazieren.
+enemy:boar          | any    | Schweinchen tötet dich! Kleines Schweinchen! {me} weint vor Lachen!
+enemy:neck          | any    | Echsenfisch gewinnt! Kleinstes Ding der ganzen Welt gewinnt!
+enemy:greyling      | any    | Kleines Baumding besiegt dich. {me} schämt sich für dich.
+enemy:greydwarf     | any    | Steinwerfender Stockmann erwischt dich! {me} wirft bessere Steine.
+enemy:troll         | first  | Großer Blauer macht dich platt! {me} versteckt sich auch vor Troll. Aber {me} STIRBT nicht.
+enemy:troll         | repeat | Wieder Troll! Troll erinnert sich nicht mal an dich. {me} erinnert sich. {me} erinnert sich IMMER.
+enemy:troll         | repeat | Lauf vor Troll weg, Langbein! {me} läuft vor Troll weg. {me} lebt.
+enemy:draugr        | any    | Stinkender Totenmann erwischt dich! Jetzt du auch stinkender Totenmann!
+enemy:blob          | any    | Pfütze besiegt dich. Wütende Pfütze. {me} hat jetzt alles gesehen.
+enemy:wolf          | any    | Hundis! Viele Hundis! {me} zählt Hundis. {me} hat keine Finger mehr.
+enemy:hatchling     | any    | Eisvogel friert dich ein! {me} bleibt weg vom Berg. Berg ist gemein.
+enemy:fenring       | any    | Wolfsmann erwischt dich nachts! {me} schläft nachts. Schlauer {me}.
+enemy:deathsquito   | first  | Bzzzz! Beißkäfer erwischt dich! {me} kennt Käfer. Käfer ist Freund von {me}.
+enemy:deathsquito   | repeat | Schon wieder Käfer! {me} trainiert Käfer. Guter Käfer.
+enemy:lox           | any    | Du piekst großes Flauschtier?! Warum?! {me} piekst nie Lox!
+enemy:goblin        | any    | Mein Vetter erwischt dich! Vetter wird so glücklich sein! {me} bringt Kuchen.
+enemy:goblinarcher  | any    | Vetter mit Bogen! Guter Schuss, Vetter!
+enemy:goblinbrute   | any    | Großer Vetter haut drauf! Großer Vetter sehr stark. Großer Vetter nicht schlau. Aber stark!
+enemy:goblinshaman  | any    | Schamane erwischt dich! {me} hat gesagt: Schamane gruselig. Keiner hört auf {me}.
+enemy:seeker        | any    | Käferding im Nebel! {me} geht nie in Nebel. Nebel ist für Dummköpfe.
+
+boss              | first  | {killer} zu stark für dich! {me} versucht {killer} gar nicht. {me} nicht verrückt.
+boss              | repeat | SCHON WIEDER {killer}?! {me} bringt nächstes Mal Snacks. Lange Vorstellung.
+enemy:eikthyr     | any    | Großer Hirsch! Großer Hirsch mit Blitzen! Trotzdem Hirsch! Hehehehe!
+enemy:goblinking  | any    | Yagluth! Sogar tot gewinnt Yagluth! {me} verbeugt sich vor Yagluth!

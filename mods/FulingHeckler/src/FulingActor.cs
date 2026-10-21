@@ -17,11 +17,13 @@ namespace FulingHeckler
         public SceneKind Scene = SceneKind.Heckle;
         public Vector3? SpawnAt;     // scenes pick their own spot; null = in front of the player
         public Vector3? FacePoint;   // something to face when he arrives (the campfire)
+        public Quaternion? SpawnRotation;   // which way he faces where he appears (a seat: the way it faces)
+        public string SeatPose;      // sitting on a seat by the fire: the player animation for it (instead of 'Campfire Poses')
         public string Line;
         public bool IsMilestone;
         public List<string> DeathChain;   // what killed the player (null for tests = "generic")
         public bool EmoteTest;       // play the player-emote experiment instead of a taunt
-        public bool? ForceTorch;     // test buttons can force the torch on/off; null = night + chance
+        public bool? ForceTorch;     // test buttons can force the torch on/off, the Campfire Squatter never brings one (he has a fire); null = night + chance
         public string ForcedEmote;   // "Test next emote" button: perform exactly this emote, no dice
         public string ForcedHelmet;  // wear exactly this, no dice
         public bool ForceOutfit;     // wear every outfit piece
@@ -56,7 +58,6 @@ namespace FulingHeckler
         private static FulingActor _current;
         private static bool _loggedAnimatorParams;
         private static GameObject _staging;
-        private static int _groundMask = -1;
         private static readonly System.Random Rng = new System.Random();
 
         private Animator _animator;
@@ -248,8 +249,7 @@ namespace FulingHeckler
         {
             try
             {
-                if (EnvMan.instance == null) return false;
-                return Traverse.Create(EnvMan.instance).Method("IsNight").GetValue<bool>();
+                return EnvMan.instance != null && EnvMan.IsNight();
             }
             catch { return false; }
         }
@@ -258,29 +258,18 @@ namespace FulingHeckler
         // Where he comes from
         // ------------------------------------------------------------------
 
-        private static bool FindSpawnPoint(Player player, out Vector3 spawn)
+        private static bool FindSpawnPoint(Player player, out Vector3 spawn) => PickSpot(player, SpawnCandidates(player), out spawn);
+
+        /// <summary>In front of the player first, widening out, so you see him coming.</summary>
+        private static IEnumerable<Vector3> SpawnCandidates(Player player)
         {
             Vector3 origin = player.transform.position;
             Vector3 look = ViewForward(player);
-
-            // Try in front of the player first, widening out, so you see him coming.
             float[] angles = { 0f, 25f, -25f, 50f, -50f, 75f, -75f, 110f, -110f };
             float[] distances = { SpawnDistance, SpawnDistance * 0.6f };
-
             foreach (float dist in distances)
                 foreach (float a in angles)
-                {
-                    Vector3 dir = Quaternion.Euler(0f, a + UnityEngine.Random.Range(-10f, 10f), 0f) * look;
-                    Vector3 p = origin + dir * dist;
-                    if (TryGround(p, origin.y, out Vector3 ground) && !IsUnderwater(ground))
-                    {
-                        spawn = ground;
-                        return true;
-                    }
-                }
-
-            spawn = Vector3.zero;
-            return false;
+                    yield return origin + Quaternion.Euler(0f, a + UnityEngine.Random.Range(-10f, 10f), 0f) * look * dist;
         }
 
         private static Vector3 ViewForward(Player player)
@@ -291,29 +280,13 @@ namespace FulingHeckler
             return f.sqrMagnitude < 0.01f ? Vector3.forward : f.normalized;
         }
 
-        private static bool TryGround(Vector3 p, float referenceY, out Vector3 ground)
-        {
-            if (_groundMask == -1)
-                _groundMask = LayerMask.GetMask("Default", "static_solid", "terrain", "piece", "vehicle");
-
-            // Cast down from a little above the player's height, so a roof overhead doesn't count as ground.
-            Vector3 from = new Vector3(p.x, Mathf.Max(referenceY, p.y) + 6f, p.z);
-            if (Physics.Raycast(from, Vector3.down, out RaycastHit hit, 40f, _groundMask))
-            {
-                ground = hit.point;
-                return Mathf.Abs(ground.y - referenceY) < 12f; // skip cliffs far above or below
-            }
-            ground = p;
-            return false;
-        }
-
         private static bool IsUnderwater(Vector3 p)
         {
             float waterLevel = 30f;
             try
             {
                 if (ZoneSystem.instance != null)
-                    waterLevel = Traverse.Create(ZoneSystem.instance).Field("m_waterLevel").GetValue<float>();
+                    waterLevel = ZoneSystem.instance.m_waterLevel;
             }
             catch { /* default sea level */ }
             return p.y < waterLevel - 0.3f;
@@ -405,7 +378,7 @@ namespace FulingHeckler
                 // A little tolerance: aiming for exactly stopAt left him "running" microscopic steps forever.
                 if (dist <= stopAt + 0.15f) break;
 
-                MoveToward(toPlayer.normalized, Mathf.Min(RunSpeed * Time.deltaTime, dist - stopAt));
+                MoveToward(toPlayer.normalized, Mathf.Min(RunSpeed * Time.deltaTime, dist - stopAt), RunSpeed, player.transform.position);
                 timeout -= Time.deltaTime;
                 yield return null;
             }
@@ -588,17 +561,6 @@ namespace FulingHeckler
                 seconds -= Time.deltaTime;
                 yield return null;
             }
-        }
-
-        private void MoveToward(Vector3 dir, float step, float animSpeed = RunSpeed)
-        {
-            if (step <= 0f) return;
-            FaceDirection(dir);
-            SetSpeed(animSpeed);
-
-            Vector3 next = transform.position + dir * step;
-            if (TryGround(next, transform.position.y, out Vector3 ground)) next.y = ground.y; // follow the ground
-            transform.position = next;
         }
 
         private void FaceDirection(Vector3 dir)

@@ -1,0 +1,131 @@
+# Fuling Heckler : répliques intégrées (français). Pour écrire les vôtres : modifiez FulingHeckler.quips.txt (voir le README).
+
+generic | first     | Hah ! Nouvelle façon de mourir ! {me} jamais vu ça avant !
+generic | first     | Grand-Pattes tombé par terre ! {me} venir voir. Ça valait la course.
+generic | first     | {me} entendre le cri de très loin. {me} courir TELLEMENT vite.
+generic | repeat    | Encore ?! Hihihi. {me} raconter à tout le village.
+generic | repeat    | Grand-Pattes mourir {n} fois. {me} compter sur les doigts. Besoin plus de doigts.
+generic | repeat    | {me} même pas besoin de se battre. Toi faire tout seul !
+generic | repeat    | {me} était en train de manger. {me} arrêter de manger pour ça. Ça valait le coup.
+generic | repeat    | Toi savoir que {me} te suivre maintenant ? Partout. Meilleur spectacle de tout le pays.
+generic | milestone | {n} ! {me} graver ça sur le totem. Grand totem.
+generic | milestone | {n} fois ! Chaman Fuling dire toi maudit. {me} dire toi nul.
+generic | milestone | {n} ! {me} faire la fête. Toi pas invité. Toi mort.
+
+flee | any | Faut que j'y aille !
+flee | any | Trop près ! {me} partir !
+flee | any | Espace perso ! Salut !
+flee | any | NAN !
+flee | any | {me} pas toucher toi ! Salut salut !
+flee | any | AAH ! Ça bouge ! {me} s'en aller !
+
+spotted   | any | Iiik !
+spotted   | any | {me} pas là !
+spotted   | any | Toi rien voir ! Rien du tout !
+spotted   | any | {me} jamais venu ici.
+bored     | any | Ennuyeux.
+bored     | any | Grand-Pattes jamais regarder. {me} rentrer à la maison.
+bored     | any | {me} te regarder SI longtemps. Toi jamais remarquer. Malpoli.
+boo       | any | BOUH !
+boo       | any | BOUH ! Hihihi !
+boo       | any | Eu, Grand-Pattes !
+tombstone | any | {me} pas toucher tes affaires ! {me} juste danser !
+tombstone | any | C'était déjà comme ça quand {me} arriver !
+tombstone | any | Jolie tombe. Bonne pour danser. Salut !
+tombstone | any | {me} juste... rendre hommage. Salut !
+
+copycat_bye  | any | Jeu rigolo. Salut !
+copycat_bye  | any | {me} fatigué maintenant. Salut salut !
+copycat_bye  | any | {me} meilleur danseur. Salut !
+copycat_rude | any | Malpoli !
+copycat_rude | any | Pas montrer {me} du doigt !
+copycat_rude | any | {me} pas une chose à montrer du doigt !
+campfire     | any | {me} juste se réchauffer les mains ! Salut !
+campfire     | any | Joli feu. {me} partir maintenant.
+campfire     | any | Avait froid ! {me} rien touché !
+thief_steal  | any | Brillant ! {me} prendre !
+thief_steal  | any | Ooh, des pièces ! À moi maintenant !
+thief_steal  | any | {me} emprunter ça !
+thief_oops   | any | Oups ! Trou dans la poche !
+thief_oops   | any | Attends... où brillant partir ?
+thief_oops   | any | {me} nul pour voler.
+thief_fee    | any | {me} garder {n}. Commission !
+thief_fee    | any | Récompense du trouveur ! Hihihi !
+thief_nope   | any | {me} vouloir brillant... la prochaine fois.
+gift_junk     | any | Cadeau ! Hihihi !
+gift_junk     | any | {me} partager. {me} généreux.
+gift_junk     | any | {me} vider ses poches. Dans TES poches.
+gift_junk     | any | Toi porter maintenant. {me} fatigué.
+gift_nice     | any | {me} fabriquer ça. De rien.
+gift_nice     | any | {me} tout fabriquer tout seul ! Regarde ton sac !
+gift_nice     | any | Bon cadeau cette fois. {me} se sentir gentil. Bizarre.
+gift_treasure | any | {me} trouver ça. {me} pas vouloir. À toi.
+gift_treasure | any | Chut ! Pas dire au chaman que {me} te donner ça !
+gift_caught   | any | {me} pas là ! C'est un cadeau ! Salut !
+gift_caught   | any | Iiik ! Surprise gâchée !
+gift_caught   | any | Prends ! Prends ! {me} partir !
+
+drowning   | first  | L'eau c'est pour les poissons, Grand-Pattes ! Poissons rigoler aussi.
+drowning   | repeat | Encore noyé ! {me} jamais aller dans l'eau. {me} malin.
+drowning   | repeat | Glou glou glou ! Hihihi ! C'était toi !
+fall       | first  | Hah ! Le sol gagne ! Le sol gagne toujours !
+fall       | repeat | Grand-Pattes saute, Grand-Pattes fait splash. {count} splash ! {me} adorer ce jeu.
+fall       | repeat | {me} te voir voler ! Puis {me} te voir plus voler !
+burning    | first  | Ça sent la cuisine ! {me} apporter la sauce la prochaine fois.
+burning    | repeat | Encore en feu ! {me} s'asseoir près. Chaud.
+freezing   | any    | Mort de froid ! Grand-Pattes oublier sa cape. {me} pas de cape et {me} va bien.
+poison     | any    | Malade vert ! Grand-Pattes manger mauvais champignon ? Hihihi.
+smoke      | any    | Trop de fumée ! {me} faire un trou dans le toit. Grand-Pattes jamais apprendre.
+edge       | any    | Grand-Pattes tomber du monde ! {me} pas savoir que le monde AVOIR un bord !
+boiled     | any    | Mer brûlante cuire Grand-Pattes ! {me} pas aller au pays qui brûle. {me} pas bête.
+tree       | first  | Arbre tomber sur Grand-Pattes ! Arbre gagne ! {me} applaudir l'arbre !
+tree       | repeat | Arbre te tuer {n} fois. {me} penser que les arbres du côté des Fulings.
+tree       | repeat | Toi taper l'arbre. Arbre taper toi. Juste !
+stalactite | any    | Caillou tomber du ciel ! Regarde EN HAUT, Grand-Pattes !
+lava       | first  | Le sol est en lave ! Grand-Pattes pas connaître le jeu ? {me} connaître le jeu. {me} GAGNER le jeu.
+lava       | repeat | Encore la pierre brûlante ! {me} te sentir de très loin. Croustillant.
+lava       | repeat | Grand-Pattes aller nager dans l'eau de feu. {me} rester sur pierre froide. {me} malin.
+incinerator | any    | Grand-Pattes sauter dans la grosse boîte à ordures ! Boîte manger Grand-Pattes ! {me} mettre ordures dedans, pas Grand-Pattes !
+incinerator | any    | Pouf ! Grand-Pattes parti ! Comme ordure ! {me} rire TELLEMENT fort !
+
+self       | any    | Grand-Pattes tuer Grand-Pattes ! {me} rien besoin de faire ! Meilleur jour !
+friend     | first  | {killer} te taper ! {me} aimer {killer}. Bon ami pour {me}.
+friend     | repeat | {killer} RECOMMENCER ! Hihihi. {me} vouloir {killer} au village Fuling.
+friend     | repeat | {me} penser que {killer} pas beaucoup t'aimer.
+cart       | any    | Charrette écrabouiller Grand-Pattes ! {me} jamais faire confiance à charrette.
+boat       | any    | Bateau gagne ! {me} pas savoir que bateau peut se battre !
+structural | any    | Maison tomber sur Grand-Pattes ! Maison Fuling en bâtons. Jamais tomber. Bon. Parfois.
+siege      | any    | Gros lanceur de cailloux t'avoir eu ! Bien visé. {me} impressionné.
+
+enemy | first     | {killer} te battre ! {me} l'écrire. {me} sait pas écrire. {me} se souvenir.
+enemy | repeat    | {killer} gagne encore ! {me} parier sur {killer}. {me} riche maintenant.
+enemy | repeat    | {killer} ! Encore ! Peut-être dire pardon à {killer} ? Devenir amis ?
+enemy | milestone | {n} fois {killer} te battre ! {me} faire un chapeau pour {killer}.
+
+enemy:deer          | any    | UN CERF ?! {me} manger cerf au petit-déjeuner ! Hihihihi !
+enemy:deer          | repeat | Cerf t'avoir eu {n} fois. Cerf même pas en colère. Cerf juste se promener.
+enemy:boar          | any    | Petit cochon te tuer ! Petit petit cochon ! {me} pleurer de rire !
+enemy:neck          | any    | Lézard-poisson gagne ! Plus petite chose du monde entier gagne !
+enemy:greyling      | any    | Petit truc-arbre te battre. {me} avoir honte pour toi.
+enemy:greydwarf     | any    | Homme-bâton lanceur de cailloux t'avoir eu ! {me} lancer meilleurs cailloux.
+enemy:troll         | first  | Grand bleu t'écraser tout plat ! {me} se cacher du troll aussi. Mais {me} pas MOURIR.
+enemy:troll         | repeat | Encore le troll ! Troll même pas se souvenir de toi. {me} se souvenir. {me} TOUJOURS se souvenir.
+enemy:troll         | repeat | Fuis le troll, Grand-Pattes ! {me} fuir le troll. {me} vivant.
+enemy:draugr        | any    | Mort-vivant puant t'avoir eu ! Maintenant toi mort-vivant puant aussi !
+enemy:blob          | any    | Flaque te battre. Flaque en colère. {me} avoir tout vu maintenant.
+enemy:wolf          | any    | Toutous ! Plein de toutous ! {me} compter toutous. {me} plus de doigts.
+enemy:hatchling     | any    | Oiseau de glace te geler ! {me} rester loin de la montagne. Montagne méchante.
+enemy:fenring       | any    | Homme-loup t'avoir eu la nuit ! {me} dormir la nuit. {me} malin.
+enemy:deathsquito   | first  | Bzzzz ! Bestiole qui pique t'avoir eu ! {me} connaître bestiole. Bestiole amie de {me}.
+enemy:deathsquito   | repeat | Encore la bestiole ! {me} dresser bestiole. Gentille bestiole.
+enemy:lox           | any    | Toi piquer la grosse bête toute douce ?! Pourquoi ?! {me} jamais piquer lox !
+enemy:goblin        | any    | Mon cousin t'avoir eu ! Cousin sera si content ! {me} apporter gâteau.
+enemy:goblinarcher  | any    | Cousin avec arc ! Joli tir, cousin !
+enemy:goblinbrute   | any    | Grand cousin écrase ! Grand cousin très fort. Grand cousin pas malin. Mais fort !
+enemy:goblinshaman  | any    | Chaman t'avoir eu ! {me} avoir dit : chaman fait peur. Personne écouter {me}.
+enemy:seeker        | any    | Truc-insecte dans le brouillard ! {me} jamais aller dans brouillard. Brouillard pour les idiots.
+
+boss              | first  | {killer} trop fort pour toi ! {me} même pas essayer {killer}. {me} pas fou.
+boss              | repeat | ENCORE {killer} ?! {me} apporter des en-cas la prochaine fois. Long spectacle.
+enemy:eikthyr     | any    | Grand cerf ! Grand cerf avec éclairs ! Toujours un cerf ! Hihihihi !
+enemy:goblinking  | any    | Yagluth ! Même mort, Yagluth gagne ! {me} s'incliner devant Yagluth !

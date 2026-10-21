@@ -1,0 +1,131 @@
+# Fuling Heckler: frases incluidas (español). Para escribir las tuyas, edita FulingHeckler.quips.txt (mira el README).
+
+generic | first     | ¡Ja! ¡Nueva forma de morir! ¡{me} nunca ver esa antes!
+generic | first     | ¡Patilargo caerse! {me} venir a mirar. Valer la carrera.
+generic | first     | {me} oír grito desde muy lejos. {me} correr TAN rápido.
+generic | repeat    | ¡¿Otra vez?! Jejeje. {me} contar a todo el pueblo.
+generic | repeat    | Patilargo morir {n} veces. {me} contar con dedos. Necesitar más dedos.
+generic | repeat    | {me} ni necesitar pelear. ¡Tú hacerlo solo!
+generic | repeat    | {me} estar comiendo. {me} dejar de comer por esto. Valer la pena.
+generic | repeat    | ¿Saber que {me} seguirte ahora? A todas partes. Mejor espectáculo de todas las tierras.
+generic | milestone | ¡{n}! {me} tallarlo en tótem. Tótem grande.
+generic | milestone | ¡{n} veces! Chamán Fuling decir tú maldito. {me} decir tú muy malo en esto.
+generic | milestone | ¡{n}! {me} hacer fiesta. Tú no invitado. Tú muerto.
+
+flee | any | ¡Me tengo que ir!
+flee | any | ¡Muy cerca! ¡{me} irse!
+flee | any | ¡Espacio personal! ¡Adiós!
+flee | any | ¡NI HABLAR!
+flee | any | ¡{me} no tocarte! ¡Adiós, adiós!
+flee | any | ¡AAH! ¡Se mueve! ¡{me} irse!
+
+spotted   | any | ¡Iiik!
+spotted   | any | ¡{me} no estar aquí!
+spotted   | any | ¡Tú no ver nada! ¡Nada!
+spotted   | any | {me} nunca estar aquí.
+bored     | any | Aburrido.
+bored     | any | Patilargo nunca mirar. {me} irse a casa.
+bored     | any | {me} mirarte TANTO rato. Tú nunca darte cuenta. Maleducado.
+boo       | any | ¡BU!
+boo       | any | ¡BU! ¡Jejeje!
+boo       | any | ¡Te pillé, patilargo!
+tombstone | any | ¡{me} no tocar tus cosas! ¡{me} solo bailar!
+tombstone | any | ¡Ya estar así cuando {me} llegar!
+tombstone | any | Bonita tumba. Buena para bailar. ¡Adiós!
+tombstone | any | {me} solo... presentar respetos. ¡Adiós!
+
+copycat_bye  | any | Juego divertido. ¡Adiós!
+copycat_bye  | any | {me} cansado ahora. ¡Adiós, adiós!
+copycat_bye  | any | {me} bailar mejor. ¡Adiós!
+copycat_rude | any | ¡Maleducado!
+copycat_rude | any | ¡No señalar a {me}!
+copycat_rude | any | ¡{me} no ser cosa para señalar!
+campfire     | any | ¡{me} solo calentar manos! ¡Adiós!
+campfire     | any | Bonito fuego. {me} irse ahora.
+campfire     | any | ¡Tener frío! ¡{me} no tocar nada!
+thief_steal  | any | ¡Brillante! ¡{me} coger!
+thief_steal  | any | ¡Ooh, monedas! ¡Mías ahora!
+thief_steal  | any | ¡{me} tomar prestadas!
+thief_oops   | any | ¡Uy! ¡Agujero en bolsillo!
+thief_oops   | any | Espera... ¿dónde ir brillante?
+thief_oops   | any | {me} malo robando.
+thief_fee    | any | {me} quedarse {n}. ¡Comisión!
+thief_fee    | any | ¡Recompensa por encontrar! ¡Jejeje!
+thief_nope   | any | {me} querer brillante... la próxima vez.
+gift_junk     | any | ¡Regalo! ¡Jejeje!
+gift_junk     | any | {me} compartir. {me} generoso.
+gift_junk     | any | {me} vaciar bolsillos. En TUS bolsillos.
+gift_junk     | any | Tú llevar ahora. {me} cansado.
+gift_nice     | any | {me} hacer eso. De nada.
+gift_nice     | any | ¡{me} fabricar todo solito! ¡Mirar bolsa!
+gift_nice     | any | Buen regalo esta vez. {me} sentirse amable. Raro.
+gift_treasure | any | {me} encontrarlo. {me} no quererlo. Tuyo.
+gift_treasure | any | ¡Chsss! ¡No decir a chamán que {me} darte eso!
+gift_caught   | any | ¡{me} no estar aquí! ¡Ser regalo! ¡Adiós!
+gift_caught   | any | ¡Iiik! ¡Sorpresa arruinada!
+gift_caught   | any | ¡Toma! ¡Toma! ¡{me} irse!
+
+drowning   | first  | ¡Agua ser para peces, patilargo! Peces reír también.
+drowning   | repeat | ¡Ahogado otra vez! {me} nunca meterse en agua. {me} listo.
+drowning   | repeat | ¡Glu glu glu! ¡Jejeje! ¡Ese ser tú!
+fall       | first  | ¡Ja! ¡Suelo gana! ¡Suelo siempre gana!
+fall       | repeat | Patilargo saltar, patilargo hacer plaf. ¡{n} veces plaf! {me} adorar este juego.
+fall       | repeat | ¡{me} verte volar! ¡Luego {me} verte no volar!
+burning    | first  | ¡Oler a comida! {me} traer salsa la próxima vez.
+burning    | repeat | ¡En llamas otra vez! {me} sentarse cerca. Calentito.
+freezing   | any    | ¡Muerte de frío! Patilargo olvidar capa. {me} no tener capa y {me} estar bien.
+poison     | any    | ¡Enfermo verde! ¿Patilargo comer seta mala? Jejeje.
+smoke      | any    | ¡Mucho humo! {me} hacer agujero en techo. Patilargo nunca aprender.
+edge       | any    | ¡Patilargo caerse del mundo! ¡{me} no saber que mundo TENER borde!
+boiled     | any    | ¡Mar caliente cocinar patilargo! {me} no ir a tierra que arde. {me} no tonto.
+tree       | first  | ¡Árbol caer sobre patilargo! ¡Árbol gana! ¡{me} animar al árbol!
+tree       | repeat | Árbol matarte {n} veces. {me} creer que árboles estar del lado Fuling.
+tree       | repeat | Tú pegar árbol. Árbol pegarte. ¡Justo!
+stalactite | any    | ¡Roca caer del cielo! ¡Mira ARRIBA, patilargo!
+lava       | first  | ¡El suelo es lava! ¿Patilargo no conocer juego? {me} conocer juego. {me} GANAR juego.
+lava       | repeat | ¡Roca caliente otra vez! {me} olerte desde muy lejos. Crujiente.
+lava       | repeat | Patilargo ir a nadar en agua de fuego. {me} quedarse en roca fría. {me} listo.
+incinerator | any    | ¡Patilargo saltar en caja grande de basura! ¡Caja comerse patilargo! ¡{me} meter basura ahí, no patilargos!
+incinerator | any    | ¡Puf! ¡Patilargo desaparecer! ¡Como basura! ¡{me} reír MUCHÍSIMO!
+
+self       | any    | ¡Patilargo matar patilargo! ¡{me} no tener que hacer nada! ¡Mejor día!
+friend     | first  | ¡{killer} pegarte! {me} gustar {killer}. Buen amigo para {me}.
+friend     | repeat | ¡{killer} hacerlo OTRA VEZ! Jejeje. {me} querer {killer} en pueblo Fuling.
+friend     | repeat | {me} creer que {killer} no quererte mucho.
+cart       | any    | ¡Carro aplastar patilargo! {me} nunca fiarse de carro.
+boat       | any    | ¡Barco gana! ¡{me} no saber que barco poder pelear!
+structural | any    | ¡Casa caer sobre patilargo! Casa Fuling hecha de palos. Nunca caer. Bueno. A veces.
+siege      | any    | ¡Gran lanzador de rocas pillarte! Buena puntería. {me} impresionado.
+
+enemy | first     | ¡{killer} ganarte! {me} apuntarlo. {me} no saber escribir. {me} recordar.
+enemy | repeat    | ¡{killer} gana otra vez! {me} apostar por {killer}. {me} rico ahora.
+enemy | repeat    | ¡{killer}! ¡Otra vez! ¿Quizás pedir perdón a {killer}? ¿Hacer amigos?
+enemy | milestone | ¡{n} veces {killer} ganarte! {me} hacer sombrero a {killer}.
+
+enemy:deer          | any    | ¡¿UN CIERVO?! ¡{me} comer ciervo en desayuno! ¡Jejejeje!
+enemy:deer          | repeat | Ciervo pillarte {n} veces. Ciervo ni enfadado. Ciervo solo pasear.
+enemy:boar          | any    | ¡Cerdito matarte! ¡Cerdito pequeñito! ¡{me} llorar de risa!
+enemy:neck          | any    | ¡Lagarto-pez gana! ¡Cosa más pequeña del mundo entero gana!
+enemy:greyling      | any    | Cosita-árbol ganarte. {me} sentir vergüenza por ti.
+enemy:greydwarf     | any    | ¡Hombre-palo lanzarrocas pillarte! {me} lanzar mejores rocas.
+enemy:troll         | first  | ¡Grandote azul aplastarte! {me} esconderse de trol también. Pero {me} no MORIR.
+enemy:troll         | repeat | ¡Trol otra vez! Trol ni acordarse de ti. {me} acordarse. {me} SIEMPRE acordarse.
+enemy:troll         | repeat | ¡Huye del trol, patilargo! {me} huir del trol. {me} vivo.
+enemy:draugr        | any    | ¡Muerto apestoso pillarte! ¡Ahora tú muerto apestoso también!
+enemy:blob          | any    | Charco ganarte. Charco enfadado. {me} ya haber visto todo.
+enemy:wolf          | any    | ¡Perritos! ¡Muchos perritos! {me} contar perritos. {me} quedarse sin dedos.
+enemy:hatchling     | any    | ¡Pájaro de hielo congelarte! {me} quedarse lejos de montaña. Montaña ser mala.
+enemy:fenring       | any    | ¡Hombre-lobo pillarte de noche! {me} dormir de noche. {me} listo.
+enemy:deathsquito   | first  | ¡Bzzzz! ¡Bicho que pica pillarte! {me} conocer bicho. Bicho amigo de {me}.
+enemy:deathsquito   | repeat | ¡Bicho otra vez! {me} entrenar bicho. Buen bicho.
+enemy:lox           | any    | ¡¿Tú pinchar bestia grande y peluda?! ¡¿Por qué?! ¡{me} nunca pinchar lox!
+enemy:goblin        | any    | ¡Mi primo pillarte! ¡Primo estar tan contento! {me} traer pastel.
+enemy:goblinarcher  | any    | ¡Primo con arco! ¡Buen tiro, primo!
+enemy:goblinbrute   | any    | ¡Primo grande aplasta! Primo grande muy fuerte. Primo grande no listo. ¡Pero fuerte!
+enemy:goblinshaman  | any    | ¡Chamán pillarte! {me} decirte: chamán da miedo. Nadie escuchar a {me}.
+enemy:seeker        | any    | ¡Cosa-bicho en niebla! {me} nunca ir a niebla. Niebla ser para tontos.
+
+boss              | first  | ¡{killer} muy fuerte para ti! {me} ni intentar {killer}. {me} no loco.
+boss              | repeat | ¡¿{killer} OTRA VEZ?! {me} traer aperitivos la próxima vez. Espectáculo largo.
+enemy:eikthyr     | any    | ¡Ciervo grande! ¡Ciervo grande con rayos! ¡Seguir siendo ciervo! ¡Jejejeje!
+enemy:goblinking  | any    | ¡Yagluth! ¡Incluso muerto, Yagluth gana! ¡{me} inclinarse ante Yagluth!

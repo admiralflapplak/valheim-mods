@@ -1,4 +1,5 @@
 using System;
+using HarmonyLib;
 using UnityEngine;
 
 namespace FulingHeckler
@@ -64,11 +65,24 @@ namespace FulingHeckler
             ShowLine(line);
         }
 
+        /// <summary>Chat.m_hideTimer is private: zero makes the chat window show, as a new message from a player does.</summary>
+        private static readonly AccessTools.FieldRef<Chat, float> ChatHideTimer = AccessTools.FieldRefAccess<Chat, float>("m_hideTimer");
+
         internal static void ShowLine(string text)
         {
+            var where = Plugin.TextPos.Value;
+            if (where == TextPosition.Off) { Plugin.Log.LogInfo("Fuling's line by text: none (Text Position is Off)."); return; }
+            string line = Plugin.FillMe(text);
+            Plugin.Log.LogInfo($"Fuling's line by text ({where}): {line}");
+            if (where == TextPosition.Chat && Chat.instance != null)
+            {
+                Chat.instance.AddString(Look.Name, line, Talker.Type.Normal, false);
+                try { ChatHideTimer(Chat.instance) = 0f; } catch { /* the line is there; the window just doesn't pop up */ }
+                return;
+            }
             if (MessageHud.instance == null) return;
-            string msg = $"<color=#E07A3A><b>{Look.Name}:</b></color> {Plugin.FillMe(text)}";
-            var type = Plugin.TextPos.Value == TextPosition.TopLeft ? MessageHud.MessageType.TopLeft : MessageHud.MessageType.Center;
+            string msg = $"<color=#E07A3A><b>{Look.Name}:</b></color> {line}";
+            var type = where == TextPosition.Center ? MessageHud.MessageType.Center : MessageHud.MessageType.TopLeft;
             MessageHud.instance.ShowMessage(type, msg);
         }
 

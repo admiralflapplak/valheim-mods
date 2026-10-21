@@ -6,7 +6,7 @@
 #  event  What killed you. Most specific match wins, then it falls back:
 #           enemy:<prefab> -> boss (bosses only) -> enemy -> generic
 #           drowning, fall, burning, freezing, poison, smoke, edge, boiled,
-#           tree, stalactite, self, friend, cart, boat, structural, siege,
+#           tree, stalactite, lava, incinerator, self, friend, cart, boat, structural, siege,
 #           unknown -> generic
 #         flee = what he shouts when you walk up too close and he runs off
 #         spotted, bored, boo, tombstone, copycat_bye, copycat_rude, campfire,
@@ -25,7 +25,7 @@
 #         {count}   "second", "third", ... "27th"
 #         {n}       the plain number
 #         {me}      his name, or just "Fuling" (by chance: 'Say His Name Chance'
-#                   in F1 > 2 - Look). Plain "Fuling" always stays "Fuling",
+#                   in F1 > 3 - Look). Plain "Fuling" always stays "Fuling",
 #                   good for goblins in general: "Fuling village".
 #
 #  Edit freely, then press "Reload quips file" in the config menu (F1).
@@ -119,6 +119,11 @@ tree       | first  | Tree fall on tall-one! Tree win! {me} cheer for tree!
 tree       | repeat | Tree kill you {count} time. {me} think trees on Fuling side.
 tree       | repeat | You hit tree. Tree hit back. Fair!
 stalactite | any    | Rock fall from sky! Look UP, tall-one!
+lava       | first  | Floor is lava! Tall-one not know game? {me} know game. {me} WIN game.
+lava       | repeat | Hot rock again! {me} smell you from far away. Crispy.
+lava       | repeat | Tall-one go swimming in fire-water. {me} stay on cold rock. Smart {me}.
+incinerator | any    | Tall-one jump in big junk-box! Box eat tall-one! {me} put junk in there, not tall-ones!
+incinerator | any    | Poof! Tall-one gone! Like junk! {me} laughing SO hard!
 
 # ---- Self, friends, other ---------------------------------------------------
 self       | any    | Tall-one kill tall-one! {me} not need to do anything! Best day!

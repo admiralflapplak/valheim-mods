@@ -1,3 +1,15 @@
+1.8.5
+- The Campfire Squatter sits on chairs and benches by the fire, only at real fires, and never brings a torch.
+- Lava and incinerator deaths get their own quips.
+- Tidier settings: clearer sections, fine-tuning behind Advanced; your values are kept.
+- He finds his way like a real Fuling: round walls and through doors, never up walls or onto roofs.
+- His messages go in the chat window instead of the middle of the screen (or a corner, or nowhere).
+- The server decides the Gifter and the Coin Thief's fee for everyone on a server with the mod; no more loot-file cheating.
+- Speaks 9 languages: his quips follow the game's language until you edit your quips file.
+- No more stutter from the Campfire Squatter's fire search in big bases.
+- Calls the game's code directly, so game updates can't quietly switch features off.
+- New mod id (nick.valheim.fulingheckler); your settings are copied over the first time.
+
 1.5.0: The settings menu is tidied. Each scene's on/off switch, Test button and options now sit together, and the diagnostics (torch, outfit, puff and emote tests) are under Advanced. No setting was renamed, so your saved values carry over.
 
 1.4.2: Replaced a deprecated Unity call in the Campfire Squatter's fire search. Build files now use the shared project settings.

@@ -1,0 +1,8 @@
+{
+  "fulingheckler_pockets": "Your pockets feel heavier...",
+  "fulingheckler_pockets_fell": "Your pockets feel heavier... and something fell out.",
+  "fulingheckler_update": "The server has version {0} and you have {1}. Update to match to get the server's goblin; until then you get your own.",
+  "fulingheckler_tallone": "tall-one",
+  "fulingheckler_something": "something",
+  "fulingheckler_ordinal": "{0}th"
+}

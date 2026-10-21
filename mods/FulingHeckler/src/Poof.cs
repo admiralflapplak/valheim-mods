@@ -78,7 +78,7 @@ namespace FulingHeckler
             _loggedCandidates = true;
             try
             {
-                var prefabs = Traverse.Create(ZNetScene.instance).Field("m_prefabs").GetValue<List<GameObject>>();
+                var prefabs = ZNetScene.instance.m_prefabs;
                 if (prefabs == null) return;
                 string[] keys = { "odin", "smoke", "poof", "puff", "spawn", "despawn", "teleport", "ghost", "vanish" };
                 var names = prefabs.Where(p => p != null)

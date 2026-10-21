@@ -1,0 +1,131 @@
+# Fuling Heckler: wbudowane teksty (polski). Własne teksty: edytuj FulingHeckler.quips.txt (zobacz README).
+
+generic | first     | Ha! Nowy sposób umierania! {me} nigdy tego nie widzieć!
+generic | first     | Dryblas się przewrócić! {me} przyjść popatrzeć. Warto było biec.
+generic | first     | {me} słyszeć krzyk z daleka. {me} biec TAK szybko.
+generic | repeat    | Znowu?! Hehehe. {me} powiedzieć całej wiosce.
+generic | repeat    | Dryblas umrzeć {n} razy. {me} liczyć na palcach. Potrzeba więcej palców.
+generic | repeat    | {me} nawet nie musieć walczyć. Ty robić to sam!
+generic | repeat    | {me} jeść. {me} przestać jeść dla tego. Warto było.
+generic | repeat    | Wiesz, że {me} teraz chodzić za tobą? Wszędzie. Najlepsze przedstawienie we wszystkich krainach.
+generic | milestone | {n}! {me} wyryć to na totemie. Wielki totem.
+generic | milestone | {n} razy! Szaman Fulingów mówić, że ty przeklęty. {me} mówić, że ty po prostu słaby w tym.
+generic | milestone | {n}! {me} robić imprezę. Ty nie zaproszony. Ty martwy.
+
+flee | any | Muszę lecieć!
+flee | any | Za blisko! {me} iść!
+flee | any | Przestrzeń osobista! Pa!
+flee | any | O NIE!
+flee | any | {me} cię nie dotykać! Pa pa!
+flee | any | AAA! To się ruszać! {me} uciekać!
+
+spotted   | any | Iik!
+spotted   | any | {me} tu nie ma!
+spotted   | any | Ty nic nie widzieć! Nic!
+spotted   | any | {me} nigdy tu nie być.
+bored     | any | Nudno.
+bored     | any | Dryblas nigdy nie patrzeć. {me} iść do domu.
+bored     | any | {me} patrzeć na ciebie TAK długo. Ty nigdy nie zauważyć. Niegrzecznie.
+boo       | any | BU!
+boo       | any | BU! Hehehe!
+boo       | any | Mam cię, dryblasie!
+tombstone | any | {me} nie ruszać twoich rzeczy! {me} tylko tańczyć!
+tombstone | any | Już tak było, jak {me} przyjść!
+tombstone | any | Ładny grób. Dobry do tańca. Pa!
+tombstone | any | {me} tylko... oddawać cześć. Pa!
+
+copycat_bye  | any | Fajna zabawa. Pa!
+copycat_bye  | any | {me} teraz zmęczony. Pa pa!
+copycat_bye  | any | {me} lepiej tańczyć. Pa!
+copycat_rude | any | Niegrzecznie!
+copycat_rude | any | Nie pokazywać palcem na {me}!
+copycat_rude | any | {me} nie rzecz do pokazywania palcem!
+campfire     | any | {me} tylko grzać ręce! Pa!
+campfire     | any | Ładny ogień. {me} teraz iść.
+campfire     | any | Było zimno! {me} niczego nie ruszać!
+thief_steal  | any | Błyskotki! {me} brać!
+thief_steal  | any | Ooo, monety! Teraz moje!
+thief_steal  | any | {me} to pożyczyć!
+thief_oops   | any | Ups! Dziura w kieszeni!
+thief_oops   | any | Chwila... gdzie błyskotki pójść?
+thief_oops   | any | {me} słabo kraść.
+thief_fee    | any | {me} zatrzymać {n}. Opłata!
+thief_fee    | any | Znaleźne! Hehehe!
+thief_nope   | any | {me} chcieć błyskotki... następnym razem.
+gift_junk     | any | Prezent! Hehehe!
+gift_junk     | any | {me} się dzielić. {me} hojny.
+gift_junk     | any | {me} opróżnić kieszenie. Do TWOICH kieszeni.
+gift_junk     | any | Teraz ty nosić. {me} zmęczony.
+gift_nice     | any | {me} to zrobić. Proszę bardzo.
+gift_nice     | any | {me} zrobić wszystko sam! Zajrzyj do torby!
+gift_nice     | any | Tym razem dobry prezent. {me} czuć się miły. Dziwne.
+gift_treasure | any | {me} to znaleźć. {me} tego nie chcieć. Twoje.
+gift_treasure | any | Ćśś! Nie mówić szamanowi, że {me} ci to dać!
+gift_caught   | any | {me} tu nie ma! To prezent! Pa!
+gift_caught   | any | Iik! Niespodzianka zepsuta!
+gift_caught   | any | Bierz! Bierz! {me} iść!
+
+drowning   | first  | Woda jest dla ryb, dryblasie! Ryby też się śmiać.
+drowning   | repeat | Znowu utonąć! {me} nigdy nie wchodzić do wody. {me} mądry.
+drowning   | repeat | Bul bul bul! Hehehe! To być ty!
+fall       | first  | Ha! Ziemia wygrać! Ziemia zawsze wygrywać!
+fall       | repeat | Dryblas skakać, dryblas plask. {n} razy plask! {me} kochać tę grę.
+fall       | repeat | {me} widzieć, jak ty latać! Potem {me} widzieć, jak ty nie latać!
+burning    | first  | Pachnieć gotowaniem! {me} następnym razem przynieść sos.
+burning    | repeat | Znowu się palić! {me} siąść blisko. Ciepło.
+freezing   | any    | Śmierć z zimna! Dryblas zapomnieć płaszcza. {me} nie mieć płaszcza i {me} dobrze.
+poison     | any    | Zielona choroba! Dryblas zjeść zły grzyb? Hehehe.
+smoke      | any    | Za dużo dymu! {me} robić dziurę w dachu. Dryblas nigdy się nie uczyć.
+edge       | any    | Dryblas spaść ze świata! {me} nie wiedzieć, że świat MIEĆ krawędź!
+boiled     | any    | Gorące morze ugotować dryblasa! {me} nie chodzić do płonącej krainy. {me} nie głupi.
+tree       | first  | Drzewo spaść na dryblasa! Drzewo wygrać! {me} kibicować drzewu!
+tree       | repeat | Drzewo zabić cię {n} razy. {me} myśleć, że drzewa po stronie Fulingów.
+tree       | repeat | Ty bić drzewo. Drzewo oddać. Uczciwie!
+stalactite | any    | Kamień spaść z nieba! Patrz W GÓRĘ, dryblasie!
+lava       | first  | Podłoga to lawa! Dryblas nie znać gry? {me} znać grę. {me} WYGRAĆ grę.
+lava       | repeat | Znowu gorący kamień! {me} czuć cię z daleka. Chrupiący.
+lava       | repeat | Dryblas iść pływać w ognistej wodzie. {me} zostać na zimnym kamieniu. Mądry {me}.
+incinerator | any    | Dryblas wskoczyć do wielkiej skrzyni na śmieci! Skrzynia zjeść dryblasa! {me} wrzucać tam śmieci, nie dryblasy!
+incinerator | any    | Puf! Dryblasa nie ma! Jak śmieć! {me} śmiać się TAK bardzo!
+
+self       | any    | Dryblas zabić dryblasa! {me} nic nie musieć robić! Najlepszy dzień!
+friend     | first  | {killer} cię uderzyć! {me} lubić {killer}. Dobry przyjaciel dla {me}.
+friend     | repeat | {killer} zrobić to ZNOWU! Hehehe. {me} chcieć {killer} w wiosce Fulingów.
+friend     | repeat | {me} myśleć, że {killer} nie bardzo cię lubić.
+cart       | any    | Wóz zgnieść dryblasa! {me} nigdy nie ufać wozom.
+boat       | any    | Łódź wygrać! {me} nie wiedzieć, że łódź umieć walczyć!
+structural | any    | Dom spaść na dryblasa! Dom Fulingów z patyków. Nigdy nie spadać. No. Czasem.
+siege      | any    | Wielki miotacz kamieni cię dopaść! Dobry cel. {me} pod wrażeniem.
+
+enemy | first     | {killer} cię pokonać! {me} to zapisać. {me} nie umieć pisać. {me} zapamiętać.
+enemy | repeat    | {killer} znowu wygrać! {me} stawiać na {killer}. {me} teraz bogaty.
+enemy | repeat    | {killer}! Znowu! Może przeprosić {killer}? Zaprzyjaźnić się?
+enemy | milestone | {n} razy {killer} cię pokonać! {me} zrobić {killer} czapkę.
+
+enemy:deer          | any    | JELEŃ?! {me} jeść jelenia na śniadanie! Hehehehe!
+enemy:deer          | repeat | Jeleń cię dopaść {n} razy. Jeleń nawet nie zły. Jeleń tylko spacerować.
+enemy:boar          | any    | Świnka cię zabić! Mała świnka! {me} płakać ze śmiechu!
+enemy:neck          | any    | Jaszczuroryba wygrać! Najmniejsza rzecz na świecie wygrać!
+enemy:greyling      | any    | Małe drzewne coś cię pokonać. {me} wstydzić się za ciebie.
+enemy:greydwarf     | any    | Patykowy ludek z kamieniami cię dopaść! {me} rzucać lepsze kamienie.
+enemy:troll         | first  | Wielki niebieski cię rozpłaszczyć! {me} też chować się przed trollem. Ale {me} nie UMIERAĆ.
+enemy:troll         | repeat | Znowu troll! Troll nawet cię nie pamiętać. {me} pamiętać. {me} ZAWSZE pamiętać.
+enemy:troll         | repeat | Uciekaj przed trollem, dryblasie! {me} uciekać przed trollem. {me} żywy.
+enemy:draugr        | any    | Śmierdzący trup cię dopaść! Teraz ty też śmierdzący trup!
+enemy:blob          | any    | Kałuża cię pokonać. Zła kałuża. {me} teraz wszystko widzieć.
+enemy:wolf          | any    | Pieski! Dużo piesków! {me} liczyć pieski. {me} skończyć się palce.
+enemy:hatchling     | any    | Lodowy ptak cię zamrozić! {me} trzymać się z dala od gór. Góry wredne.
+enemy:fenring       | any    | Wilkołak cię dopaść w nocy! {me} w nocy spać. Mądry {me}.
+enemy:deathsquito   | first  | Bzzzz! Gryzący robal cię dopaść! {me} znać robala. Robal przyjaciel {me}.
+enemy:deathsquito   | repeat | Znowu robal! {me} tresować robala. Dobry robal.
+enemy:lox           | any    | Ty szturchać wielkiego puchatego zwierza?! Czemu?! {me} nigdy nie szturchać loksa!
+enemy:goblin        | any    | Mój kuzyn cię dopaść! Kuzyn być taki szczęśliwy! {me} przynieść ciasto.
+enemy:goblinarcher  | any    | Kuzyn z łukiem! Dobry strzał, kuzynie!
+enemy:goblinbrute   | any    | Wielki kuzyn miażdżyć! Wielki kuzyn bardzo silny. Wielki kuzyn nie mądry. Ale silny!
+enemy:goblinshaman  | any    | Szaman cię dopaść! {me} mówić: szaman straszny. Nikt nie słuchać {me}.
+enemy:seeker        | any    | Robalowe coś we mgle! {me} nigdy nie chodzić we mgłę. Mgła dla głupków.
+
+boss              | first  | {killer} za silny dla ciebie! {me} nawet nie próbować {killer}. {me} nie szalony.
+boss              | repeat | ZNOWU {killer}?! {me} następnym razem przynieść przekąski. Długie przedstawienie.
+enemy:eikthyr     | any    | Wielki jeleń! Wielki jeleń z piorunami! Dalej jeleń! Hehehehe!
+enemy:goblinking  | any    | Yagluth! Nawet martwy, Yagluth wygrywać! {me} kłaniać się Yagluthowi!

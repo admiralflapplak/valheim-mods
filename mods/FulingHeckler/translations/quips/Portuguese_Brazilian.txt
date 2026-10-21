@@ -1,0 +1,131 @@
+# Fuling Heckler: falas embutidas (português do Brasil). Para escrever as suas, edite FulingHeckler.quips.txt (veja o README).
+
+generic | first     | Rá! Jeito novo de morrer! {me} nunca ver esse antes!
+generic | first     | Pernalonga cair! {me} vir olhar. Valeu a corrida.
+generic | first     | {me} ouvir grito de muito longe. {me} correr TÃO rápido.
+generic | repeat    | De novo?! Hehehe. {me} contar pra vila toda.
+generic | repeat    | Pernalonga morrer {n} vezes. {me} contar nos dedos. Precisar mais dedos.
+generic | repeat    | {me} nem precisar lutar. Você fazer sozinho!
+generic | repeat    | {me} estava comendo. {me} parar de comer por isso. Valeu a pena.
+generic | repeat    | Sabe que {me} seguir você agora? Pra todo lado. Melhor show de todas as terras.
+generic | milestone | {n}! {me} entalhar no totem. Totem grande.
+generic | milestone | {n} vezes! Xamã Fuling dizer você amaldiçoado. {me} dizer você ruim nisso.
+generic | milestone | {n}! {me} dar festa. Você não convidado. Você morto.
+
+flee | any | Tenho que ir!
+flee | any | Perto demais! {me} vai!
+flee | any | Espaço pessoal! Tchau!
+flee | any | NEM PENSAR!
+flee | any | {me} não encostar em você! Tchau tchau!
+flee | any | AAH! Isso mexe! {me} sair!
+
+spotted   | any | Iiik!
+spotted   | any | {me} não está aqui!
+spotted   | any | Você não ver nada! Nada!
+spotted   | any | {me} nunca esteve aqui.
+bored     | any | Chato.
+bored     | any | Pernalonga nunca olhar. {me} ir pra casa.
+bored     | any | {me} olhar você TANTO tempo. Você nunca perceber. Mal-educado.
+boo       | any | BU!
+boo       | any | BU! Hehehe!
+boo       | any | Te peguei, pernalonga!
+tombstone | any | {me} não mexer nas suas coisas! {me} só dançar!
+tombstone | any | Já estava assim quando {me} chegou!
+tombstone | any | Túmulo bonito. Bom pra dançar. Tchau!
+tombstone | any | {me} só... prestar homenagem. Tchau!
+
+copycat_bye  | any | Jogo divertido. Tchau!
+copycat_bye  | any | {me} cansado agora. Tchau tchau!
+copycat_bye  | any | {me} dança melhor. Tchau!
+copycat_rude | any | Mal-educado!
+copycat_rude | any | Não apontar pra {me}!
+copycat_rude | any | {me} não é coisa pra apontar!
+campfire     | any | {me} só esquentar as mãos! Tchau!
+campfire     | any | Fogo bonito. {me} vai agora.
+campfire     | any | Estava frio! {me} não mexer em nada!
+thief_steal  | any | Brilhante! {me} pegar!
+thief_steal  | any | Ooh, moedas! Minhas agora!
+thief_steal  | any | {me} pegar emprestado!
+thief_oops   | any | Ops! Buraco no bolso!
+thief_oops   | any | Espera... cadê brilhante?
+thief_oops   | any | {me} ruim em roubar.
+thief_fee    | any | {me} ficar com {n}. Taxa!
+thief_fee    | any | Recompensa de quem acha! Hehehe!
+thief_nope   | any | {me} querer brilhante... da próxima vez.
+gift_junk     | any | Presente! Hehehe!
+gift_junk     | any | {me} dividir. {me} generoso.
+gift_junk     | any | {me} esvaziar bolsos. Nos SEUS bolsos.
+gift_junk     | any | Você carregar agora. {me} cansado.
+gift_nice     | any | {me} fazer isso. De nada.
+gift_nice     | any | {me} fabricar tudo sozinho! Olhar bolsa!
+gift_nice     | any | Presente bom dessa vez. {me} se sentir legal. Estranho.
+gift_treasure | any | {me} achar isso. {me} não querer. Seu.
+gift_treasure | any | Psiu! Não contar pro xamã que {me} dar isso!
+gift_caught   | any | {me} não está aqui! É presente! Tchau!
+gift_caught   | any | Iiik! Surpresa estragada!
+gift_caught   | any | Pega! Pega! {me} vai!
+
+drowning   | first  | Água é pra peixe, pernalonga! Peixe rir também.
+drowning   | repeat | Afogou de novo! {me} nunca entrar na água. {me} esperto.
+drowning   | repeat | Glub glub glub! Hehehe! Era você!
+fall       | first  | Rá! Chão ganha! Chão sempre ganha!
+fall       | repeat | Pernalonga pula, pernalonga faz splash. {n} vezes splash! {me} adora esse jogo.
+fall       | repeat | {me} ver você voar! Depois {me} ver você não voar!
+burning    | first  | Cheiro de comida! {me} trazer molho da próxima vez.
+burning    | repeat | Pegando fogo de novo! {me} sentar pertinho. Quentinho.
+freezing   | any    | Morte de frio! Pernalonga esquecer capa. {me} não ter capa e {me} está bem.
+poison     | any    | Doença verde! Pernalonga comer cogumelo errado? Hehehe.
+smoke      | any    | Fumaça demais! {me} fazer buraco no teto. Pernalonga nunca aprender.
+edge       | any    | Pernalonga cair do mundo! {me} não saber que mundo TEM borda!
+boiled     | any    | Mar quente cozinhar pernalonga! {me} não ir pra terra que queima. {me} não burro.
+tree       | first  | Árvore cair no pernalonga! Árvore ganha! {me} torcer pra árvore!
+tree       | repeat | Árvore matar você {n} vezes. {me} achar que árvores estão do lado Fuling.
+tree       | repeat | Você bater na árvore. Árvore bater de volta. Justo!
+stalactite | any    | Pedra cair do céu! Olha pra CIMA, pernalonga!
+lava       | first  | O chão é lava! Pernalonga não conhece o jogo? {me} conhece o jogo. {me} GANHA o jogo.
+lava       | repeat | Pedra quente de novo! {me} sentir seu cheiro de longe. Crocante.
+lava       | repeat | Pernalonga ir nadar na água de fogo. {me} ficar na pedra fria. {me} esperto.
+incinerator | any    | Pernalonga pular na caixa grande de lixo! Caixa comer pernalonga! {me} põe lixo lá, não pernalonga!
+incinerator | any    | Puf! Pernalonga sumiu! Igual lixo! {me} rindo DEMAIS!
+
+self       | any    | Pernalonga matar pernalonga! {me} não precisar fazer nada! Melhor dia!
+friend     | first  | {killer} bater em você! {me} gostar de {killer}. Bom amigo pra {me}.
+friend     | repeat | {killer} fazer DE NOVO! Hehehe. {me} querer {killer} na vila Fuling.
+friend     | repeat | {me} achar que {killer} não gostar muito de você.
+cart       | any    | Carroça esmagar pernalonga! {me} nunca confiar em carroça.
+boat       | any    | Barco ganha! {me} não saber que barco sabe lutar!
+structural | any    | Casa cair no pernalonga! Casa Fuling feita de gravetos. Nunca cair. Bom. Às vezes.
+siege      | any    | Grande atirador de pedras pegar você! Boa mira. {me} impressionado.
+
+enemy | first     | {killer} vencer você! {me} anotar. {me} não saber escrever. {me} lembrar.
+enemy | repeat    | {killer} ganha de novo! {me} apostar em {killer}. {me} rico agora.
+enemy | repeat    | {killer}! De novo! Talvez pedir desculpa pro {killer}? Fazer amizade?
+enemy | milestone | {n} vezes {killer} vencer você! {me} fazer chapéu pro {killer}.
+
+enemy:deer          | any    | VEADO?! {me} comer veado no café da manhã! Hehehehe!
+enemy:deer          | repeat | Veado pegar você {n} vezes. Veado nem bravo. Veado só passeando.
+enemy:boar          | any    | Porquinho matar você! Porquinho pequenininho! {me} chorar de rir!
+enemy:neck          | any    | Lagarto-peixe ganha! Coisa menor do mundo inteiro ganha!
+enemy:greyling      | any    | Coisinha-árvore vencer você. {me} com vergonha por você.
+enemy:greydwarf     | any    | Homem-graveto que joga pedra pegar você! {me} jogar pedras melhores.
+enemy:troll         | first  | Grandão azul te achatar! {me} se esconder do troll também. Mas {me} não MORRER.
+enemy:troll         | repeat | Troll de novo! Troll nem lembrar de você. {me} lembrar. {me} SEMPRE lembrar.
+enemy:troll         | repeat | Foge do troll, pernalonga! {me} fugir do troll. {me} vivo.
+enemy:draugr        | any    | Morto fedido pegar você! Agora você morto fedido também!
+enemy:blob          | any    | Poça vencer você. Poça brava. {me} já viu de tudo agora.
+enemy:wolf          | any    | Cachorrinhos! Muitos cachorrinhos! {me} contar cachorrinhos. {me} ficar sem dedos.
+enemy:hatchling     | any    | Pássaro de gelo congelar você! {me} ficar longe da montanha. Montanha malvada.
+enemy:fenring       | any    | Homem-lobo pegar você de noite! {me} dormir de noite. {me} esperto.
+enemy:deathsquito   | first  | Bzzzz! Bicho que pica pegar você! {me} conhecer bicho. Bicho amigo de {me}.
+enemy:deathsquito   | repeat | Bicho de novo! {me} treinar bicho. Bicho bonzinho.
+enemy:lox           | any    | Você cutucar bichão fofinho?! Por quê?! {me} nunca cutucar lox!
+enemy:goblin        | any    | Meu primo pegar você! Primo vai ficar tão feliz! {me} trazer bolo.
+enemy:goblinarcher  | any    | Primo com arco! Belo tiro, primo!
+enemy:goblinbrute   | any    | Primo grandão esmaga! Primo grandão muito forte. Primo grandão não esperto. Mas forte!
+enemy:goblinshaman  | any    | Xamã pegar você! {me} avisar: xamã assustador. Ninguém escutar {me}.
+enemy:seeker        | any    | Coisa-inseto na névoa! {me} nunca ir na névoa. Névoa é pra bobo.
+
+boss              | first  | {killer} forte demais pra você! {me} nem tentar {killer}. {me} não doido.
+boss              | repeat | {killer} DE NOVO?! {me} trazer petiscos da próxima vez. Show longo.
+enemy:eikthyr     | any    | Veado grande! Veado grande com raios! Ainda é veado! Hehehehe!
+enemy:goblinking  | any    | Yagluth! Mesmo morto, Yagluth ganha! {me} se curvar pro Yagluth!

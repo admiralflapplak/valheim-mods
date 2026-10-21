@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Collections;
 using System.Linq;
 using UnityEngine;
@@ -31,23 +32,18 @@ namespace FulingHeckler
         /// Finds dry ground around the player at an angle from where they're looking
         /// (0 = straight ahead, 90 = to the side, 180 = directly behind), left or right at random.
         /// </summary>
-        public static bool FindPointAround(Player player, float minAngle, float maxAngle, float minDist, float maxDist, out Vector3 point)
+        public static bool FindPointAround(Player player, float minAngle, float maxAngle, float minDist, float maxDist, out Vector3 point) =>
+            PickSpot(player, PointsAround(player, minAngle, maxAngle, minDist, maxDist), out point);
+
+        private static IEnumerable<Vector3> PointsAround(Player player, float minAngle, float maxAngle, float minDist, float maxDist)
         {
             Vector3 origin = player.transform.position;
             Vector3 look = ViewForward(player);
             for (int attempt = 0; attempt < 16; attempt++)
             {
                 float angle = Random.Range(minAngle, maxAngle) * (Random.value < 0.5f ? -1f : 1f);
-                float dist = Random.Range(minDist, maxDist);
-                Vector3 p = origin + (Quaternion.Euler(0f, angle, 0f) * look) * dist;
-                if (TryGround(p, origin.y, out Vector3 ground) && !IsUnderwater(ground))
-                {
-                    point = ground;
-                    return true;
-                }
+                yield return origin + (Quaternion.Euler(0f, angle, 0f) * look) * Random.Range(minDist, maxDist);
             }
-            point = Vector3.zero;
-            return false;
         }
 
         /// <summary>
@@ -199,7 +195,7 @@ namespace FulingHeckler
                     // A little tolerance: aiming for exactly closeEnough left him "running" microscopic steps.
                     if (dist <= closeEnough + 0.25f) break;
                     Vector3 to = Flat(p.transform.position - transform.position);
-                    MoveToward(to.normalized, Mathf.Min(speed * Time.deltaTime, dist - closeEnough), speed);
+                    MoveToward(to.normalized, Mathf.Min(speed * Time.deltaTime, dist - closeEnough), speed, p.transform.position);
                 }
 
                 // Backup: if he's been frozen within arm's reach for a while, he gives up being sneaky.

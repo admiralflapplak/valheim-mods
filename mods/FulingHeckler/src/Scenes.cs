@@ -106,7 +106,7 @@ namespace FulingHeckler
             if (Plugin.RedLightEnabled.Value) options.Add(SceneKind.RedLight);
             if (Plugin.CopycatEnabled.Value) options.Add(SceneKind.Copycat);
             if (Plugin.ThiefEnabled.Value && CoinTheft.CoinsCarried(p) >= Plugin.ThiefMinCoins.Value) options.Add(SceneKind.CoinThief);
-            if (Plugin.GifterEnabled.Value && Gifts.HasRoom(p, out _) && !HeadingBackToGrave) options.Add(SceneKind.Gifter);
+            if (Rules.GifterEnabled && Gifts.HasRoom(p, out _) && !HeadingBackToGrave) options.Add(SceneKind.Gifter);
             if (options.Count > 0) Stage(p, options[_rng.Next(options.Count)]);
             ScheduleNext();
         }
@@ -142,7 +142,7 @@ namespace FulingHeckler
             // Stand right beside the grave marker, on the ground.
             Vector2 r = UnityEngine.Random.insideUnitCircle.normalized * 1.2f;
             Vector3 spot = grave + new Vector3(r.x, 0f, r.y);
-            var hit = Physics.Raycast(spot + Vector3.up * 5f, Vector3.down, out RaycastHit h, 15f,
+            var hit = Physics.Raycast(spot + Vector3.up * 1.5f, Vector3.down, out RaycastHit h, 15f,
                 LayerMask.GetMask("Default", "static_solid", "terrain", "piece"));
             if (hit) spot = h.point;
 
@@ -152,32 +152,109 @@ namespace FulingHeckler
 
         public bool StartCampfire(Player p, Vector3 fire)
         {
+            // A seat by the fire (a chair, bench, log bench, throne): he sits on it, the way it faces, as a player would.
+            if (FindSeat(fire, out Vector3 seat, out Quaternion facing, out string pose))
+            {
+                Plugin.Log.LogInfo($"Scene: Campfire Squatter, on a seat ({pose}).");
+                return FulingActor.TrySpawn(p, new Performance { Scene = SceneKind.Campfire, SpawnAt = seat, SpawnRotation = facing, SeatPose = pose, ForceTorch = false, Line = "" });
+            }
+
             // Sit beside the fire, on the side facing you so you can see him, a little off to one side.
             Vector3 toPlayer = p.transform.position - fire; toPlayer.y = 0f;
             Vector3 side = toPlayer.sqrMagnitude > 0.01f ? toPlayer.normalized : Vector3.forward;
             side = Quaternion.Euler(0f, UnityEngine.Random.Range(-60f, 60f), 0f) * side;
             Vector3 spot = fire + side * 1.7f;
-            if (Physics.Raycast(spot + Vector3.up * 5f, Vector3.down, out RaycastHit h, 15f,
+            if (Physics.Raycast(spot + Vector3.up * 1.5f, Vector3.down, out RaycastHit h, 15f,
                 LayerMask.GetMask("Default", "static_solid", "terrain", "piece")))
                 spot = h.point;
 
             Plugin.Log.LogInfo("Scene: Campfire Squatter.");
-            return FulingActor.TrySpawn(p, new Performance { Scene = SceneKind.Campfire, SpawnAt = spot, FacePoint = fire, Line = "" });
+            return FulingActor.TrySpawn(p, new Performance { Scene = SceneKind.Campfire, SpawnAt = spot, FacePoint = fire, ForceTorch = false, Line = "" });
         }
 
-        /// <summary>The closest burning fire (campfire, hearth, bonfire...) within range, if any.</summary>
+        /// <summary>Every loaded fire, kept as they load (a search of the whole scene every few seconds stutters in a big base).</summary>
+        internal static readonly HashSet<Fireplace> Fires = new HashSet<Fireplace>();
+
+        [HarmonyPatch(typeof(Fireplace), nameof(Fireplace.Awake))]
+        private static class FireplaceAwake
+        {
+            private static void Postfix(Fireplace __instance) => Fires.Add(__instance);
+        }
+
+        /// <summary>Fires already loaded when the mod starts (after a reload in a world). Once, at load.</summary>
+        internal static void FindLoadedFires()
+        {
+            foreach (var f in UnityEngine.Object.FindObjectsByType<Fireplace>(FindObjectsSortMode.None)) Fires.Add(f);
+        }
+
+        private const float SeatRange = 4.5f;   // how far from the fire a seat may be (a ring of log benches round a campfire)
+
+        /// <summary>
+        /// A free seat near the fire, the nearest first: the game's Chair part (chairs, stools, benches, log benches, thrones, other
+        /// mods' seats) gives the spot and which way it faces, and its sitting style picks the player animation. Only the pieces near
+        /// the fire are looked at, once, when the scene starts.
+        /// </summary>
+        private static bool FindSeat(Vector3 fire, out Vector3 seat, out Quaternion facing, out string pose)
+        {
+            seat = Vector3.zero; facing = Quaternion.identity; pose = null;
+            float best = float.MaxValue;
+            var seen = new HashSet<Chair>();
+            try
+            {
+                foreach (var c in Physics.OverlapSphere(fire, SeatRange, LayerMask.GetMask("piece", "piece_nonsolid", "Default")))
+                {
+                    var chair = c != null ? c.GetComponentInParent<Chair>() : null;
+                    if (chair == null || !seen.Add(chair) || chair.m_attachPoint == null || chair.m_inShip || chair.IsInUse()) continue;
+                    string anim = SeatAnimation(chair.m_attachAnimation);
+                    if (anim == null) continue;
+                    Vector3 at = chair.m_attachPoint.position;
+                    float d = Vector3.Distance(new Vector3(at.x, 0f, at.z), new Vector3(fire.x, 0f, fire.z));
+                    if (d < 0.8f || d > SeatRange || Mathf.Abs(at.y - fire.y) > 2f || d >= best) continue;   // not on the fire, not upstairs
+                    best = d;
+                    seat = at;
+                    facing = Quaternion.Euler(0f, chair.m_attachPoint.rotation.eulerAngles.y, 0f);
+                    pose = anim;
+                }
+            }
+            catch (Exception e) { Plugin.DebugLog($"Campfire Squatter: couldn't look for seats ({e.Message})."); }
+            return pose != null;
+        }
+
+        /// <summary>The player animation for a seat's sitting style (Chair.m_attachAnimation), or null for one he can't do.</summary>
+        private static string SeatAnimation(string attach)
+        {
+            switch (attach)
+            {
+                case "attach_chair": return "Player_Sit_Chair";
+                case "attach_throne": return "Sit_Throne_Idle";
+                default: return null;
+            }
+        }
+
+        /// <summary>
+        /// A fire to sit by: what the game counts as a fire for comfort (campfire, iron fire pit, hearth, bonfire, standing brazier, and
+        /// other mods' fires in that group), not a sconce, a standing torch or a Jack-o-turnip, and not a brazier hanging from the ceiling.
+        /// </summary>
+        private static bool IsCampfire(Fireplace f)
+        {
+            var piece = f.GetComponentInParent<Piece>();
+            if (piece == null || piece.m_comfortGroup != Piece.ComfortGroup.Fire) return false;
+            return Utils.GetPrefabName(piece.gameObject).IndexOf("ceiling", StringComparison.OrdinalIgnoreCase) < 0;
+        }
+
+        /// <summary>The closest burning fire to sit by (IsCampfire) within range, if any.</summary>
         public static Vector3? NearestLitFire(Player p, float range)
         {
             try
             {
                 Vector3? best = null;
                 float bestDist = range;
-                foreach (var f in UnityEngine.Object.FindObjectsByType<Fireplace>(FindObjectsSortMode.None))
+                Fires.RemoveWhere(f => f == null);
+                foreach (var f in Fires)
                 {
-                    if (f == null) continue;
                     float d = Vector3.Distance(f.transform.position, p.transform.position);
                     if (d > bestDist) continue;
-                    if (!CallBool(f, "IsBurning")) continue;
+                    if (!f.IsBurning() || !IsCampfire(f)) continue;
                     best = f.transform.position;
                     bestDist = d;
                 }
@@ -195,9 +272,9 @@ namespace FulingHeckler
             if (p.IsDead() || p.IsTeleporting()) { reason = "dead or teleporting"; return false; }
             if (p.transform.position.y > 1000f) { reason = "in a dungeon"; return false; }
             if (p.IsSwimming()) { reason = "swimming"; return false; }
-            if (CallBool(p, "InBed")) { reason = "in bed"; return false; }
-            if (CallBool(p, "IsAttached")) { reason = "sitting, on a cart or at a ship's helm"; return false; }
-            if (CallObject(p, "GetStandingOnShip") != null) { reason = "on a boat"; return false; }
+            if (p.InBed()) { reason = "in bed"; return false; }
+            if (p.IsAttached()) { reason = "sitting, on a cart or at a ship's helm"; return false; }
+            if (p.GetStandingOnShip() != null) { reason = "on a boat"; return false; }
             if (EnemiesNearby(p, 35f)) { reason = "enemies nearby"; return false; }
             return true;
         }
@@ -206,30 +283,17 @@ namespace FulingHeckler
         {
             try
             {
-                var all = Traverse.Create(typeof(Character)).Method("GetAllCharacters").GetValue<List<Character>>();
-                if (all == null) return false;
-                foreach (var c in all)
+                foreach (var c in Character.GetAllCharacters())
                 {
                     if (c == null || c == p || c is Player || c.IsDead()) continue;
                     if (Vector3.Distance(c.transform.position, p.transform.position) > range) continue;
-                    if (CallBool(c, "IsTamed")) continue;
-                    string faction = Traverse.Create(c).Field("m_faction").GetValue()?.ToString() ?? "";
-                    if (CalmFactions.Contains(faction)) continue;
+                    if (c.IsTamed()) continue;
+                    if (CalmFactions.Contains(c.GetFaction().ToString())) continue;
                     return true;
                 }
             }
             catch { /* if unsure, don't block */ }
             return false;
-        }
-
-        private static bool CallBool(object o, string method)
-        {
-            try { return Traverse.Create(o).Method(method).GetValue<bool>(); } catch { return false; }
-        }
-
-        private static object CallObject(object o, string method)
-        {
-            try { return Traverse.Create(o).Method(method).GetValue(); } catch { return null; }
         }
     }
 }

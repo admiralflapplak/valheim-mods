@@ -102,9 +102,11 @@ namespace FulingHeckler
         private IEnumerator CampfireSquat()
         {
             SetSpeed(0f);
-            if (_show.FacePoint.HasValue) transform.rotation = Quaternion.LookRotation(Flat(_show.FacePoint.Value - transform.position).normalized, Vector3.up);
+            if (_show.SpawnRotation.HasValue) transform.rotation = _show.SpawnRotation.Value;
+            else if (_show.FacePoint.HasValue) transform.rotation = Quaternion.LookRotation(Flat(_show.FacePoint.Value - transform.position).normalized, Vector3.up);
 
-            var poses = NameList.Parse(Plugin.CampfirePoses.Value);
+            var poses = _show.SeatPose != null ? new List<string> { _show.SeatPose } : NameList.Parse(Plugin.CampfirePoses.Value);
+            Vector3 seat = transform.position;   // on a seat: its own spot, which Seat Height / Seat Forward shift him from (live)
             float t = 0f, nextPose = 0f, timeout = 240f;
             bool caught = false;
             while (t < timeout)
@@ -112,6 +114,8 @@ namespace FulingHeckler
                 var p = Player.m_localPlayer;
                 if (p == null || p.IsDead()) { Destroy(gameObject); yield break; }
                 if (DistanceToPlayer(p) < Plugin.CampfireCatchDistance.Value || RemoteSaw(_pokeClose)) { caught = true; break; }
+                if (_show.SeatPose != null)
+                    transform.position = seat + Vector3.up * Plugin.SeatUp.Value + transform.forward * Plugin.SeatForward.Value;
 
                 if (t >= nextPose)
                 {
@@ -153,7 +157,7 @@ namespace FulingHeckler
                 float dist = DistanceToPlayer(p);
                 if (dist <= 2.2f) break;
                 MoveToward(Flat(p.transform.position - transform.position).normalized,
-                    Mathf.Min(RunSpeed * 1.3f * Time.deltaTime, dist - 2.0f), RunSpeed * 1.3f);
+                    Mathf.Min(RunSpeed * 1.3f * Time.deltaTime, dist - 2.0f), RunSpeed * 1.3f, p.transform.position);
                 timeout -= Time.deltaTime;
                 yield return null;
             }
@@ -196,11 +200,18 @@ namespace FulingHeckler
                 if (sinceDrop >= spacing && !IsUnderwater(transform.position))
                 {
                     sinceDrop = 0f;
+                    // Only while you still carry a coin he can take (you may have died, or put them in a chest, since he grabbed them):
+                    // otherwise the dropped coin would be a free one.
+                    var p = Player.m_localPlayer;
+                    if (p == null || p.IsDead() || CoinTheft.CoinsCarried(p) < 1)
+                    {
+                        Plugin.Log.LogInfo("Coin Thief: you have no coins left for him to drop, so he stops.");
+                        break;
+                    }
                     if (CoinTheft.DropOneCoin(transform.position + Vector3.up * 0.6f - escapeDir * 0.3f))
                     {
                         SfxAt(SoundMoment.CoinDrop);
-                        var p = Player.m_localPlayer;
-                        if (p != null) CoinTheft.TakeCoins(p, 1);
+                        CoinTheft.TakeCoins(p, 1);
                         dropped++;
                     }
                     else
@@ -216,7 +227,7 @@ namespace FulingHeckler
             if (fee > 0 && dropped == toDrop)
             {
                 var p = Player.m_localPlayer;
-                if (p != null) CoinTheft.TakeCoins(p, fee);
+                if (p != null) CoinTheft.TakeCoins(p, Mathf.Min(fee, CoinTheft.CoinsCarried(p)));
                 TrySayLine(SceneLine("thief_fee", "{me} keep a little. Fee!", "Finder's fee! Hehehe!").Replace("{n}", fee.ToString()), 2.5f);
             }
             else TrySayLine(SceneLine("thief_oops", "Oops! Hole in pocket!", "Wait... where shiny go?", "{me} bad at stealing."), 2.5f);

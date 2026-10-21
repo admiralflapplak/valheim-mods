@@ -6,8 +6,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="../Shared/ServerSettings.cs" Link="Shared/ServerSettings.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <EmbeddedResource Include="DefaultQuips.txt" LogicalName="FulingHeckler.DefaultQuips.txt" />
     <EmbeddedResource Include="DefaultLoot.txt" LogicalName="FulingHeckler.DefaultLoot.txt" />
+    <!-- His quips in the other languages (English is DefaultQuips.txt); translations/*.json come in through ../Directory.Build.props -->
+    <EmbeddedResource Include="translations/quips/*.txt" LogicalName="FulingHeckler.Quips.%(Filename).txt" />
   </ItemGroup>
 
   <!-- Unity modules FulingHeckler needs beyond the references in ../Directory.Build.props -->

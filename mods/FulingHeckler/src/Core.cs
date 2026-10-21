@@ -59,6 +59,8 @@ namespace FulingHeckler
                 case "Boat": key = "boat"; cat = DeathCategory.Other; break;
                 case "Structural": key = "structural"; cat = DeathCategory.Other; break;
                 case "Stalagtite": key = "stalactite"; cat = DeathCategory.Environment; break;
+                case "AshlandsLava": key = "lava"; cat = DeathCategory.Environment; break;
+                case "Incinerator": key = "incinerator"; cat = DeathCategory.Other; break;
                 case "Turret":
                 case "Catapult": key = "siege"; cat = DeathCategory.Other; break;
                 default: key = null; cat = DeathCategory.Other; break;
@@ -134,6 +136,49 @@ namespace FulingHeckler
             }
         }
 
+        /// <summary>The built-in quips in a language (the game's language name, e.g. "German"), or null if there are none.</summary>
+        public static string ReadBuiltInQuips(string language)
+        {
+            if (string.IsNullOrEmpty(language) || language == "English") return ReadDefaultQuips();
+            var asm = Assembly.GetExecutingAssembly();
+            using (var s = asm.GetManifestResourceStream("FulingHeckler.Quips." + language + ".txt"))
+            {
+                if (s == null) return null;
+                using (var r = new StreamReader(s, Encoding.UTF8)) return r.ReadToEnd();
+            }
+        }
+
+        /// <summary>Lines older versions wrote in their default file, and what they are now: such a file is still unedited.</summary>
+        private static readonly Dictionary<string, string> RetiredLines = new Dictionary<string, string>
+        {
+            { "enemy:drake | any | Ice-bird freeze you! {me} stay away from mountain. Mountain is mean.",
+              "enemy:hatchling | any | Ice-bird freeze you! {me} stay away from mountain. Mountain is mean." },
+        };
+
+        /// <summary>Lines added to the default file since older versions wrote theirs: an older file without them is still unedited.</summary>
+        private static readonly HashSet<string> AddedLines = new HashSet<string>
+        {
+            "lava | first | Floor is lava! Tall-one not know game? {me} know game. {me} WIN game.",
+            "lava | repeat | Hot rock again! {me} smell you from far away. Crispy.",
+            "lava | repeat | Tall-one go swimming in fire-water. {me} stay on cold rock. Smart {me}.",
+            "incinerator | any | Tall-one jump in big junk-box! Box eat tall-one! {me} put junk in there, not tall-ones!",
+            "incinerator | any | Poof! Tall-one gone! Like junk! {me} laughing SO hard!",
+        };
+
+        /// <summary>
+        /// The same quips (an unedited file): comments, blank lines, line endings and spacing don't count, and neither do the
+        /// default lines older versions wrote nor the ones added since.
+        /// </summary>
+        public static bool SameText(string a, string b)
+        {
+            IEnumerable<string> Norm(string t) => (t ?? "").Replace("\r", "").Split('\n')
+                .Select(l => string.Join(" | ", l.Split('|').Select(x => string.Join(" ", x.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries)))))
+                .Where(l => l.Length > 0 && !l.StartsWith("#"))
+                .Select(l => RetiredLines.TryGetValue(l, out string now) ? now : l)
+                .Where(l => !AddedLines.Contains(l));
+            return Norm(a).SequenceEqual(Norm(b));
+        }
+
         public static string ReadDefaultQuips()
         {
             var asm = Assembly.GetExecutingAssembly();
@@ -147,11 +192,15 @@ namespace FulingHeckler
 
     public static class Placeholders
     {
+        /// <summary>The words for an unknown name, an unknown killer and "27th" in the player's language (the plugin sets them).</summary>
+        public static string TallOne = "tall-one", Something = "something";
+        public static Func<int, string> OrdinalWord;   // null: English ("second", "27th")
+
         public static string Fill(string text, string playerName, string killerName, int count)
         {
             return text
-                .Replace("{name}", string.IsNullOrEmpty(playerName) ? "tall-one" : playerName)
-                .Replace("{killer}", string.IsNullOrEmpty(killerName) ? "something" : killerName)
+                .Replace("{name}", string.IsNullOrEmpty(playerName) ? TallOne : playerName)
+                .Replace("{killer}", string.IsNullOrEmpty(killerName) ? Something : killerName)
                 .Replace("{count}", Ordinal(count))
                 .Replace("{n}", count.ToString());
         }
@@ -170,8 +219,10 @@ namespace FulingHeckler
         private static readonly string[] Words =
             { "zeroth", "first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth", "tenth", "eleventh", "twelfth" };
 
+        /// <summary>"second", "27th" in English; other languages' own form ("27.", "27-й") through OrdinalWord.</summary>
         public static string Ordinal(int n)
         {
+            if (OrdinalWord != null) return OrdinalWord(n);
             if (n >= 0 && n < Words.Length) return Words[n];
             int mod100 = n % 100;
             string suffix = (mod100 >= 11 && mod100 <= 13) ? "th"

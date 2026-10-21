@@ -170,7 +170,7 @@ namespace FulingHeckler
             try
             {
                 var vis = prefab.GetComponent<VisEquipment>();
-                var src = vis != null ? Traverse.Create(vis).Field("m_bodyModel").GetValue<SkinnedMeshRenderer>() : null;
+                var src = vis != null ? vis.m_bodyModel : null;
                 if (src != null)
                 {
                     var names = new List<string>();
@@ -249,24 +249,12 @@ namespace FulingHeckler
         {
             var humanoid = prefab.GetComponent<Humanoid>();
             if (humanoid == null) yield break;
-            var t = Traverse.Create(humanoid);
-
-            foreach (var field in new[] { "m_defaultItems", "m_randomWeapon", "m_randomArmor", "m_randomShield" })
-            {
-                GameObject[] arr = null;
-                try { arr = t.Field(field).GetValue<GameObject[]>(); } catch { }
+            foreach (var arr in new[] { humanoid.m_defaultItems, humanoid.m_randomWeapon, humanoid.m_randomArmor, humanoid.m_randomShield })
                 if (arr != null) foreach (var go in arr) if (go != null) yield return go;
-            }
 
-            System.Collections.IEnumerable sets = null;
-            try { sets = t.Field("m_randomSets").GetValue() as System.Collections.IEnumerable; } catch { }
-            if (sets == null) yield break;
-            foreach (var set in sets)
-            {
-                GameObject[] arr = null;
-                try { arr = Traverse.Create(set).Field("m_items").GetValue<GameObject[]>(); } catch { }
-                if (arr != null) foreach (var go in arr) if (go != null) yield return go;
-            }
+            if (humanoid.m_randomSets == null) yield break;
+            foreach (var set in humanoid.m_randomSets)
+                if (set?.m_items != null) foreach (var go in set.m_items) if (go != null) yield return go;
         }
 
         private static string ItemType(GameObject item)
@@ -275,7 +263,7 @@ namespace FulingHeckler
             {
                 var drop = item.GetComponent<ItemDrop>();
                 if (drop == null) return "?";
-                return Traverse.Create(drop).Field("m_itemData").Field("m_shared").Field("m_itemType").GetValue()?.ToString() ?? "?";
+                return drop.m_itemData.m_shared.m_itemType.ToString();
             }
             catch { return "?"; }
         }
