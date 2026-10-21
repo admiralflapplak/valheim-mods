@@ -279,6 +279,10 @@ namespace FulingHeckler
             return true;
         }
 
+        /// <summary>
+        /// A fight going on near the player: a creature in range that is alerted or after someone (its AI says so). Wildlife minding its
+        /// own business (a Neck by the water, a greyling wandering) doesn't hold the scenes up.
+        /// </summary>
         private static bool EnemiesNearby(Player p, float range)
         {
             try
@@ -289,6 +293,8 @@ namespace FulingHeckler
                     if (Vector3.Distance(c.transform.position, p.transform.position) > range) continue;
                     if (c.IsTamed()) continue;
                     if (CalmFactions.Contains(c.GetFaction().ToString())) continue;
+                    var ai = c.GetBaseAI();
+                    if (ai == null || (!ai.IsAlerted() && !ai.HaveTarget())) continue;
                     return true;
                 }
             }

@@ -1,3 +1,6 @@
+## 1.9.1
+- Uninvited scenes only wait while a creature nearby is actually alerted or after someone; wildlife minding its own business (a Neck by the water) no longer holds them up.
+
 ## 1.9.0
 - A console command, heckler: summon him or start any scene from the console (F5), hold him still, and take a picture of him (on a transparent background or in the world).
 

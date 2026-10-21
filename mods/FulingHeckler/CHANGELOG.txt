@@ -1,3 +1,6 @@
+1.9.1
+- Scenes no longer wait on harmless wildlife nearby, only on real fights.
+
 1.9.0
 - Console command "heckler": summon him or start any scene from F5, and take pictures of him.
 - On a server, his news only goes to players near him.

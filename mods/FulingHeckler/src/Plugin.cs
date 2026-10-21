@@ -34,7 +34,7 @@ namespace FulingHeckler
     {
         public const string Guid = "nick.valheim.fulingheckler";
         public const string Name = "Fuling Heckler";
-        public const string Version = "1.9.0";
+        public const string Version = "1.9.1";
 
         internal static Plugin Instance;
         internal static ManualLogSource Log;
