@@ -34,7 +34,7 @@ namespace FulingHeckler
     {
         public const string Guid = "nick.valheim.fulingheckler";
         public const string Name = "Fuling Heckler";
-        public const string Version = "1.9.3";
+        public const string Version = "1.9.4";
 
         internal static Plugin Instance;
         internal static ManualLogSource Log;
@@ -421,10 +421,10 @@ namespace FulingHeckler
                      "The mod's own fits (fishing hat etc.) always sit underneath, so emptying this brings them back.",
                     900, advanced: true));
 
-            SoundsEnabled = Config.Bind("8 - Smoke & Sounds", "Custom Sounds", true,
-                Desc("Play your own recordings from the sounds folder (arrive, taunt, poof, flee).", 950));
-            SoundVolume = Config.Bind("8 - Smoke & Sounds", "Custom Sounds Volume", 1f,
-                Desc("Volume of your recordings (on top of the game's own volume).", 940, new AcceptableValueRange<float>(0f, 2f)));
+            SoundsEnabled = Config.Bind("8 - Smoke & Sounds", "His Voice", true,
+                Desc("Play his voice: the recordings in his sounds folder (arrive, taunt, poof, flee...). It comes with the mod's own; change them there.", 950));
+            SoundVolume = Config.Bind("8 - Smoke & Sounds", "Voice Volume", 1f,
+                Desc("Volume of his voice (on top of the game's own volume).", 940, new AcceptableValueRange<float>(0f, 2f)));
             Config.Bind("8 - Smoke & Sounds", "Open Sounds Folder", "",
                 Button("Opens the sounds folder. Its README.txt lists every folder (arrive, taunt, poof, flee, dance, spotted, boo...).", 930, "Open sounds folder", () =>
                 {
@@ -614,7 +614,7 @@ namespace FulingHeckler
             "7 - Thief & Gifter/Gifter Gifts Max", "7 - Thief & Gifter/Gifter Free Slots Needed", "7 - Thief & Gifter/Reload Loot Table", "7 - Thief & Gifter/Sign His Gifts*",
             "7 - Thief & Gifter/Thief Grab Animation*", "7 - Thief & Gifter/Coin Trail Spacing*",
             // 8 - Smoke & Sounds
-            "8 - Smoke & Sounds/Smoke Puff", "8 - Smoke & Sounds/Smoke Puff Sound", "8 - Smoke & Sounds/Custom Sounds", "8 - Smoke & Sounds/Custom Sounds Volume",
+            "8 - Smoke & Sounds/Smoke Puff", "8 - Smoke & Sounds/Smoke Puff Sound", "8 - Smoke & Sounds/His Voice", "8 - Smoke & Sounds/Voice Volume",
             "8 - Smoke & Sounds/Open Sounds Folder", "8 - Smoke & Sounds/Reload Sounds", "8 - Smoke & Sounds/Arrival Effects*", "8 - Smoke & Sounds/Exit Effects*",
             "8 - Smoke & Sounds/Smoke Puff Size*",
             // 9 - Tools
@@ -623,7 +623,7 @@ namespace FulingHeckler
             "9 - Tools/Test Exit Poof*", "9 - Tools/Test Next Emote*", "9 - Tools/Emote Test*",
         };
 
-        /// <summary>Settings that moved or were renamed in 1.8.0: (old section, old key, new section, new key). Their values come along.</summary>
+        /// <summary>Settings that moved or were renamed (1.8.0, and the voice settings in 1.9.4): (old section, old key, new section, new key). Their values come along.</summary>
         private static readonly (string, string, string, string)[] Moved =
         {
             ("8 - Server", "Share Goblin On My Server", "1 - General", "Share Goblin On My Server"),
@@ -676,8 +676,10 @@ namespace FulingHeckler
             ("4 - Heckling", "Death Impressions", "5 - Visits", "Death Impressions"),
             ("5 - Puffs & Sounds", "Smoke Puff", "8 - Smoke & Sounds", "Smoke Puff"),
             ("5 - Puffs & Sounds", "Smoke Puff Sound", "8 - Smoke & Sounds", "Smoke Puff Sound"),
-            ("5 - Puffs & Sounds", "Play Sounds", "8 - Smoke & Sounds", "Custom Sounds"),
-            ("5 - Puffs & Sounds", "Volume", "8 - Smoke & Sounds", "Custom Sounds Volume"),
+            ("5 - Puffs & Sounds", "Play Sounds", "8 - Smoke & Sounds", "His Voice"),
+            ("5 - Puffs & Sounds", "Volume", "8 - Smoke & Sounds", "Voice Volume"),
+            ("8 - Smoke & Sounds", "Custom Sounds", "8 - Smoke & Sounds", "His Voice"),
+            ("8 - Smoke & Sounds", "Custom Sounds Volume", "8 - Smoke & Sounds", "Voice Volume"),
             ("5 - Puffs & Sounds", "Open Folder", "8 - Smoke & Sounds", "Open Sounds Folder"),
             ("5 - Puffs & Sounds", "Reload", "8 - Smoke & Sounds", "Reload Sounds"),
             ("5 - Puffs & Sounds", "Arrival Effects", "8 - Smoke & Sounds", "Arrival Effects"),

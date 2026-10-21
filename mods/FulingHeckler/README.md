@@ -64,7 +64,7 @@ Everything is in the F1 Configuration Manager, grouped by what it's for. Tick **
 | **5 - Visits** | How a death visit plays out: **Personal Space** (walk closer and he bolts), how often he taunts, hops, or plays dead. *(Advanced: how close he stops, how far he runs, his emotes and **Death Impressions**.)* |
 | **6 - Scenes** | How often he turns up uninvited, then each scene's on/off, **Test** button and chance. *(Advanced: each scene's distances, speeds and poses.)* |
 | **7 - Thief & Gifter** | The two scenes that use real items, each with its options and a **Test** button, and **Reload loot table**. *(Advanced: signed gifts, the grab animation, the coin trail.)* |
-| **8 - Smoke & Sounds** | His smoke puff and its sound, your own recordings (**Custom Sounds**, their volume, **Open Sounds Folder**, **Reload Sounds**). *(Advanced: which game effects make the puff, and its size.)* |
+| **8 - Smoke & Sounds** | His smoke puff and its sound, his voice (**His Voice**, **Voice Volume**, **Open Sounds Folder**, **Reload Sounds**). *(Advanced: which game effects make the puff, and its size.)* |
 | **9 - Tools** | Summon him, reload the quips file, make him forget your deaths. *(Advanced: debug logging, **Echo Test**, and tests for the torch, outfit, emotes and puffs.)* |
 
 Files the mod keeps in `BepInEx\config\`:
@@ -72,7 +72,6 @@ Files the mod keeps in `BepInEx\config\`:
 - `FulingHeckler.quips.txt`: everything he can say, in English. Edit freely (see below).
 - `FulingHeckler.loot.txt`: what the Gifter slips into your pockets.
 - `FulingHeckler_memory\<character>.txt`: his death tallies.
-- `FulingHeckler_sounds\`: your own sounds (below).
 
 ## Console commands
 
@@ -117,17 +116,17 @@ Fits are stored in **Saved Fits** (advanced), so you can copy that setting to fr
 
 He comes recoloured by default. Untick **Recolour** (3 - Look) for the game's own Fuling colours, or drag **Hue**, **Saturation** and **Brightness**: changes show live, so tick **Fitting Mode** to keep him standing in front of you while you adjust.
 
-## His voice, and your own sounds
+## His voice
 
-He comes with his own voice: a yell as he runs over, five taunts, two "gotta go!"s, his poof, and a hum while he dances on your grave, all recorded by the mod's author. To give him your own, F1 → **8 - Smoke & Sounds** → **Open Sounds Folder**, drop `.ogg`, `.wav` or `.mp3` files (short, mono, trimmed tight) into these folders, then press **Reload Sounds**. A folder with your files in it always wins; one left empty uses his own voice, or the one in brackets:
+He comes with his own voice: a yell as he runs over, five taunts, two "gotta go!"s, his poof, and a hum while he dances on your grave, all recorded by the mod's author. They live in his sounds folder, beside the mod's DLL: F1 → **8 - Smoke & Sounds** → **Open Sounds Folder**. To change his voice, replace or add `.ogg`, `.wav` or `.mp3` files there (short, mono, trimmed tight), then press **Reload Sounds**. **Keep a copy of your own recordings**: updating the mod in a mod manager puts its original ones back. A folder left empty is silent, or uses the one in brackets:
 
 | Folder | When | If empty, uses |
 |---|---|---|
-| `arrive` | he yells it as he runs over | his own |
-| `taunt` | his bit (emote, swing, play dead) | his own |
-| `poof` | as he vanishes | his own |
-| `flee` | "Gotta go!" when you get too close | his own |
-| `dance` | while he dances on your grave, clip after clip | his own |
+| `arrive` | he yells it as he runs over | silence |
+| `taunt` | his bit (emote, swing, play dead) | silence |
+| `poof` | as he vanishes | silence |
+| `flee` | "Gotta go!" when you get too close | silence |
+| `dance` | while he dances on your grave, clip after clip | silence |
 | `caught` | you catch him dancing | `flee` |
 | `spotted` | you spot the Lurker | `flee` |
 | `bored` | the Lurker gives up | silence |

@@ -1,5 +1,5 @@
-1.9.3
-- He comes with his own voice; your own recordings still win.
+1.9.4
+- He comes with his own voice, in one sounds folder beside the mod (change them there).
 - Scenes no longer wait on harmless wildlife nearby, only on real fights.
 
 1.9.0
