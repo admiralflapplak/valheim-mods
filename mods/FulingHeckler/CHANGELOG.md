@@ -1,3 +1,6 @@
+## 1.9.0
+- A console command, heckler: summon him or start any scene from the console (F5), hold him still, and take a picture of him (on a transparent background or in the world).
+
 ## 1.8.6
 - On a server, his news (where he is, his moves, lines and sounds) only goes to players near him, not to everyone in the world.
 - The Campfire Squatter sits on a seat by the fire when there is one (chairs, stools, benches, log benches, thrones, other mods' seats), in the player's sitting pose, and never brings a torch to a fire. He only picks real fires (campfire, hearth, bonfire, braziers), not sconces or standing torches, and no longer ends up on the roof over an indoor fire; the Tombstone Dancer no longer dances on the roof over an indoor grave.

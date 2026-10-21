@@ -26,6 +26,14 @@ namespace FulingHeckler
         private static readonly List<Vector3> _probePath = new List<Vector3>();
 
         private readonly List<Vector3> _path = new List<Vector3>();
+        private bool _frozen;
+
+        /// <summary>"heckler freeze": he holds his pose and his place (for a picture) until unfrozen; the scene's own timers run on.</summary>
+        internal void Freeze(bool on)
+        {
+            _frozen = on;
+            if (_animator != null) _animator.speed = on ? 0f : 1f;
+        }
         private Vector3 _pathGoal;
         private float _pathAt = -99f;
         private bool _havePath;
@@ -91,7 +99,7 @@ namespace FulingHeckler
         /// <summary>One step of a run or a creep: along the route to goal (or towards where dir points), by the step rules.</summary>
         private void MoveToward(Vector3 dir, float step, float animSpeed = RunSpeed, Vector3? goal = null)
         {
-            if (step <= 0f) return;
+            if (step <= 0f || _frozen) return;
             dir = Flat(dir);
             if (dir.sqrMagnitude < 0.0001f) return;
             dir.Normalize();

@@ -34,7 +34,7 @@ namespace FulingHeckler
     {
         public const string Guid = "nick.valheim.fulingheckler";
         public const string Name = "Fuling Heckler";
-        public const string Version = "1.8.6";
+        public const string Version = "1.9.0";
 
         internal static Plugin Instance;
         internal static ManualLogSource Log;
@@ -169,6 +169,7 @@ namespace FulingHeckler
             gameObject.AddComponent<Net>();
             Net.Patch(_harmony);
             if (ZRoutedRpc.instance != null) Net.OnGameStart();   // loaded in a world (a hot reload): set up for it now
+            Commands.Register();
 
             Log.LogInfo($"{Name} {Version} loaded. A Fuling is watching.");
         }
@@ -180,6 +181,7 @@ namespace FulingHeckler
             // A hot reload: nothing of this copy may keep running (a goblin left standing, messages handled by old code).
             FulingActor.RemoveAll();
             Net.Unregister();
+            Commands.Unregister();
             foreach (var c in new MonoBehaviour[] { Courier, Sounds.Instance, Scenes.Instance, Net.Instance })
                 if (c != null) Destroy(c);
             Localization.OnLanguageChange -= ReloadQuips;
@@ -862,14 +864,14 @@ namespace FulingHeckler
         // Tools
         // ------------------------------------------------------------------
 
-        private void TestSummon(bool emoteTest, bool? forceTorch)
+        internal void TestSummon(bool emoteTest, bool? forceTorch, string forcedEmote = null)
         {
             var p = Player.m_localPlayer;
             if (p == null) { ShowToolFeedback("Load into a world first."); return; }
             string line = QuipPicker.PickForTest(Quips, _rng);
             if (line == null) { ShowToolFeedback("No lines in the quips file."); return; }
             line = Placeholders.Fill(line, p.GetPlayerName(), "a test", 3);
-            Courier.Deliver(p, line, special: true, milestone: false, emoteTest: emoteTest, forceTorch: forceTorch, isTest: true);
+            Courier.Deliver(p, line, special: true, milestone: false, emoteTest: emoteTest, forceTorch: forceTorch, isTest: true, forcedEmote: forcedEmote);
         }
 
         private int _emoteTestIndex;
@@ -1037,7 +1039,7 @@ namespace FulingHeckler
             ShowToolFeedback("Puff: " + effects);
         }
 
-        private void TestScene(SceneKind kind)
+        internal void TestScene(SceneKind kind)
         {
             var p = Player.m_localPlayer;
             if (p == null) { ShowToolFeedback("Load into a world first."); return; }

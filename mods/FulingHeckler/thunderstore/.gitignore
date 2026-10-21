@@ -1,0 +1,5 @@
+# Game renders the icon is built from: the game's art, kept off the repository (as for the other mods)
+sources/
+# Icon drafts tried on the way
+drafts/
+__pycache__/
