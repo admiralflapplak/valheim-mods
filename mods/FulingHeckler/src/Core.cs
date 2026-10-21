@@ -153,6 +153,20 @@ namespace FulingHeckler
         {
             { "enemy:drake | any | Ice-bird freeze you! {me} stay away from mountain. Mountain is mean.",
               "enemy:hatchling | any | Ice-bird freeze you! {me} stay away from mountain. Mountain is mean." },
+            { "generic | repeat | Tall-one die {count} time. {me} counting on fingers. Need more fingers.",
+              "generic | repeat | Tall-one die {n} times. {me} counting on fingers. Need more fingers." },
+            { "fall | repeat | Tall-one jump, tall-one go splat. {count} splat! {me} love this game.",
+              "fall | repeat | Tall-one jump, tall-one go splat. {n} splats! {me} love this game." },
+            { "tree | repeat | Tree kill you {count} time. {me} think trees on Fuling side.",
+              "tree | repeat | Tree kill you {n} times. {me} think trees on Fuling side." },
+            { "enemy:deer | repeat | Deer get you {count} time. Deer is not even angry. Deer just walking.",
+              "enemy:deer | repeat | Deer get you {n} times. Deer not even angry. Deer just walking." },
+            { "enemy:blob | any | Puddle beat you. Angry puddle. {me} has seen everything now.",
+              "enemy:blob | any | Puddle beat you. Angry puddle. {me} seen everything now." },
+            { "enemy:goblin | any | My cousin get you! Cousin will be so happy! {me} bring cake.",
+              "enemy:goblin | any | {me} cousin get you! Cousin will be so happy! {me} bring cake." },
+            { "enemy:goblinarcher | any | Cousin with bow! Good shot cousin!",
+              "enemy:goblinarcher | any | Cousin with bow! Good shot, cousin!" },
         };
 
         /// <summary>Lines added to the default file since older versions wrote theirs: an older file without them is still unedited.</summary>
@@ -194,7 +208,7 @@ namespace FulingHeckler
     {
         /// <summary>The words for an unknown name, an unknown killer and "27th" in the player's language (the plugin sets them).</summary>
         public static string TallOne = "tall-one", Something = "something";
-        public static Func<int, string> OrdinalWord;   // null: English ("second", "27th")
+        public static Func<int, string> OrdinalWord;   // null: English ("2nd", "27th")
 
         public static string Fill(string text, string playerName, string killerName, int count)
         {
@@ -216,14 +230,9 @@ namespace FulingHeckler
             return System.Text.RegularExpressions.Regex.Replace(text, @"\{me\}", me, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         }
 
-        private static readonly string[] Words =
-            { "zeroth", "first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth", "tenth", "eleventh", "twelfth" };
-
-        /// <summary>"second", "27th" in English; other languages' own form ("27.", "27-й") through OrdinalWord.</summary>
         public static string Ordinal(int n)
         {
             if (OrdinalWord != null) return OrdinalWord(n);
-            if (n >= 0 && n < Words.Length) return Words[n];
             int mod100 = n % 100;
             string suffix = (mod100 >= 11 && mod100 <= 13) ? "th"
                 : (n % 10 == 1) ? "st" : (n % 10 == 2) ? "nd" : (n % 10 == 3) ? "rd" : "th";

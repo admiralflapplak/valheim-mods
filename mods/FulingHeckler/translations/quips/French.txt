@@ -69,7 +69,7 @@ drowning   | first  | L'eau c'est pour les poissons, Grand-Pattes ! Poissons rig
 drowning   | repeat | Encore noyé ! {me} jamais aller dans l'eau. {me} malin.
 drowning   | repeat | Glou glou glou ! Hihihi ! C'était toi !
 fall       | first  | Hah ! Le sol gagne ! Le sol gagne toujours !
-fall       | repeat | Grand-Pattes saute, Grand-Pattes fait splash. {count} splash ! {me} adorer ce jeu.
+fall       | repeat | Grand-Pattes saute, Grand-Pattes fait splash. {n} fois splash ! {me} adorer ce jeu.
 fall       | repeat | {me} te voir voler ! Puis {me} te voir plus voler !
 burning    | first  | Ça sent la cuisine ! {me} apporter la sauce la prochaine fois.
 burning    | repeat | Encore en feu ! {me} s'asseoir près. Chaud.

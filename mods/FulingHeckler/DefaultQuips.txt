@@ -22,7 +22,7 @@
 #  Placeholders:
 #         {name}    your character's name
 #         {killer}  what killed you ("Troll", or a friend's name)
-#         {count}   "second", "third", ... "27th"
+#         {count}   "2nd", "3rd", ... "27th"
 #         {n}       the plain number
 #         {me}      his name, or just "Fuling" (by chance: 'Say His Name Chance'
 #                   in F1 > 3 - Look). Plain "Fuling" always stays "Fuling",
@@ -38,7 +38,7 @@ generic | first     | Hah! New way to die! {me} never see that one before!
 generic | first     | Tall-one fall over! {me} come see. Worth the run.
 generic | first     | {me} hear the scream from far away. {me} run SO fast.
 generic | repeat    | Again?! Hehehe. {me} tell whole village.
-generic | repeat    | Tall-one die {count} time. {me} counting on fingers. Need more fingers.
+generic | repeat    | Tall-one die {n} times. {me} counting on fingers. Need more fingers.
 generic | repeat    | {me} not even need to fight you. You do it yourself!
 generic | repeat    | {me} was eating. {me} stop eating for this. Worth it.
 generic | repeat    | You know {me} follow you now? {me} follow you everywhere. Best show in all lands.
@@ -106,7 +106,7 @@ drowning   | first  | Water is for fish, tall-one! Fish laughing too.
 drowning   | repeat | Drown again! {me} never go in water. {me} smart.
 drowning   | repeat | Glub glub glub! Hehehe! That was you!
 fall       | first  | Hah! Ground win! Ground always win!
-fall       | repeat | Tall-one jump, tall-one go splat. {count} splat! {me} love this game.
+fall       | repeat | Tall-one jump, tall-one go splat. {n} splats! {me} love this game.
 fall       | repeat | {me} see you fly! Then {me} see you not fly!
 burning    | first  | Smell like cooking! {me} bring sauce next time.
 burning    | repeat | On fire again! {me} sit close. Warm.
@@ -116,7 +116,7 @@ smoke      | any    | Too much smoke! {me} make hole in roof. Tall-one never lea
 edge       | any    | Tall-one fall off world! {me} not know world HAS edge!
 boiled     | any    | Hot sea cook tall-one! {me} not go to burning land. {me} not stupid.
 tree       | first  | Tree fall on tall-one! Tree win! {me} cheer for tree!
-tree       | repeat | Tree kill you {count} time. {me} think trees on Fuling side.
+tree       | repeat | Tree kill you {n} times. {me} think trees on Fuling side.
 tree       | repeat | You hit tree. Tree hit back. Fair!
 stalactite | any    | Rock fall from sky! Look UP, tall-one!
 lava       | first  | Floor is lava! Tall-one not know game? {me} know game. {me} WIN game.
@@ -142,7 +142,7 @@ enemy | repeat    | {killer}! Again! Maybe say sorry to {killer}? Make friends?
 enemy | milestone | {n} times {killer} beat you! {me} make {killer} a hat.
 
 enemy:deer          | any    | DEER?! {me} eat deer for breakfast! Hehehehe!
-enemy:deer          | repeat | Deer get you {count} time. Deer is not even angry. Deer just walking.
+enemy:deer          | repeat | Deer get you {n} times. Deer not even angry. Deer just walking.
 enemy:boar          | any    | Piggy kill you! Little piggy! {me} crying from laugh!
 enemy:neck          | any    | Lizard-fish win! Smallest thing in whole world win!
 enemy:greyling      | any    | Little tree-thing beat you. {me} embarrassed for you.
@@ -151,15 +151,15 @@ enemy:troll         | first  | Big blue one smash you flat! {me} hide from troll
 enemy:troll         | repeat | Troll again! Troll not even remember you. {me} remember. {me} ALWAYS remember.
 enemy:troll         | repeat | Run from troll, tall-one! {me} run from troll. {me} alive.
 enemy:draugr        | any    | Stinky dead-man get you! Now you stinky dead-man too!
-enemy:blob          | any    | Puddle beat you. Angry puddle. {me} has seen everything now.
+enemy:blob          | any    | Puddle beat you. Angry puddle. {me} seen everything now.
 enemy:wolf          | any    | Doggies! Many doggies! {me} count doggies. {me} run out of fingers.
 enemy:hatchling     | any    | Ice-bird freeze you! {me} stay away from mountain. Mountain is mean.
 enemy:fenring       | any    | Wolf-man get you at night! {me} sleep at night. Smart {me}.
 enemy:deathsquito   | first  | Bzzzz! Bitey bug get you! {me} know bug. Bug is {me} friend.
 enemy:deathsquito   | repeat | Bug again! {me} train bug. Good bug.
 enemy:lox           | any    | You poke big fluffy beast?! Why?! {me} never poke lox!
-enemy:goblin        | any    | My cousin get you! Cousin will be so happy! {me} bring cake.
-enemy:goblinarcher  | any    | Cousin with bow! Good shot cousin!
+enemy:goblin        | any    | {me} cousin get you! Cousin will be so happy! {me} bring cake.
+enemy:goblinarcher  | any    | Cousin with bow! Good shot, cousin!
 enemy:goblinbrute   | any    | Big cousin smash! Big cousin very strong. Big cousin not smart. But strong!
 enemy:goblinshaman  | any    | Shaman get you! {me} tell you: shaman scary. Nobody listen to {me}.
 enemy:seeker        | any    | Bug-thing in fog! {me} never go in fog. Fog is for idiots.
