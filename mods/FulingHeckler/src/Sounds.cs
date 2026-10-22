@@ -110,7 +110,7 @@ namespace FulingHeckler
                     "  boo/        the Red Light Green Light BOO                   [taunt]\n\n" +
                     "Coin thief:\n" +
                     "  steal/      when he grabs your coins                        [taunt]\n" +
-                    "  coin_drop/  each coin hitting the ground as he runs\n\n" +
+                    "  coin_drop/  each coin hitting the ground as he runs           [the game's own coin sound]\n\n" +
                     "Gifter:\n" +
                     "  gift/       his giggle as he slips things into your pockets\n" +
                     "  (caught/ is used when you catch him)\n");
@@ -182,8 +182,27 @@ namespace FulingHeckler
         {
             if (_clips.TryGetValue(m, out var list) && list.Count > 0) return list[_rng.Next(list.Count)];
             var fallback = FallbackFor(m);
-            return fallback.HasValue ? Pick(fallback.Value) : null;
+            if (fallback.HasValue) return Pick(fallback.Value);
+            var game = GameClips(m);
+            return game != null && game.Length > 0 ? game[_rng.Next(game.Length)] : null;
         }
+
+        /// <summary>
+        /// The game's own sound for a moment with no recordings of his: a coin landing sounds like the game's coins being put down
+        /// (sfx_coins_placed). Only its clips are borrowed and played on his own sound source: the effect itself is a networked object.
+        /// </summary>
+        private static AudioClip[] GameClips(SoundMoment m)
+        {
+            string effect = m == SoundMoment.CoinDrop ? "sfx_coins_placed" : null;
+            if (effect == null) return null;
+            if (_gameClips.TryGetValue(m, out var clips)) return clips;
+            var prefab = ZNetScene.instance != null ? ZNetScene.instance.GetPrefab(effect) : null;
+            var sfx = prefab != null ? prefab.GetComponent<ZSFX>() : null;
+            if (sfx == null) return null;   // not loaded yet: ask again next time
+            return _gameClips[m] = sfx.m_audioClips ?? new AudioClip[0];
+        }
+
+        private static readonly Dictionary<SoundMoment, AudioClip[]> _gameClips = new Dictionary<SoundMoment, AudioClip[]>();
 
         /// <summary>
         /// For continuous sound (his dance): if nothing is playing on his dedicated channel, start the next clip.
