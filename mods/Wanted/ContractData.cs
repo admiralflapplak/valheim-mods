@@ -181,6 +181,16 @@ namespace Wanted
             };
         }
 
+        /// <summary>
+        /// The stage the game's own valuables belong to (where they're found: chests and locations, which Discovery can't read). Other
+        /// mods' valuables go by where Discovery finds them, or failing that by their price.
+        /// </summary>
+        public static readonly Dictionary<string, int> ValuableTiers = new Dictionary<string, int>
+        {
+            { "Amber", 0 }, { "AmberPearl", 0 }, { "Ruby", 1 }, { "SilverNecklace", 2 },
+            { "AncientCoin", 7 }, { "AncientGemstoneGreen", 7 }, { "AncientGemstoneOrange", 7 }, { "AncientGemstonePurple", 7 }, { "AncientGemstoneBlack", 7 },
+        };
+
         // ---- the file ---------------------------------------------------------------------------------------------------
 
         /// <summary>The file's text (the example, written the first time), for ServerSettings to send or use.</summary>

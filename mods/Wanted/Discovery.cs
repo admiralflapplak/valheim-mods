@@ -270,7 +270,8 @@ namespace Wanted
                     if (k != null) ammo.Add(new PayEntry(k.Value.tier, go.name, Mathf.Max(0.2f, k.Value.value)));
                 }
                 else if (s.m_value > 0 && go.name != "Coins" && s.m_itemType != ItemDrop.ItemData.ItemType.Trophy)
-                    valuables.Add(new PayEntry(itemTier.TryGetValue(go.name, out int vt) ? vt : -1, go.name, s.m_value));   // (-1: found nowhere in particular)
+                    valuables.Add(new PayEntry(ContractData.ValuableTiers.TryGetValue(go.name, out int vt) ? vt
+                        : itemTier.TryGetValue(go.name, out vt) ? vt : -1, go.name, s.m_value));   // (-1: found nowhere in particular)
             }
 
             Found = found;
