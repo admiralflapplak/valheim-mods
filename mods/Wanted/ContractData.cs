@@ -35,16 +35,32 @@ namespace Wanted
     /// 7 Deep North uses 6's until it has its own). The built-in lists below, plus a file a server owner can add to:
     /// BepInEx/config/nick.valheim.wanted.contracts.json ("add" entries, "remove" prefab names), made with an example the first time.
     /// Other mods' creatures and items go in there; anything this game doesn't have is skipped (`wanted names` lists them), so the
-    /// built-in lists name other mods' things too (Weapon Oils' oils), which only come up when that mod is installed. In multiplayer
-    /// the server's file applies to everyone (ServerSettings' server data).
+    /// built-in lists name other mods' things too (Weapon Oils' oils), which only come up when that mod is installed. Discovery adds
+    /// what neither names (other mods' creatures, things, food and metals, found in the game). In multiplayer the server's file applies
+    /// to everyone (ServerSettings' server data).
     /// </summary>
     internal static class ContractData
     {
         public const string SyncKey = "contracts";
         public static string FilePath => Path.Combine(Paths.ConfigPath, Plugin.Guid + ".contracts.json");
 
-        public static List<Entry> Entries = new List<Entry>(Defaults());
+        public static List<Entry> Entries = new List<Entry>(Defaults());       // the built-in lists with the file's changes
         public static List<PayEntry> Pay = new List<PayEntry>(DefaultPay());
+        public static HashSet<string> Removed = new HashSet<string>();         // the file's "remove": out of found ones too
+
+        /// <summary>Everything a notice can ask for: the lists, and what Discovery found that they don't name.</summary>
+        public static IEnumerable<Entry> AllEntries()
+        {
+            Discovery.Ensure();
+            return Entries.Concat(Discovery.Found.Where(f => !Removed.Contains(f.Prefab)));
+        }
+
+        /// <summary>Everything a notice can pay in: the lists, and the metals Discovery found.</summary>
+        public static IEnumerable<PayEntry> AllPay()
+        {
+            Discovery.Ensure();
+            return Pay.Concat(Discovery.FoundPay.Where(f => !Removed.Contains(f.Prefab)));
+        }
 
         // ---- the built-in lists --------------------------------------------------------------------------------------
         // Values are coins for one: a kill by how dangerous and slow the creature is; a thing by what it takes to get or make (an ore
@@ -151,12 +167,14 @@ namespace Wanted
         {
             var entries = new List<Entry>(Defaults());
             var pay = new List<PayEntry>(DefaultPay());
+            var removedAll = new HashSet<string>();
             try
             {
                 if (!string.IsNullOrWhiteSpace(text))
                 {
                     JObject root = JObject.Parse(text);
                     var removed = new HashSet<string>((root["remove"] as JArray)?.Select(t => (string)t).Where(s => s != null) ?? Enumerable.Empty<string>());
+                    removedAll = removed;
                     entries.RemoveAll(e => removed.Contains(e.Prefab));
                     pay.RemoveAll(p => removed.Contains(p.Prefab));
                     foreach (JToken t in (root["add"] as JArray) ?? new JArray())
@@ -175,6 +193,8 @@ namespace Wanted
             catch (Exception e) { Plugin.Log.LogWarning($"The contracts file has a mistake ({e.Message}): using the built-in lists only"); }
             Entries = entries;
             Pay = pay;
+            Removed = removedAll;
+            Discovery.Forget();   // (found again against the new lists at the next posting)
         }
 
         private const string Example =

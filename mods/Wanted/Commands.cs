@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using BepInEx;
 using BepInEx.Bootstrap;
@@ -18,7 +19,7 @@ namespace Wanted
     {
         private const string Owner = "Wanted";
         private static readonly string[] ToolGuids = { "com.quad.claudetools", "com.dhack.claudetools" };
-        private const string Usage = "wanted boards [radius]: the Wanted boards near the player, which way they face, their notices and materials | wanted names: prefab names the contract lists use that this game doesn't have, and the world's stage";
+        private const string Usage = "wanted boards [radius]: the Wanted boards near the player, which way they face, their notices and materials | wanted names: prefab names the contract lists use that this game doesn't have, and the world's stage | wanted found: what discovery adds beyond the built-in lists (other mods' creatures, things, food, metals) | wanted spawns <creature>: its entries in the world's spawn lists";
 
         private static BaseUnityPlugin _registeredWith;
         private static float _nextLook;
@@ -66,6 +67,31 @@ namespace Wanted
             try
             {
                 string what = args.Length > 1 ? args[1].ToLowerInvariant() : "";
+                if (what == "spawns" && args.Length > 2)   // how a creature is listed in the world's spawn lists (why discovery gave it its stage)
+                {
+                    var lines = new List<string>();
+                    var lists = new List<SpawnSystemList>();
+                    var zc = ZNetScene.instance.GetPrefab("_ZoneCtrl")?.GetComponent<SpawnSystem>();
+                    if (zc != null) lists.AddRange(zc.m_spawnLists);
+                    foreach (var l in lists) foreach (var d in l.m_spawners)
+                        if (d.m_prefab != null && d.m_prefab.name == args[2])
+                            lines.Add($"{l.name}: biome={d.m_biome} ({(int)d.m_biome}) area={d.m_biomeArea} enabled={d.m_enabled} key='{d.m_requiredGlobalKey}' event='{d.m_requiredPersistentEvent}' night={d.m_spawnAtNight}/{d.m_spawnAtDay}");
+                    output(new Dictionary<string, object> { { "spawns", lines } });
+                    return null;
+                }
+                if (what == "found")
+                {
+                    Discovery.Forget();
+                    var entries = ContractData.AllEntries().ToList();   // (finds them afresh)
+                    output(new Dictionary<string, object>
+                    {
+                        { "found", Discovery.Found.OrderBy(e => e.Tier).ThenBy(e => e.Kind)
+                            .Select(e => $"{e.Kind} t{e.Tier} {e.Prefab} x{e.Count} @{e.Value} ({Contracts.DisplayName(e.Prefab)})").ToList() },
+                        { "foundRewards", Discovery.FoundPay.Select(p => $"t{p.Tier} {p.Prefab} @{p.Value} ({Contracts.DisplayName(p.Prefab)})").ToList() },
+                        { "builtIn", ContractData.Entries.Count }, { "total", entries.Count },
+                    });
+                    return null;
+                }
                 if (what == "names") { output(new Dictionary<string, object> { { "unknown", Contracts.Unknown() }, { "worldTier", Contracts.WorldTier() } }); return null; }
                 if (what != "boards") { output(new Dictionary<string, object> { { "usage", Usage } }); return null; }
                 Player p = Player.m_localPlayer;

@@ -108,12 +108,13 @@ namespace Wanted
         {
             int newest = WorldTier();
             int tier = newest > 0 && rnd.NextDouble() < 0.3 ? newest - 1 : newest;
-            int list = ListTier(tier, ContractData.Entries.Select(e => e.Tier));
+            List<Entry> all = ContractData.AllEntries().ToList();
+            int list = ListTier(tier, all.Select(e => e.Tier));
 
             var kinds = new List<List<Entry>>();
             foreach (Kind k in new[] { Kind.Kill, Kind.Kill, Kind.Gather, Kind.Trophy, Kind.Provisions })
             {
-                var known = ContractData.Entries.Where(e => e.Kind == k && e.Tier == list && Known(e.Prefab)).ToList();
+                var known = all.Where(e => e.Kind == k && e.Tier == list && Known(e.Prefab)).ToList();
                 if (known.Count > 0) kinds.Add(known);
             }
             if (kinds.Count == 0) return null;
@@ -156,8 +157,9 @@ namespace Wanted
             int coins = Math.Max(1, (int)Math.Round(worth * CoinShare));
             parts.Add("Coins:" + coins.ToString(CultureInfo.InvariantCulture));
 
-            int payTier = ListTier(tier, ContractData.Pay.Select(p => p.Tier));
-            var pay = ContractData.Pay.Where(p => p.Tier == payTier && Known(p.Prefab)).ToList();
+            List<PayEntry> allPay = ContractData.AllPay().ToList();
+            int payTier = ListTier(tier, allPay.Select(p => p.Tier));
+            var pay = allPay.Where(p => p.Tier == payTier && Known(p.Prefab)).ToList();
             if (pay.Count > 0)
             {
                 PayEntry m = pay[rnd.Next(pay.Count)];

@@ -45,6 +45,18 @@ namespace Wanted
         /// <summary>Whether a notice has all it needs to be handed in (a bounty: all its kills; the rest: checked at the box).</summary>
         public static bool Done(ItemDrop.ItemData notice, Contract c) => c.Kind == Kind.Kill && Progress(notice) >= c.Count;
 
+        /// <summary>
+        /// Whether a kill counts for a bounty: the same creature, or one the game calls by the same name (the swamp's Skeleton counts
+        /// for "Slay: Skeleton", a frozen Greydwarf for "Slay: Greydwarf").
+        /// </summary>
+        private static bool SameCreature(string target, string killed)
+        {
+            if (target == killed) return true;
+            string a = ZNetScene.instance?.GetPrefab(target)?.GetComponent<Character>()?.m_name;
+            string b = ZNetScene.instance?.GetPrefab(killed)?.GetComponent<Character>()?.m_name;
+            return a != null && a == b;
+        }
+
         /// <summary>On this player's game: a creature of this kind died by players' hands near them.</summary>
         private static void Credit(string prefab)
         {
@@ -55,7 +67,7 @@ namespace Wanted
                 foreach (ItemDrop.ItemData item in player.GetInventory().GetAllItems())
                 {
                     Contract c = NoticeItem.ContractOf(item);
-                    if (c == null || c.Kind != Kind.Kill || c.Target != prefab) continue;
+                    if (c == null || c.Kind != Kind.Kill || !SameCreature(c.Target, prefab)) continue;
                     int n = Progress(item);
                     if (n >= c.Count) continue;
                     item.m_customData[KeyProgress] = (++n).ToString();
