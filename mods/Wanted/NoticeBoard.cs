@@ -22,6 +22,8 @@ namespace Wanted
         private ZNetView _view;
         private GameObject[] _slots;
         private MeshRenderer[] _papers;
+        private GameObject _pouch;
+        private Container _box;
         private string _shown;
         private float _nextShow, _nextPost;
         private int _pendingSlot = -1;
@@ -38,6 +40,8 @@ namespace Wanted
                 _slots[i] = slot != null ? slot.gameObject : null;
                 _papers[i] = slot != null ? slot.Find("paper")?.GetComponent<MeshRenderer>() : null;
             }
+            _pouch = transform.Find("wanted_look/wanted_pouch")?.gameObject;
+            _box = GetComponent<Container>();
             if (_view == null || !_view.IsValid()) return;   // (the build ghost: no saved data, nothing to do)
             _view.Register<int, string>(RpcTake, RPC_Take);
             _view.Register<int, string>(RpcTaken, RPC_Taken);
@@ -59,7 +63,7 @@ namespace Wanted
             if (now >= _nextPost && _view.IsOwner())
             {
                 _nextPost = now + 2f;
-                try { Post(); }
+                try { Post(); ClearPouch(); }
                 catch (Exception e) { Plugin.Log.LogWarning("Posting notices: " + e.Message); }
             }
             if (now >= _nextShow)
@@ -89,6 +93,7 @@ namespace Wanted
         /// <summary>Papers shown for the slots that hold a notice, each in its kind's paper; the empty ones hidden (their hover too).</summary>
         private void Show(bool force)
         {
+            if (_pouch != null) _pouch.SetActive(!string.IsNullOrEmpty(_view.GetZDO().GetString(HandIn.KeyPouch, "")));
             string saved = _view.GetZDO().GetString(KeyNotices, "");
             if (!force && saved == _shown) return;
             _shown = saved;
@@ -103,6 +108,16 @@ namespace Wanted
                     if (m != null) _papers[i].sharedMaterial = m;
                 }
             }
+        }
+
+        /// <summary>On the owner: once none of the rewards paid into the box are left in it, the coins on the sill go.</summary>
+        private void ClearPouch()
+        {
+            string waiting = _view.GetZDO().GetString(HandIn.KeyPouch, "");
+            if (string.IsNullOrEmpty(waiting) || _box == null) return;
+            var names = waiting.Split(',');
+            bool any = _box.GetInventory().GetAllItems().Any(i => i.m_dropPrefab != null && names.Contains(i.m_dropPrefab.name));
+            if (!any) _view.GetZDO().Set(HandIn.KeyPouch, "");
         }
 
         // ---- posting (the owner) ------------------------------------------------------------------------------------------

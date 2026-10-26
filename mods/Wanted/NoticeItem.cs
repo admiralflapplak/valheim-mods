@@ -38,6 +38,15 @@ namespace Wanted
             _holder = null;
         }
 
+        private const int Kinds = 4;
+
+        private const string KeyDone = "Wanted.done";   // m_customData: "1" once a bounty's last kill is counted
+
+        /// <summary>The bounty is finished: its icon gets the wax seal.</summary>
+        public static void MarkDone(ItemDrop.ItemData item, Contract c) => item.m_customData[KeyDone] = "1";
+
+        private static bool IsDone(ItemDrop.ItemData item) => item.m_customData.TryGetValue(KeyDone, out string d) && d == "1";
+
         public static bool Is(ItemDrop.ItemData item) => item != null && item.m_shared.m_name == ItemName;
 
         public static Contract ContractOf(ItemDrop.ItemData item) =>
@@ -53,7 +62,6 @@ namespace Wanted
             ItemDrop.ItemData item = Prefab.GetComponent<ItemDrop>().m_itemData.Clone();
             item.m_dropPrefab = Prefab;
             item.m_stack = 1;
-            item.m_variant = (int)contract.Kind;
             item.m_customData[KeyContract] = contract.Write();   // (set before it goes in: nothing can stack onto it then)
             if (!player.GetInventory().AddItem(item))
             {
@@ -90,8 +98,10 @@ namespace Wanted
             try { Dress(go, scene); }
             catch (Exception e) { Plugin.Log.LogWarning("Notice look: " + e.Message); }
 
-            var icons = new Sprite[4];
-            for (int k = 0; k < icons.Length; k++) icons[k] = Paper.IconFor((Kind)k, scene);
+            // 0-3: a notice of each kind; 4-7: the same, finished (a wax seal on it). Picked by GetIcon below from the item's own contract,
+            // not by the game's variants (it resets a variant its item doesn't declare, and declared ones become a choice when crafting).
+            var icons = new Sprite[Kinds * 2];
+            for (int k = 0; k < icons.Length; k++) icons[k] = Paper.IconFor((Kind)(k % Kinds), scene, done: k >= Kinds);
             if (icons.All(i => i != null)) s.m_icons = icons;
             drop.m_itemData.m_dropPrefab = go;
             return go;
@@ -122,10 +132,38 @@ namespace Wanted
                 try
                 {
                     Contract c = ContractOf(item);
-                    if (c != null) __result = Contracts.Describe(c) + "\n\n" + __result;
+                    if (c == null) return;
+                    __result = Contracts.Describe(c) + "\n" + Status(item, c) + "\n\n" + __result;
                 }
                 catch (Exception e) { Plugin.Log.LogWarning("Notice tooltip: " + e.Message); }
             }
+        }
+
+        [HarmonyPatch(typeof(ItemDrop.ItemData), nameof(ItemDrop.ItemData.GetIcon))]
+        private static class ItemData_GetIcon
+        {
+            private static void Postfix(ItemDrop.ItemData __instance, ref Sprite __result)
+            {
+                if (!Is(__instance)) return;
+                Sprite[] icons = __instance.m_shared.m_icons;
+                Contract c = ContractOf(__instance);
+                if (c == null || icons == null || icons.Length < Kinds * 2) return;
+                __result = icons[(int)c.Kind + (IsDone(__instance) ? Kinds : 0)] ?? __result;
+            }
+        }
+
+        /// <summary>How far along it is: kills counted, or how many of the things it asks for are in the bag.</summary>
+        private static string Status(ItemDrop.ItemData item, Contract c)
+        {
+            if (c.Kind == Kind.Kill)
+            {
+                int n = Kills.Progress(item);
+                return n >= c.Count ? "<color=#99e68c>" + T("wanted_status_done") + "</color>" : T("wanted_status_kills", n, c.Count);
+            }
+            Player p = Player.m_localPlayer;
+            int have = p != null ? HandIn.CountOf(p.GetInventory(), c.Target) : 0;
+            string text = T("wanted_status_have", have, c.Count);
+            return have >= c.Count ? "<color=#99e68c>" + text + "</color>" : text;
         }
 
         // ---- when the game registers its own ---------------------------------------------------------------------------

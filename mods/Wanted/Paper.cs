@@ -58,12 +58,12 @@ namespace Wanted
         /// The notice's picture in the bag: its paper, a little turned, on a square with nothing around it (the game draws item icons
         /// square). Null when the paper can't be made.
         /// </summary>
-        public static Sprite IconFor(Kind kind, ZNetScene scene)
+        public static Sprite IconFor(Kind kind, ZNetScene scene, bool done = false)
         {
             var paper = For(kind, scene)?.mainTexture as Texture2D;
             if (paper == null) return null;
             const int size = 128;
-            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false) { name = "wanted_icon_" + kind, wrapMode = TextureWrapMode.Clamp };
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false) { name = "wanted_icon_" + kind + (done ? "_done" : ""), wrapMode = TextureWrapMode.Clamp };
             var px = new Color[size * size];
             float h = size * 0.92f, w = h * W / H;   // the paper's own proportions
             float turn = (kind == Kind.Kill || kind == Kind.Trophy ? -6f : 6f) * Mathf.Deg2Rad, cos = Mathf.Cos(turn), sin = Mathf.Sin(turn);
@@ -75,9 +75,32 @@ namespace Wanted
                 float u = (dx * cos + dy * sin) / w + 0.5f, v = (-dx * sin + dy * cos) / h + 0.5f;
                 px[y * size + x] = u < 0f || u > 1f || v < 0f || v > 1f ? new Color(0, 0, 0, 0) : paper.GetPixelBilinear(u, v);
             }
+            if (done) Seal(px, size, size * 0.72f, size * 0.24f, size * 0.17f);
             tex.SetPixels(px);
             tex.Apply(false);
             return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f);
+        }
+
+        /// <summary>A red wax seal pressed on the paper (a finished notice): a blob with a ragged rim, darker at the edge, a pressed ring inside.</summary>
+        private static void Seal(Color[] px, int size, float cx, float cy, float radius)
+        {
+            var wax = new Color(0.62f, 0.08f, 0.06f);
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float dx = x + 0.5f - cx, dy = y + 0.5f - cy;
+                float angle = Mathf.Atan2(dy, dx);
+                float rim = radius * (1f + 0.12f * Mathf.PerlinNoise(Mathf.Cos(angle) * 2f + 5f, Mathf.Sin(angle) * 2f + 5f) - 0.06f);
+                float r = Mathf.Sqrt(dx * dx + dy * dy);
+                if (r > rim + 1f) continue;
+                float edge = Mathf.Clamp01(rim + 1f - r);                      // soft outer pixel
+                float shade = 0.75f + 0.25f * Mathf.Clamp01(1f - r / rim);      // darker towards the rim
+                if (Mathf.Abs(r - rim * 0.6f) < 1.2f) shade *= 0.75f;          // the stamp's ring
+                Color c = wax * shade;
+                c.a = 1f;
+                int i = y * size + x;
+                px[i] = Color.Lerp(px[i], c, edge);
+            }
         }
 
         public static void Forget()

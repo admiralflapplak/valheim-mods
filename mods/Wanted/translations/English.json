@@ -20,5 +20,15 @@
   "wanted_gone": "Someone else took that notice.",
   "wanted_too_many": "You can carry only {0} notices at a time.",
   "wanted_bag_full": "Your bag is full.",
-  "wanted_dropped": "No room in your bag: the notice is at your feet."
+  "wanted_dropped": "No room in your bag: the notice is at your feet.",
+  "wanted_status_kills": "Slain: {0}/{1}",
+  "wanted_status_have": "In your bag: {0}/{1}",
+  "wanted_status_done": "Done: hand it in at a Wanted board's box",
+  "wanted_progress": "{0}: {1}/{2}",
+  "wanted_done": "Notice done: {0}. Hand it in at a Wanted board's box.",
+  "wanted_not_done": "{0}: only {1}/{2} slain so far.",
+  "wanted_short": "{0}: only {1}/{2} in the box.",
+  "wanted_box_full": "The box has no room for the reward.",
+  "wanted_already_paid": "That notice has already been paid.",
+  "wanted_paid": "Paid for {0}: {1}"
 }

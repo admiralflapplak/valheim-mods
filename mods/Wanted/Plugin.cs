@@ -15,7 +15,7 @@ namespace Wanted
     {
         public const string Guid = "nick.valheim.wanted";
         public const string Name = "Wanted";
-        public const string Version = "0.2.0";
+        public const string Version = "0.3.3";
 
         internal static Plugin Instance;
         internal static BepInEx.Logging.ManualLogSource Log;
@@ -79,12 +79,14 @@ namespace Wanted
         {
             Synced?.Update();
             Commands.Update();
+            Kills.Update();
         }
 
         private void OnDestroy()
         {
             _harmony?.UnpatchSelf();
             Commands.Unregister();
+            Kills.Unregister();
             Board.Unload();
             Board.Forget();
             NoticeItem.Forget();

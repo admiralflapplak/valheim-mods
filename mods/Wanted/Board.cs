@@ -33,6 +33,8 @@ namespace Wanted
             PieceTable table = hammer != null ? hammer.GetComponent<ItemDrop>()?.m_itemData.m_shared.m_buildPieces : null;
             if (table != null) _table = table;
             PieceReload.ReplacePrefab(scene, Prefab, table != null ? table : _table);
+            int swapped = PieceReload.Reattach(scene, Prefab);   // boards already standing: this copy's NoticeBoard, papers and faces
+            if (swapped > 0) Plugin.Log.LogInfo($"Gave {swapped} standing board(s) this copy's components");
             ApplyCost();
             Plugin.Synced.NeedsServer(Prefab);
         }
@@ -180,6 +182,7 @@ namespace Wanted
             Beam(look, plank, new Vector3(0f, ridgeY + 0.02f, PostZ), new Vector3(PostX * 2f + 0.7f, 0.1f, 0.1f), 0f);
 
             AddNotices(look, scene, iron, rnd);
+            AddPouch(look, scene);
             AddColliders(board);
         }
 
@@ -223,6 +226,23 @@ namespace Wanted
                     nail.GetComponent<MeshRenderer>().sharedMaterial = iron;
                 }
             }
+        }
+
+        /// <summary>
+        /// A little heap of the game's coins on the sill, under the notices on the box's side: shown while a reward waits in the box
+        /// (NoticeBoard switches it). Hidden on the prefab.
+        /// </summary>
+        private static void AddPouch(Transform look, ZNetScene scene)
+        {
+            Transform coins = scene.GetPrefab("Coins")?.transform.Find("attach");
+            if (coins == null) return;
+            var pouch = Object.Instantiate(coins.gameObject, look, false);
+            pouch.name = "wanted_pouch";
+            foreach (Collider c in pouch.GetComponentsInChildren<Collider>(true)) Object.DestroyImmediate(c);
+            pouch.transform.localPosition = new Vector3(0.5f, PanelBottom + 0.002f, PanelFront - 0.02f);   // on the sill's top
+            pouch.transform.localRotation = Quaternion.Euler(0f, 20f, 0f);
+            pouch.transform.localScale = Vector3.one * 0.55f;
+            pouch.SetActive(false);
         }
 
         /// <summary>Boxes the player and the building checks bump into: the posts and the panel with its roof (the chest keeps its own).</summary>
