@@ -64,8 +64,8 @@ namespace Wanted
 
         private static GameObject Build(ZNetScene scene)
         {
-            GameObject source = scene.GetPrefab("piece_chest_wood");
-            if (source == null) { Plugin.Log.LogWarning("The game has no wooden chest to copy: no Wanted board this session"); return null; }
+            GameObject source = scene.GetPrefab("piece_chest_private");
+            if (source == null) { Plugin.Log.LogWarning("The game has no personal chest to copy: no Wanted board this session"); return null; }
 
             _holder = new GameObject("Wanted_prefabs");
             _holder.SetActive(false);   // nothing under it wakes up: they are prefabs, not objects
@@ -78,10 +78,19 @@ namespace Wanted
             piece.m_name = PieceName;
             piece.m_description = "$wanted_board_desc";
 
+            // the personal chest's iron-bound box, opened by anyone, with a wooden chest's room (rewards and handed-in things fit)
             Container box = board.GetComponent<Container>();
-            if (box != null) box.m_name = "$wanted_box";
+            if (box != null)
+            {
+                box.m_name = "$wanted_box";
+                box.m_privacy = Container.PrivacySetting.Public;
+                box.m_width = 5;
+                box.m_height = 2;
+            }
 
             MoveChest(board);
+            try { DressChest(board.transform.Find("wanted_chest"), scene); }
+            catch (Exception e) { Plugin.Log.LogWarning("Wanted box look: " + e.Message); }
 
             try { AddLook(board, scene); }
             catch (Exception e) { Plugin.Log.LogWarning("Wanted board look: " + e); }
@@ -100,8 +109,8 @@ namespace Wanted
 
         private const float PostX = 0.98f, PostZ = 0.52f, PostHeight = 3.0f, PostRadius = 0.15f;
         private const float PostSink = 0.3f;   // how far the posts go into the ground, so they stand in it on uneven ground
-        private const float ChestScale = 0.8f, ChestTurn = 22f;
-        private static readonly Vector3 ChestAt = new Vector3(0.55f, 0f, 0.05f);   // in front of the right post, its back corner under the panel
+        private const float ChestScale = 1.1f, ChestTurn = 22f;
+        private static readonly Vector3 ChestAt = new Vector3(0.5f, 0f, 0.18f);   // in front of the right post, its back corner under the panel (7 cm clear of the post)
 
         /// <summary>
         /// The chest's model and its collider move under one child, turned round (the game's chest faces +z, our front is -z), scaled down
@@ -121,6 +130,81 @@ namespace Wanted
             chest.localRotation = Quaternion.Euler(0f, 180f + ChestTurn, 0f);
             chest.localScale = Vector3.one * ChestScale;
         }
+        private static Material _stain;   // the box's weathered wood (kept: boards standing use it)
+
+        /// <summary>
+        /// The box made its own: the personal chest's texture recoloured (its red wood to the weathered brown of the board's planks, its
+        /// iron bands to aged bronze) in a copy of its material, and a paper label pinned to its front with a gold coin painted on it,
+        /// where you're paid.
+        /// </summary>
+        private static void DressChest(Transform chest, ZNetScene scene)
+        {
+            if (chest == null) return;
+            foreach (MeshRenderer r in chest.GetComponentsInChildren<MeshRenderer>(true))
+            {
+                if (r.sharedMaterial == null || r.sharedMaterial.name.StartsWith("snow", StringComparison.Ordinal)) continue;
+                if (_stain == null)
+                {
+                    _stain = new Material(r.sharedMaterial) { name = "wanted_box_stain" };
+                    Texture2D recoloured = Recolour(r.sharedMaterial.mainTexture);
+                    if (recoloured != null) _stain.mainTexture = recoloured;
+                    else if (_stain.HasProperty("_Color")) _stain.SetColor("_Color", new Color(0.72f, 0.64f, 0.58f));   // (can't read it: just darker)
+                }
+                r.sharedMaterial = _stain;
+            }
+
+            Material label = Paper.Label(scene);
+            if (label == null) return;
+            // on the box's front (+z before the box is turned round), between the lid and the upper band, beside the clasp, leaning back with the slope of its side
+            var sheet = new GameObject("wanted_label");
+            sheet.transform.SetParent(chest, false);
+            sheet.transform.localPosition = new Vector3(0.115f, 0.44f, 0.262f);
+            sheet.transform.localRotation = Quaternion.Euler(-8f, 180f, 4f);
+            sheet.transform.localScale = new Vector3(0.1f, 0.13f, 1f);
+            sheet.AddComponent<MeshFilter>().sharedMesh = QuadMesh();
+            sheet.AddComponent<MeshRenderer>().sharedMaterial = label;
+        }
+
+        /// <summary>
+        /// A copy of a texture with its wood and its metal coloured apart: grey, unsaturated pixels are metal and go towards aged bronze;
+        /// the rest is wood and goes to a weathered brown, each keeping its own light and dark (so the grain and the wear stay). Null when
+        /// it can't be read.
+        /// </summary>
+        private static Texture2D Recolour(Texture source)
+        {
+            if (source == null) return null;
+            RenderTexture target = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGB32);
+            RenderTexture previous = RenderTexture.active;
+            try
+            {
+                Graphics.Blit(source, target);   // reads any texture, readable or not
+                RenderTexture.active = target;
+                var tex = new Texture2D(source.width, source.height, TextureFormat.RGBA32, true) { name = "wanted_box", wrapMode = source.wrapMode };
+                tex.ReadPixels(new Rect(0, 0, source.width, source.height), 0, 0);
+                Color[] px = tex.GetPixels();
+                var bronze = new Color(0.66f, 0.48f, 0.26f);
+                for (int i = 0; i < px.Length; i++)
+                {
+                    Color c = px[i];
+                    Color.RGBToHSV(c, out float h, out float sat, out float val);
+                    Color to = sat < 0.22f
+                        ? Color.Lerp(c, bronze * Mathf.Clamp01(val * 1.25f), 0.6f)                          // metal: aged bronze
+                        : Color.HSVToRGB(0.075f, Mathf.Clamp01(sat * 0.72f), Mathf.Clamp01(val * 0.82f));  // wood: weathered brown
+                    to.a = c.a;
+                    px[i] = to;
+                }
+                tex.SetPixels(px);
+                tex.Apply(true);
+                return tex;
+            }
+            catch (Exception e) { Plugin.Log.LogInfo("Could not recolour the box (" + e.Message + "): it's only darkened"); return null; }
+            finally
+            {
+                RenderTexture.active = previous;
+                RenderTexture.ReleaseTemporary(target);
+            }
+        }
+
         private const float PanelBottom = 1.0f, PanelTop = 2.2f, PlankDepth = 0.05f;
         private static float PanelFront => PostZ - PostRadius - PlankDepth;   // the planks' front face
 

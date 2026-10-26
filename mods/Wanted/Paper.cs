@@ -29,6 +29,18 @@ namespace Wanted
         }
 
         private static readonly Dictionary<Kind, Material> Materials = new Dictionary<Kind, Material>();
+        private static Material _label;
+
+        /// <summary>The box's label: the same paper with a gold coin painted on it (where you're paid). Null without a material to copy.</summary>
+        public static Material Label(ZNetScene scene)
+        {
+            if (_label != null) return _label;
+            Material source = BaseMaterial(scene);
+            if (source == null) return null;
+            _label = Flat(new Material(source) { name = "wanted_label" });
+            _label.mainTexture = Draw(Kind.Kill, coin: true);
+            return _label;
+        }
 
         /// <summary>The material of a notice of this kind (made the first time it's asked for). Null when the game has no material to copy.</summary>
         public static Material For(Kind kind, ZNetScene scene)
@@ -36,8 +48,15 @@ namespace Wanted
             if (Materials.TryGetValue(kind, out Material made) && made != null) return made;
             Material source = BaseMaterial(scene);
             if (source == null) return null;
-            var m = new Material(source) { name = "wanted_paper_" + kind };
+            var m = Flat(new Material(source) { name = "wanted_paper_" + kind });
             m.mainTexture = Draw(kind);
+            Materials[kind] = m;
+            return m;
+        }
+
+        /// <summary>A copy of the cartography table's material made fit for our paper: the whole texture, no bumps or metal, no wobble.</summary>
+        private static Material Flat(Material m)
+        {
             m.mainTextureScale = Vector2.one;
             m.mainTextureOffset = Vector2.zero;
             // The table's bumps and metal belong to its atlas, not to our paper (its metal map put dark green spots on the notices).
@@ -50,7 +69,6 @@ namespace Wanted
             if (m.HasProperty("_ValueNoiseVertex")) m.SetFloat("_ValueNoiseVertex", 0f);
             if (m.HasProperty("_RippleDistance")) m.SetFloat("_RippleDistance", 0f);   // (how far it moves them, in case the switch alone isn't heeded)
             m.DisableKeyword("_VALUENOISEVERTEX_ON");
-            Materials[kind] = m;
             return m;
         }
 
@@ -108,6 +126,7 @@ namespace Wanted
             // Not destroyed: the old copy's prefab and the boards standing in the world still show them (destroying them left placed
             // boards with no paper or planks after a hot reload). Four small textures per reload, only while making the mod.
             Materials.Clear();
+            _label = null;
         }
 
         private static Material BaseMaterial(ZNetScene scene)
@@ -120,12 +139,12 @@ namespace Wanted
 
         // ---- drawing ------------------------------------------------------------------------------------------------
 
-        private static Texture2D Draw(Kind kind)
+        private static Texture2D Draw(Kind kind, bool coin = false)
         {
-            var tex = new Texture2D(W, H, TextureFormat.RGBA32, true) { name = "wanted_paper_" + kind, wrapMode = TextureWrapMode.Clamp };
+            var tex = new Texture2D(W, H, TextureFormat.RGBA32, true) { name = coin ? "wanted_label" : "wanted_paper_" + kind, wrapMode = TextureWrapMode.Clamp };
             var px = new Color[W * H];
-            float seed = 13.7f + (int)kind * 41.3f;
-            Color ink = Ink(kind);
+            float seed = coin ? 91.1f : 13.7f + (int)kind * 41.3f;
+            Color ink = coin ? new Color(0.74f, 0.52f, 0.1f) : Ink(kind);
 
             for (int y = 0; y < H; y++)
             for (int x = 0; x < W; x++)
@@ -148,7 +167,7 @@ namespace Wanted
                 c = Color.Lerp(c, new Color(0.38f, 0.26f, 0.14f), burn * burn * 0.8f);
 
                 // the mark: a brush stroke narrowing towards the bottom, and a blot under it
-                float paint = Mark(u, v, seed);
+                float paint = coin ? Coin(u, v, seed) : Mark(u, v, seed);
                 if (paint > 0f)
                 {
                     float dry = 0.75f + 0.25f * Mathf.PerlinNoise(u * 30f - seed, v * 30f + seed);   // dry-brush streaks
@@ -160,6 +179,17 @@ namespace Wanted
             tex.SetPixels(px);
             tex.Apply(true);
             return tex;
+        }
+
+        /// <summary>A coin, painted: a thick ring with a dot in the middle, ragged at its edges.</summary>
+        private static float Coin(float u, float v, float seed)
+        {
+            float dx = u - 0.5f, dy = (v - 0.52f) * H / W;
+            float r = Mathf.Sqrt(dx * dx + dy * dy);
+            float ragged = (Mathf.PerlinNoise(u * 25f + seed, v * 25f) - 0.5f) * 0.03f;
+            float ring = Mathf.Clamp01((0.06f + ragged - Mathf.Abs(r - 0.27f)) / 0.012f);
+            float dot = Mathf.Clamp01((0.08f + ragged - r) / 0.012f);
+            return Mathf.Max(ring, dot);
         }
 
         /// <summary>How much paint is at (u, v): 0 none, 1 solid, soft at the stroke's ragged edge.</summary>
