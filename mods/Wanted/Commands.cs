@@ -104,6 +104,7 @@ namespace Wanted
                         { "foundRewards", Discovery.FoundPay.Select(p => $"t{p.Tier} {p.Prefab} @{p.Value} ({Contracts.DisplayName(p.Prefab)})").ToList() },
                         { "arrows", Discovery.Ammo.OrderBy(a => a.Tier).Select(a => $"t{a.Tier} {a.Prefab} @{a.Value} ({Contracts.DisplayName(a.Prefab)})").ToList() },
                         { "valuables", Discovery.Valuables.Select(v => $"{v.Prefab} @{v.Value} ({Contracts.DisplayName(v.Prefab)})").ToList() },
+                        { "creaturesSkipped", Discovery.Skipped() },
                         { "builtIn", ContractData.Entries.Count }, { "total", entries.Count },
                     });
                     return null;

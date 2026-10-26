@@ -28,6 +28,30 @@ namespace Wanted
         public static List<PayEntry> FoundPay = new List<PayEntry>();
         public static List<PayEntry> Ammo = new List<PayEntry>();        // arrows and bolts, at the stage of what they're made of
         public static List<PayEntry> Valuables = new List<PayEntry>();   // things the trader buys (amber, rubies...): worth their price
+        public static Dictionary<string, int> CreatureTiers = new Dictionary<string, int>();   // the last pass's stage for each spawning creature
+
+        /// <summary>For `wanted found`: every creature the game has that no notice asks for, and why.</summary>
+        public static List<string> Skipped()
+        {
+            var lines = new List<string>();
+            ZNetScene scene = ZNetScene.instance;
+            if (scene == null) return lines;
+            var asked = new HashSet<string>(ContractData.AllEntries().Where(e => e.Kind == Kind.Kill)
+                .Select(e => scene.GetPrefab(e.Prefab)?.GetComponent<Character>()?.m_name).Where(n => n != null));
+            foreach (GameObject go in scene.m_prefabs)
+            {
+                Character c = go != null ? go.GetComponent<Character>() : null;
+                if (c == null || c is Player || asked.Contains(c.m_name)) continue;
+                string why = c.m_boss ? "a boss"
+                    : c.GetComponent<BaseAI>() == null ? "no AI"
+                    : c.m_faction == Character.Faction.Players || c.m_faction == Character.Faction.Dverger || c.m_faction == Character.Faction.PlayerSpawned
+                      || c.m_faction == Character.Faction.TrainingDummy || c.m_faction == Character.Faction.Boss ? "faction " + c.m_faction
+                    : !CreatureTiers.ContainsKey(go.name) ? "not in the world's spawn lists (spawned by a location, an event or its own mod)"
+                    : "?";
+                lines.Add($"{go.name} ({Contracts.DisplayName(go.name)}): {why}");
+            }
+            return lines;
+        }
         private static ZNetScene _doneFor;
 
         /// <summary>Finds them, once per world (cheap enough to run at a dawn: a pass over the game's prefabs and recipes).</summary>
@@ -134,6 +158,7 @@ namespace Wanted
                     Lower(creatureTier, s.m_prefab.name, Math.Max(TierOf(s.m_biome), KeyTier(s.m_requiredGlobalKey)));   // (late roamers in early lands)
                 }
             foreach (Entry e in curated.Where(e => e.Kind == Kind.Kill)) Lower(creatureTier, e.Prefab, e.Tier);
+            CreatureTiers = creatureTier;
 
             // a built-in creature's worth per point of health, by stage: found ones are worth the same for theirs
             var perHealth = new Dictionary<int, float>();
