@@ -15,7 +15,8 @@ namespace Wanted
     ///     they come from (an ore is worth the bar it smelts into);
     ///   - provisions: food and meads made from known things (a recipe, a cooking station, a fermenter), at the stage of their latest
     ///     ingredient, worth their ingredients and a quarter more;
-    ///   - rewards: what a smelter, blast furnace or refinery makes from a known ore, at the ore's stage, worth the ore.
+    ///   - rewards: what a smelter, blast furnace or refinery makes from a known ore, at the ore's stage, worth the ore; and for bonuses,
+    ///     arrows and bolts (at the stage of what they're made of) and valuables (worth their price at the trader).
     /// Each found notice asks for about as much as a built-in one of its kind and stage is worth. The built-in lists win where both have a
     /// thing; the contracts file's "remove" takes found ones out too, and its "add" sets their numbers by hand. `wanted found` lists them.
     /// </summary>
@@ -25,6 +26,8 @@ namespace Wanted
 
         public static List<Entry> Found = new List<Entry>();
         public static List<PayEntry> FoundPay = new List<PayEntry>();
+        public static List<PayEntry> Ammo = new List<PayEntry>();        // arrows and bolts, at the stage of what they're made of
+        public static List<PayEntry> Valuables = new List<PayEntry>();   // things the trader buys (amber, rubies...): worth their price
         private static ZNetScene _doneFor;
 
         /// <summary>Finds them, once per world (cheap enough to run at a dawn: a pass over the game's prefabs and recipes).</summary>
@@ -43,6 +46,8 @@ namespace Wanted
             _doneFor = null;
             Found = new List<Entry>();
             FoundPay = new List<PayEntry>();
+            Ammo = new List<PayEntry>();
+            Valuables = new List<PayEntry>();
         }
 
         // ---- stages -----------------------------------------------------------------------------------------------------
@@ -100,7 +105,8 @@ namespace Wanted
         {
             List<Entry> curated = ContractData.Entries;
             List<PayEntry> curatedPay = ContractData.Pay;
-            var taken = new HashSet<string>(curated.Select(e => e.Prefab).Concat(curatedPay.Select(p => p.Prefab)).Concat(ContractData.Removed));
+            var taken = new HashSet<string>(curated.Select(e => e.Prefab).Concat(curatedPay.Select(p => p.Prefab)).Concat(ContractData.Removed)
+                .Concat(ContractData.Bonus.Select(b => b.Prefab)));   // (a bonus, such as Refined Eitr, is never plain pay too)
             foreach (Recipe r in db.m_recipes)   // things used only to upgrade at the Forge of Potential (its idols): never errands
                 foreach (Piece.Requirement req in r?.m_resources ?? new Piece.Requirement[0])
                     if (req != null && req.m_upgraderResource && req.m_resItem != null) taken.Add(req.m_resItem.name);
@@ -225,10 +231,29 @@ namespace Wanted
                 found.Add(new Entry(Kind.Provisions, k.Value.tier, go.name, CountFor(curated, Kind.Provisions, k.Value.tier, k.Value.value), Round(k.Value.value)));
             }
 
+            // ---- bonuses: arrows and bolts by what they're made of; valuables by their price at the trader
+            var ammo = new List<PayEntry>();
+            var valuables = new List<PayEntry>();
+            foreach (GameObject go in db.m_items)
+            {
+                ItemDrop item = go != null ? go.GetComponent<ItemDrop>() : null;
+                if (item == null || ContractData.Removed.Contains(go.name) || item.m_itemData.m_shared.m_maxStackSize <= 1) continue;
+                ItemDrop.ItemData.SharedData s = item.m_itemData.m_shared;
+                if (s.m_itemType == ItemDrop.ItemData.ItemType.Ammo)
+                {
+                    var k = made.Of(go.name);
+                    if (k != null) ammo.Add(new PayEntry(k.Value.tier, go.name, Mathf.Max(0.2f, k.Value.value)));
+                }
+                else if (s.m_value > 0 && go.name != "Coins" && s.m_itemType != ItemDrop.ItemData.ItemType.Trophy)
+                    valuables.Add(new PayEntry(itemTier.TryGetValue(go.name, out int vt) ? vt : -1, go.name, s.m_value));   // (-1: found nowhere in particular)
+            }
+
             Found = found;
             FoundPay = foundPay;
-            Plugin.Log.LogInfo($"Found {found.Count} more things notices can ask for ({found.Count(e => e.Kind == Kind.Kill)} creatures) " +
-                               $"and {foundPay.Count} more rewards, beyond the built-in lists (wanted found lists them)");
+            Ammo = ammo;
+            Valuables = valuables;
+            Plugin.Log.LogInfo($"Found {found.Count} more things notices can ask for ({found.Count(e => e.Kind == Kind.Kill)} creatures), " +
+                               $"{foundPay.Count} more rewards, {ammo.Count} arrows and bolts and {valuables.Count} valuables (wanted found lists them)");
         }
 
         /// <summary>A creature a bounty can be put on: a wild one that fights or flees, not a player, boss, Dvergr or dummy.</summary>

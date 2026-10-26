@@ -104,10 +104,13 @@ namespace Wanted
         /// A new notice for this world, or null when nothing fits. Mostly for the newest land opened, now and then the one before it;
         /// the kind is chosen among those with anything this game knows at that stage (hunting twice as often as each of the others).
         /// </summary>
-        public static Contract Make(System.Random rnd)
+        public static Contract Make(System.Random rnd) => Make(rnd, -1);
+
+        /// <summary>A new notice, written for this stage (-1: for the world as it is, mostly its newest land).</summary>
+        public static Contract Make(System.Random rnd, int forTier)
         {
             int newest = WorldTier();
-            int tier = newest > 0 && rnd.NextDouble() < 0.3 ? newest - 1 : newest;
+            int tier = forTier >= 0 ? forTier : newest > 0 && rnd.NextDouble() < 0.3 ? newest - 1 : newest;
             List<Entry> all = ContractData.AllEntries().ToList();
             int list = ListTier(tier, all.Select(e => e.Tier));
 
@@ -167,6 +170,9 @@ namespace Wanted
                 parts.Add(m.Prefab + ":" + n.ToString(CultureInfo.InvariantCulture));
             }
 
+            string bonus = Bonus(rnd, tier, worth * BonusShare);
+            if (bonus != null) parts.Add(bonus);
+
             // now and then one of the Forge of Potential's idols, of this stage's tier
             if (rnd.NextDouble() * 100.0 < Plugin.IdolChance.Value)
             {
@@ -176,12 +182,82 @@ namespace Wanted
             return string.Join(",", parts);
         }
 
+        public const float BonusShare = 0.5f;   // a bonus is worth about half the reward it comes with (on top of it)
+
+        /// <summary>
+        /// Now and then something more on top of the pay ("prefab:amount"), or null: a rare find (a boss's summoning item, something hard
+        /// to come by), a valuable (amber, a ruby: worth its price at the trader), or something useful of the stage: a mead or an oil
+        /// (the brews the provisions lists know, other mods' included), arrows or bolts (found by their recipes), or a refined good
+        /// (Eitr, linen thread, nails). One draw: rare first, then valuable, then useful, each with its server chance.
+        /// </summary>
+        private static string Bonus(System.Random rnd, int tier, float worth)
+        {
+            double roll = rnd.NextDouble() * 100.0;
+            float rare = Plugin.RareChance.Value, valuable = Plugin.ValuableChance.Value, useful = Plugin.UsefulChance.Value;
+            if (roll < rare) return Pick(rnd, Nearest(ContractData.Bonus.Where(b => b.Group == "Rare" && !ContractData.Removed.Contains(b.Prefab))
+                .Select(b => (b.Tier, b.Prefab, b.Value)), tier), worth, 3);
+            if (roll < rare + valuable)
+            {
+                // of a land opened by this notice's stage; one found nowhere in particular, if it's not worth more than the stage's sort
+                var gems = Discovery.Valuables.Where(v => Known(v.Prefab) && (v.Tier >= 0 ? v.Tier <= tier : v.Value <= 25f * (tier + 1)))
+                    .OrderBy(v => v.Value).ToList();
+                var fits = gems.Where(v => v.Value <= worth).ToList();   // (one that a reward of this size can buy; else the cheapest)
+                var pick = fits.Count > 0 ? fits[rnd.Next(fits.Count)] : gems.FirstOrDefault();
+                return pick == null ? null : Amount(pick.Prefab, pick.Value, worth, 10);
+            }
+            if (roll < rare + valuable + useful)
+            {
+                var brews = ContractData.AllEntries().Where(e => e.Kind == Kind.Provisions && IsBrew(e.Prefab)).Select(e => (e.Tier, e.Prefab, e.Value));
+                var arrows = Discovery.Ammo.Select(a => (a.Tier, a.Prefab, a.Value));
+                var refined = ContractData.Bonus.Where(b => b.Group == "Refined" && !ContractData.Removed.Contains(b.Prefab)).Select(b => (b.Tier, b.Prefab, b.Value));
+                var groups = new[] { Nearest(brews, tier), Nearest(arrows, tier), Nearest(refined, tier) }.Where(g => g.Count > 0).ToList();
+                if (groups.Count == 0) return null;
+                return Pick(rnd, groups[rnd.Next(groups.Count)], worth, 100);
+            }
+            return null;
+        }
+
+        /// <summary>The ones this game has, of this stage or the nearest below it that has any.</summary>
+        private static List<(int tier, string prefab, float value)> Nearest(IEnumerable<(int tier, string prefab, float value)> all, int tier)
+        {
+            var known = all.Where(a => Known(a.prefab)).ToList();
+            for (int t = tier; t >= 0; t--)
+            {
+                var here = known.Where(a => a.tier == t).ToList();
+                if (here.Count > 0) return here;
+            }
+            return new List<(int, string, float)>();
+        }
+
+        private static string Pick(System.Random rnd, List<(int tier, string prefab, float value)> from, float worth, int most)
+        {
+            if (from.Count == 0) return null;
+            var p = from[rnd.Next(from.Count)];
+            return Amount(p.prefab, p.value, worth, most);
+        }
+
+        /// <summary>"prefab:n", as many as the worth buys (at least one; no more than <paramref name="most"/> or a stack).</summary>
+        private static string Amount(string prefab, float value, float worth, int most)
+        {
+            int stack = ZNetScene.instance?.GetPrefab(prefab)?.GetComponent<ItemDrop>()?.m_itemData.m_shared.m_maxStackSize ?? 1;
+            int n = Mathf.Clamp(Mathf.RoundToInt(worth / Mathf.Max(0.1f, value)), 1, Math.Max(1, Math.Min(most, stack)));
+            return prefab + ":" + n.ToString(CultureInfo.InvariantCulture);
+        }
+
+        /// <summary>A drink or an oil rather than a meal: a consumable that doesn't feed.</summary>
+        private static bool IsBrew(string prefab)
+        {
+            ItemDrop.ItemData.SharedData s = ZNetScene.instance?.GetPrefab(prefab)?.GetComponent<ItemDrop>()?.m_itemData.m_shared;
+            return s != null && s.m_food <= 0f && s.m_foodStamina <= 0f && s.m_foodEitr <= 0f;
+        }
+
         /// <summary>Whether this game has the prefab (an item or a creature).</summary>
         public static bool Known(string prefab) => ZNetScene.instance != null && ZNetScene.instance.GetPrefab(prefab) != null;
 
         /// <summary>Every prefab the lists name that this game doesn't have (a game update renamed it, a mod isn't installed), for `wanted names`.</summary>
         public static List<string> Unknown() =>
-            ContractData.Entries.Select(e => e.Prefab).Concat(ContractData.Pay.Select(p => p.Prefab)).Distinct().Where(p => !Known(p)).ToList();
+            ContractData.Entries.Select(e => e.Prefab).Concat(ContractData.Pay.Select(p => p.Prefab)).Concat(ContractData.Bonus.Select(b => b.Prefab))
+                .Distinct().Where(p => !Known(p)).ToList();
 
         /// <summary>A creature's or item's name as the game shows it, in the player's language (the prefab name if it has none).</summary>
         public static string DisplayName(string prefab)

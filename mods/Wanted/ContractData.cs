@@ -20,6 +20,17 @@ namespace Wanted
         public Entry(Kind kind, int tier, string prefab, int count, float value) { Kind = kind; Tier = tier; Prefab = prefab; Count = count; Value = value; }
     }
 
+    /// <summary>A bonus a notice can pay on top: a rare find or a refined good, at a stage, and what one is worth in coins.</summary>
+    internal sealed class BonusEntry
+    {
+        public string Group;   // "Rare" or "Refined"
+        public int Tier;
+        public string Prefab;
+        public float Value;
+
+        public BonusEntry(string group, int tier, string prefab, float value) { Group = group; Tier = tier; Prefab = prefab; Value = value; }
+    }
+
     /// <summary>A material a stage's notices pay in, and what one is worth in coins (so a reward of a given worth buys the right amount).</summary>
     internal sealed class PayEntry
     {
@@ -46,6 +57,7 @@ namespace Wanted
 
         public static List<Entry> Entries = new List<Entry>(Defaults());       // the built-in lists with the file's changes
         public static List<PayEntry> Pay = new List<PayEntry>(DefaultPay());
+        public static List<BonusEntry> Bonus = new List<BonusEntry>(DefaultBonus());
         public static HashSet<string> Removed = new HashSet<string>();         // the file's "remove": out of found ones too
 
         /// <summary>Everything a notice can ask for: the lists, and what Discovery found that they don't name.</summary>
@@ -145,9 +157,29 @@ namespace Wanted
             new PayEntry(2, "Iron", 14),
             new PayEntry(3, "Silver", 18),
             new PayEntry(4, "BlackMetal", 22),
-            new PayEntry(5, "Eitr", 25), new PayEntry(5, "BlackMarble", 3), new PayEntry(5, "Carapace", 8),
+            new PayEntry(5, "BlackMarble", 3), new PayEntry(5, "Carapace", 8),   // (Eitr is a refined bonus: DefaultBonus)
             new PayEntry(6, "FlametalNew", 30),
         };
+
+        /// <summary>
+        /// Rare finds (boss summoning items and things that are hard to come by) and refined goods (what takes a station and time to make),
+        /// paid now and then on top of a notice's reward. Meads, oils, arrows and valuables are found in the game instead (Contracts.Bonus).
+        /// </summary>
+        private static IEnumerable<BonusEntry> DefaultBonus()
+        {
+            BonusEntry R(int t, string p, float v) => new BonusEntry("Rare", t, p, v);
+            BonusEntry F(int t, string p, float v) => new BonusEntry("Refined", t, p, v);
+            return new[]
+            {
+                R(1, "AncientSeed", 40), R(1, "SurtlingCore", 15),
+                R(2, "WitheredBone", 40), R(2, "Chain", 25),
+                R(3, "DragonTear", 80),
+                R(4, "GoblinTotem", 80), R(4, "YmirRemains", 60), R(4, "Thunderstone", 60),
+                R(5, "DvergrKeyFragment", 100), R(5, "BlackCore", 80),
+                R(6, "BellFragment", 150), R(6, "MoltenCore", 80),
+                F(1, "BronzeNails", 1.2f), F(2, "IronNails", 1.4f), F(4, "LinenThread", 3), F(5, "Eitr", 25),
+            };
+        }
 
         // ---- the file ---------------------------------------------------------------------------------------------------
 
@@ -168,6 +200,7 @@ namespace Wanted
             var entries = new List<Entry>(Defaults());
             var pay = new List<PayEntry>(DefaultPay());
             var removedAll = new HashSet<string>();
+            var bonus = new List<BonusEntry>(DefaultBonus());
             try
             {
                 if (!string.IsNullOrWhiteSpace(text))
@@ -177,16 +210,19 @@ namespace Wanted
                     removedAll = removed;
                     entries.RemoveAll(e => removed.Contains(e.Prefab));
                     pay.RemoveAll(p => removed.Contains(p.Prefab));
+                    bonus.RemoveAll(b => removed.Contains(b.Prefab));
                     foreach (JToken t in (root["add"] as JArray) ?? new JArray())
                     {
                         string kind = (string)t["kind"], prefab = (string)t["prefab"];
                         int tier = (int?)t["tier"] ?? 0;
                         if (string.IsNullOrEmpty(prefab) || tier < 0 || tier >= Contracts.Tiers) continue;
-                        if (string.Equals(kind, "pay", StringComparison.OrdinalIgnoreCase))
+                        if (string.Equals(kind, "rare", StringComparison.OrdinalIgnoreCase) || string.Equals(kind, "refined", StringComparison.OrdinalIgnoreCase))
+                            bonus.Add(new BonusEntry(char.ToUpperInvariant(kind[0]) + kind.Substring(1).ToLowerInvariant(), tier, prefab, (float?)t["value"] ?? 1f));
+                        else if (string.Equals(kind, "pay", StringComparison.OrdinalIgnoreCase))
                             pay.Add(new PayEntry(tier, prefab, (float?)t["value"] ?? 1f));
                         else if (Enum.TryParse(kind, true, out Kind k))
                             entries.Add(new Entry(k, tier, prefab, Math.Max(1, (int?)t["count"] ?? 1), (float?)t["value"] ?? 1f));
-                        else Plugin.Log.LogWarning($"Contracts file: \"{kind}\" isn't a kind (Kill, Gather, Trophy, Provisions or Pay)");
+                        else Plugin.Log.LogWarning($"Contracts file: \"{kind}\" isn't a kind (Kill, Gather, Trophy, Provisions, Pay, Rare or Refined)");
                     }
                 }
             }
@@ -194,6 +230,7 @@ namespace Wanted
             Entries = entries;
             Pay = pay;
             Removed = removedAll;
+            Bonus = bonus;
             Discovery.Forget();   // (found again against the new lists at the next posting)
         }
 
@@ -201,7 +238,8 @@ namespace Wanted
 @"{
   ""_help"": [
     ""Add things Wanted notices can ask for, or pay in, and take built-in ones out. Kinds: Kill (a creature prefab), Gather, Trophy,"",
-    ""Provisions (item prefabs), and Pay (an item notices of that stage pay in). Tier: 0 Meadows, 1 Black Forest, 2 Swamp,"",
+    ""Provisions (item prefabs), Pay (an item notices of that stage pay in), Rare and Refined (bonuses now and then paid on top)."",
+    ""Other mods' creatures, items, food, meads, arrows and valuables are found by themselves: this is for fine-tuning. Tier: 0 Meadows, 1 Black Forest, 2 Swamp,"",
     ""3 Mountain, 4 Plains, 5 Mistlands, 6 Ashlands, 7 Deep North. Count: a usual amount (a notice asks for it, give or take a fifth)."",
     ""Value: what one is worth in coins; the reward is the notice's worth times a premium for its kind. Remove: prefab names to drop"",
     ""from the built-in lists. Names this game doesn't have are skipped (Claude Tools: wanted names). On a server, the server's file"",

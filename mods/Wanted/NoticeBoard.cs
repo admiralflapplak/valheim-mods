@@ -18,6 +18,7 @@ namespace Wanted
         public const int Slots = Board.Slots;
         private const string KeyNotices = "Wanted.notices";   // the slots, ';'-separated, each Contract.Write or empty (boards from before 0.4 have five)
         private const string KeyDay = "Wanted.day";           // the day notices were last posted (-1: never, a new board)
+        private const string KeyFirst = "Wanted.first";       // 1: a new board, still to have its first dawn
         private const string RpcTake = "Wanted_Take", RpcTaken = "Wanted_Taken";
 
         private ZNetView _view;
@@ -147,24 +148,41 @@ namespace Wanted
             if (last < 0 || today < last)
             {
                 _view.GetZDO().Set(KeyDay, today);   // a new board (or the world's clock went back): its first notices come at the next dawn
+                if (last < 0) _view.GetZDO().Set(KeyFirst, 1);
                 return;
             }
             string[] slots = Read();
             var rnd = new System.Random();
             int added = 0;
-            for (int day = 0; day < Math.Min(today - last, 5); day++)   // each dawn passed (sleeping through several counts each)
+            if (_view.GetZDO().GetInt(KeyFirst) == 1)
             {
-                int count = 1;
-                if (rnd.NextDouble() * 100.0 < Plugin.SecondChance.Value)
-                {
-                    count = 2;
-                    if (rnd.NextDouble() * 100.0 < Plugin.ThirdChance.Value) count = 3;
-                }
-                added += Fill(slots, count, rnd);
+                // a new board's first dawn fills it well (losing what a board had is the price of building it again)
+                int lo = Plugin.FirstDawnLeast.Value, hi = Math.Max(lo, Plugin.FirstDawnMost.Value);
+                added += Fill(slots, rnd.Next(lo, hi + 1), rnd);
+                _view.GetZDO().Set(KeyFirst, 0);
             }
+            else
+                for (int day = 0; day < Math.Min(today - last, 5); day++)   // each dawn passed (sleeping through several counts each)
+                    added += Fill(slots, DawnCount(rnd), rnd);
 
             if (added > 0) Write(slots);
             _view.GetZDO().Set(KeyDay, today);
+        }
+
+        /// <summary>
+        /// How many notices a dawn brings: one, and each more with its chance in turn (the setting "75, 55, 40, 20": a second 75%, a third
+        /// 55% of those, ...), so with the defaults one 25%, two 35%, three 25%, four 12%, five 3% of dawns.
+        /// </summary>
+        private static int DawnCount(System.Random rnd)
+        {
+            int count = 1;
+            foreach (string part in (Plugin.MoreChances.Value ?? "").Split(','))
+            {
+                if (!float.TryParse(part.Trim(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float chance)) break;
+                if (rnd.NextDouble() * 100.0 >= chance) break;
+                count++;
+            }
+            return count;
         }
 
         /// <summary>Puts up to this many new notices in empty places, never more than the board may show at once; how many it put up.</summary>

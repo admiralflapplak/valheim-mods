@@ -19,7 +19,7 @@ namespace Wanted
     {
         private const string Owner = "Wanted";
         private static readonly string[] ToolGuids = { "com.quad.claudetools", "com.dhack.claudetools" };
-        private const string Usage = "wanted boards [radius]: the Wanted boards near the player, which way they face, their notices and materials | wanted names: prefab names the contract lists use that this game doesn't have, and the world's stage | wanted found: what discovery adds beyond the built-in lists (other mods' creatures, things, food, metals) | wanted spawns <creature>: its entries in the world's spawn lists";
+        private const string Usage = "wanted boards [radius]: the Wanted boards near the player, which way they face, their notices and materials | wanted names: prefab names the contract lists use that this game doesn't have, and the world's stage | wanted found: what discovery adds beyond the built-in lists (other mods' creatures, things, food, metals) | wanted spawns <creature>: its entries in the world's spawn lists | wanted sample [count] [stage]: notices as a board would write them, nothing posted";
 
         private static BaseUnityPlugin _registeredWith;
         private static float _nextLook;
@@ -79,6 +79,20 @@ namespace Wanted
                     output(new Dictionary<string, object> { { "spawns", lines } });
                     return null;
                 }
+                if (what == "sample")   // notices as a board would write them (nothing posted): for checking what they ask and pay
+                {
+                    int count = args.Length > 2 && int.TryParse(args[2], out int n) ? n : 10;
+                    int tier = args.Length > 3 && int.TryParse(args[3], out int t) ? t : -1;
+                    var rnd = new System.Random();
+                    var lines = new List<string>();
+                    for (int i = 0; i < count; i++)
+                    {
+                        Contract c = Contracts.Make(rnd, tier);
+                        if (c != null) lines.Add($"t{c.Tier} {c.Kind} {c.Target} x{c.Count} -> {c.Reward}");
+                    }
+                    output(new Dictionary<string, object> { { "sample", lines } });
+                    return null;
+                }
                 if (what == "found")
                 {
                     Discovery.Forget();
@@ -88,6 +102,8 @@ namespace Wanted
                         { "found", Discovery.Found.OrderBy(e => e.Tier).ThenBy(e => e.Kind)
                             .Select(e => $"{e.Kind} t{e.Tier} {e.Prefab} x{e.Count} @{e.Value} ({Contracts.DisplayName(e.Prefab)})").ToList() },
                         { "foundRewards", Discovery.FoundPay.Select(p => $"t{p.Tier} {p.Prefab} @{p.Value} ({Contracts.DisplayName(p.Prefab)})").ToList() },
+                        { "arrows", Discovery.Ammo.OrderBy(a => a.Tier).Select(a => $"t{a.Tier} {a.Prefab} @{a.Value} ({Contracts.DisplayName(a.Prefab)})").ToList() },
+                        { "valuables", Discovery.Valuables.Select(v => $"{v.Prefab} @{v.Value} ({Contracts.DisplayName(v.Prefab)})").ToList() },
                         { "builtIn", ContractData.Entries.Count }, { "total", entries.Count },
                     });
                     return null;
