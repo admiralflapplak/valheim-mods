@@ -171,6 +171,30 @@ namespace Wanted
         }
 
         /// <summary>
+        /// For testing (`wanted post`): put up this many notices now, the first ones pinned as asked. Only on the board's owner. Returns
+        /// how many went up.
+        /// </summary>
+        public int PostNow(int count, System.Collections.Generic.IList<Pin> pins)
+        {
+            if (_view == null || !_view.IsValid() || !_view.IsOwner()) return 0;
+            string[] slots = Read();
+            var before = new System.Collections.Generic.HashSet<int>(Enumerable.Range(0, Slots).Where(i => !string.IsNullOrEmpty(slots[i])));
+            var rnd = new System.Random();
+            int added = Fill(slots, count, rnd);
+            int p = 0;
+            for (int i = 0; i < Slots && p < pins.Count; i++)
+            {
+                if (before.Contains(i)) continue;
+                Contract c = Contract.Read(slots[i]);
+                if (c == null) continue;
+                c.Pin = pins[p++];
+                slots[i] = c.Write();
+            }
+            if (added > 0) Write(slots);
+            return added;
+        }
+
+        /// <summary>
         /// Takes down notices for a creature or thing the game no longer has (the mod that added it was removed): nobody could ever do
         /// them, and they'd hold a place on the board for good.
         /// </summary>

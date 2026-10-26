@@ -19,7 +19,7 @@ namespace Wanted
     {
         private const string Owner = "Wanted";
         private static readonly string[] ToolGuids = { "com.quad.claudetools", "com.dhack.claudetools" };
-        private const string Usage = "wanted boards [radius]: the Wanted boards near the player, which way they face, their notices and materials | wanted names: prefab names the contract lists use that this game doesn't have, and the world's stage | wanted found: what discovery adds beyond the built-in lists (other mods' creatures, things, food, metals) | wanted spawns <creature>: its entries in the world's spawn lists | wanted sample [count] [stage]: notices as a board would write them, nothing posted";
+        private const string Usage = "wanted boards [radius]: the Wanted boards near the player, which way they face, their notices and materials | wanted names: prefab names the contract lists use that this game doesn't have, and the world's stage | wanted found: what discovery adds beyond the built-in lists (other mods' creatures, things, food, metals) | wanted spawns <creature>: its entries in the world's spawn lists | wanted sample [count] [stage]: notices as a board would write them, nothing posted | wanted post [count] [nail|arrow|knife ...]: put notices up on the nearest board now (single player, host or devcommands)";
 
         private static BaseUnityPlugin _registeredWith;
         private static float _nextLook;
@@ -77,6 +77,20 @@ namespace Wanted
                         if (d.m_prefab != null && d.m_prefab.name == args[2])
                             lines.Add($"{l.name}: biome={d.m_biome} ({(int)d.m_biome}) area={d.m_biomeArea} enabled={d.m_enabled} key='{d.m_requiredGlobalKey}' event='{d.m_requiredPersistentEvent}' night={d.m_spawnAtNight}/{d.m_spawnAtDay}");
                     output(new Dictionary<string, object> { { "spawns", lines } });
+                    return null;
+                }
+                if (what == "post")   // put notices up on the nearest board now (changes the world: single player, the host, or devcommands)
+                {
+                    if (!(ZNet.instance != null && ZNet.instance.IsServer()) && !(global::Console.instance != null && global::Console.instance.IsCheatsEnabled()))
+                    { error("wanted post changes the world: single player, the host, or with devcommands."); return null; }
+                    Player me = Player.m_localPlayer;
+                    if (me == null) { error("Not in a world."); return null; }
+                    NoticeBoard board = NoticeBoard.Loaded.Where(b => b != null).OrderBy(b => Vector3.Distance(b.transform.position, me.transform.position)).FirstOrDefault();
+                    if (board == null || Vector3.Distance(board.transform.position, me.transform.position) > 20f) { error("No Wanted board within 20 m."); return null; }
+                    int n = args.Length > 2 && int.TryParse(args[2], out int k) ? k : 1;
+                    var pins = new List<Pin>();
+                    for (int i = 3; i < args.Length; i++) if (Enum.TryParse(args[i], true, out Pin pin)) pins.Add(pin);
+                    output(new Dictionary<string, object> { { "posted", board.PostNow(n, pins) } });
                     return null;
                 }
                 if (what == "sample")   // notices as a board would write them (nothing posted): for checking what they ask and pay

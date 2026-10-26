@@ -3,6 +3,8 @@
 A notice board for your village. Build it, and each morning it posts notices: creatures to slay, things to gather, trophies to bring
 and food to deliver. Take a notice, do what it asks, and drop it in the board's box to be paid.
 
+![A Wanted board in a Meadows village: five notices pinned to its planks, and its iron-banded box at its foot](thunderstore/screenshots/01-board.png)
+
 - **Notices you can read on the board.** Each one is an old sheet of paper with an exclamation mark painted on it in its kind's
   colour: red for a bounty, green for gathering, amber for trophies, blue for provisions. Look at one to read it. Press E to take it.
   Now and then a notice is pinned with an arrow or a knife instead of a nail.
@@ -24,6 +26,19 @@ and food to deliver. Take a notice, do what it asks, and drop it in the board's 
   - a valuable (amber, rubies, silver necklaces...), 10%;
   - a rare find (a boss's summoning item, Dragon Tears, Thunderstones, Sealbreaker fragments, Bell fragments...), 5%;
   - an idol of the Forge of Potential, 3%.
+
+![Looking at a notice: what it asks, what it pays, and E to take it](thunderstore/screenshots/02-hover.png)
+
+![Notices pinned with an arrow shot through one and a knife driven through another](thunderstore/screenshots/03-pins.png)
+*Most notices are nailed up. Some aren't.*
+
+![A notice in the bag: its tooltip with what it asks, what it pays, and how far along you are](thunderstore/screenshots/04-tooltip.png)
+
+![The box with a gathering notice and the nine thistles it asks for, "In the box: 9/9"](thunderstore/screenshots/05a-box-before.png) ![The same box after the lid closed: 11 coins, 3 copper and an Ancient Coin](thunderstore/screenshots/05b-box-after.png)
+*Before and after: close the lid, and the notice and what it asked for turn into the reward.*
+
+![The coin pouch hanging under the board while a reward waits in the box](thunderstore/screenshots/06-pouch.png)
+*While a reward waits in the box, a coin pouch hangs on the board.*
 
 ## The board
 
