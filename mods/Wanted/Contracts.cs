@@ -61,7 +61,28 @@ namespace Wanted
         public string TargetName() => Contracts.DisplayName(Target);
 
         /// <summary>"Slay: Greydwarf ×8".</summary>
-        public string Line() => T("wanted_line_" + Kind.ToString().ToLowerInvariant(), TargetName(), Count);
+        public string Line()
+        {
+            switch (Kind)
+            {
+                case Kind.Kill: return T("wanted_line_kill", TargetName(), Count);
+                case Kind.Gather: return T("wanted_line_gather", TargetName(), Count);
+                case Kind.Trophy: return T("wanted_line_trophy", TargetName(), Count);
+                default: return T("wanted_line_provisions", TargetName(), Count);
+            }
+        }
+
+        /// <summary>"Bounty", "Gathering"...: the kind's name.</summary>
+        public string KindName()
+        {
+            switch (Kind)
+            {
+                case Kind.Kill: return T("wanted_kind_kill");
+                case Kind.Gather: return T("wanted_kind_gather");
+                case Kind.Trophy: return T("wanted_kind_trophy");
+                default: return T("wanted_kind_provisions");
+            }
+        }
 
         /// <summary>"30 Coins, 4 Bronze".</summary>
         public string RewardText() =>
@@ -279,7 +300,7 @@ namespace Wanted
         {
             var sb = new StringBuilder();
             sb.Append("<color=#").Append(ColorUtility.ToHtmlStringRGB(Color.Lerp(Paper.Ink(c.Kind), Color.white, 0.35f))).Append(">")
-              .Append(T("wanted_kind_" + c.Kind.ToString().ToLowerInvariant())).Append("</color>\n");
+              .Append(c.KindName()).Append("</color>\n");
             sb.Append(c.Line()).Append('\n');
             sb.Append(T("wanted_reward", c.RewardText()));
             return sb.ToString();
