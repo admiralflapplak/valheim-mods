@@ -299,7 +299,8 @@ namespace Wanted
                 paper.transform.SetParent(slot, false);
                 paper.transform.localScale = new Vector3(Paper.Width, Paper.Height, 1f);
                 paper.AddComponent<MeshFilter>().sharedMesh = quad;
-                paper.AddComponent<MeshRenderer>().sharedMaterial = Paper.For((Kind)(i % 4), scene);
+                // (the prefab's own look: the arrow-pinned one a red bounty, the rest each kind in turn)
+                paper.AddComponent<MeshRenderer>().sharedMaterial = Paper.For(i == 2 ? Kind.Kill : i == 0 ? Kind.Trophy : (Kind)(i % 4), scene);
 
                 var top = new Vector3(0f, Paper.Height / 2f - 0.045f, 0f);   // where it's pinned
                 var nail = new GameObject("pin_nail");

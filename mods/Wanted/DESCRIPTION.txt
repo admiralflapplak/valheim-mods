@@ -1,1 +1,1 @@
-A craftable Wanted board: take a notice from the board, hunt or gather what it asks, and hand it in at the board's box for a reward matched to your progress.
+A craftable notice board (bounty board) that posts notices each dawn: slay creatures, gather, bring trophies, deliver food. Hand them in at its box for coins, materials and rare finds. Finds other mods' creatures and items by itself.
