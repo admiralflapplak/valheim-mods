@@ -1,2 +1,2 @@
-0.1.0
-- First build: the mod loads. Nothing in the game yet.
+1.0.0
+- First release: a craftable Wanted board posting bounty, gathering, trophy and provisions notices each dawn, matched to the world's progress; take a notice, do it, hand it in at any board's box for coins, the land's materials and now and then a bonus. Finds other mods' creatures and items by itself. Nine languages.

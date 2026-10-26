@@ -82,11 +82,21 @@ namespace Wanted
             catch (Exception e) { Plugin.Log.LogWarning("Counting a kill: " + e.Message); }
         }
 
+        // Noted before the death (the creature is whole, its ZDO still valid), counted after it, and only if it went ahead: another mod
+        // can stop a death in its own prefix (Grudges lets a nemesis escape a killing blow), and an escape is no kill.
         [HarmonyPatch(typeof(Character), nameof(Character.OnDeath))]
         private static class Character_OnDeath
         {
-            private static void Prefix(Character __instance)
+            private sealed class Death
             {
+                public string Prefab;
+                public List<long> Peers = new List<long>();   // the other players' games to tell
+                public bool Local;                             // this game's own player was there too
+            }
+
+            private static void Prefix(Character __instance, out Death __state)
+            {
+                __state = null;
                 try
                 {
                     if (__instance == null || __instance.IsPlayer()) return;
@@ -94,16 +104,28 @@ namespace Wanted
                     if (view == null || !view.IsValid() || !view.IsOwner()) return;   // (only the game running it: once per death)
                     if (!(LastHit(__instance)?.GetAttacker() is Player killer)) return;
 
-                    string prefab = Utils.GetPrefabName(__instance.gameObject);
+                    var death = new Death { Prefab = Utils.GetPrefabName(__instance.gameObject) };
                     var near = new List<Player>();
                     Player.GetPlayersInRange(__instance.transform.position, ShareRange, near);
                     if (!near.Contains(killer)) near.Add(killer);
                     foreach (Player p in near)
                     {
-                        if (p == Player.m_localPlayer) { Credit(prefab); continue; }
+                        if (p == Player.m_localPlayer) { death.Local = true; continue; }
                         ZNetView pv = p.GetComponent<ZNetView>();
-                        if (pv != null && pv.IsValid()) ZRoutedRpc.instance?.InvokeRoutedRPC(pv.GetZDO().GetOwner(), Rpc, prefab);
+                        if (pv != null && pv.IsValid()) death.Peers.Add(pv.GetZDO().GetOwner());
                     }
+                    __state = death;
+                }
+                catch (Exception e) { Plugin.Log.LogWarning("Noting a kill: " + e.Message); }
+            }
+
+            private static void Postfix(Death __state, bool __runOriginal)
+            {
+                if (__state == null || !__runOriginal) return;   // (the death didn't happen)
+                try
+                {
+                    if (__state.Local) Credit(__state.Prefab);
+                    foreach (long peer in __state.Peers) ZRoutedRpc.instance?.InvokeRoutedRPC(peer, Rpc, __state.Prefab);
                 }
                 catch (Exception e) { Plugin.Log.LogWarning("Sharing a kill: " + e.Message); }
             }
