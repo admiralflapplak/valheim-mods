@@ -142,6 +142,7 @@ namespace Wanted
         {
             if (EnvMan.instance == null || ZNetScene.instance == null) return;
             int today = EnvMan.instance.GetDay();
+            TakeDownOrphans();
             int last = _view.GetZDO().GetInt(KeyDay, -1);
             if (last == today) return;
 
@@ -167,6 +168,24 @@ namespace Wanted
 
             if (added > 0) Write(slots);
             _view.GetZDO().Set(KeyDay, today);
+        }
+
+        /// <summary>
+        /// Takes down notices for a creature or thing the game no longer has (the mod that added it was removed): nobody could ever do
+        /// them, and they'd hold a place on the board for good.
+        /// </summary>
+        private void TakeDownOrphans()
+        {
+            string[] slots = Read();
+            bool changed = false;
+            for (int i = 0; i < slots.Length; i++)
+            {
+                Contract c = Contract.Read(slots[i]);
+                if (c == null || Contracts.Known(c.Target)) continue;
+                slots[i] = "";
+                changed = true;
+            }
+            if (changed) Write(slots);
         }
 
         /// <summary>
