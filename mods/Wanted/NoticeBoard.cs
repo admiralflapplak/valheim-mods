@@ -110,7 +110,7 @@ namespace Wanted
             }
         }
 
-        /// <summary>On the owner: once none of the rewards paid into the box are left in it, the coins on the sill go.</summary>
+        /// <summary>On the owner: once none of the rewards paid into the box are left in it, the pouch comes down.</summary>
         private void ClearPouch()
         {
             string waiting = _view.GetZDO().GetString(HandIn.KeyPouch, "");

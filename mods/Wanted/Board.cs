@@ -182,7 +182,7 @@ namespace Wanted
             Beam(look, plank, new Vector3(0f, ridgeY + 0.02f, PostZ), new Vector3(PostX * 2f + 0.7f, 0.1f, 0.1f), 0f);
 
             AddNotices(look, scene, iron, rnd);
-            AddPouch(look, scene);
+            AddPouch(look, scene, iron);
             AddColliders(board);
         }
 
@@ -229,20 +229,34 @@ namespace Wanted
         }
 
         /// <summary>
-        /// A little heap of the game's coins on the sill, under the notices on the box's side: shown while a reward waits in the box
-        /// (NoticeBoard switches it). Hidden on the prefab.
+        /// An iron hook driven into the front of the sill at the board's left end (the box is on the right), and the coin pouch hanging
+        /// from it under the board, clear of the notices: the pouch is shown while a reward waits in the box (NoticeBoard switches it),
+        /// hidden on the prefab. The hook stays, as a board would have one.
         /// </summary>
-        private static void AddPouch(Transform look, ZNetScene scene)
+        private static void AddPouch(Transform look, ZNetScene scene, Material iron)
         {
-            Transform coins = scene.GetPrefab("Coins")?.transform.Find("attach");
-            if (coins == null) return;
-            var pouch = Object.Instantiate(coins.gameObject, look, false);
-            pouch.name = "wanted_pouch";
-            foreach (Collider c in pouch.GetComponentsInChildren<Collider>(true)) Object.DestroyImmediate(c);
-            pouch.transform.localPosition = new Vector3(0.5f, PanelBottom + 0.002f, PanelFront - 0.02f);   // on the sill's top
-            pouch.transform.localRotation = Quaternion.Euler(0f, 20f, 0f);
-            pouch.transform.localScale = Vector3.one * 0.55f;
-            pouch.SetActive(false);
+            // out of the sill's front, rising a little to its tip, far enough out that the bag hangs clear of the wood
+            var root = new Vector3(-0.62f, PanelBottom - 0.06f, PanelFront + 0.01f);
+            var tip = new Vector3(-0.62f, PanelBottom - 0.04f, PanelFront - 0.17f);
+            if (iron != null)
+            {
+                var hook = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                Object.DestroyImmediate(hook.GetComponent<Collider>());
+                hook.name = "wanted_hook";
+                hook.transform.SetParent(look, false);
+                hook.transform.localPosition = (root + tip) / 2f;
+                hook.transform.localRotation = Quaternion.FromToRotation(Vector3.up, tip - root);
+                hook.transform.localScale = new Vector3(0.018f, (tip - root).magnitude / 2f, 0.018f);   // (the cylinder is 2 m tall)
+                hook.GetComponent<MeshRenderer>().sharedMaterial = iron;
+            }
+
+            var pouch = new GameObject("wanted_pouch").transform;
+            pouch.SetParent(look, false);
+            pouch.localPosition = tip + new Vector3(0f, -0.01f, 0.03f);   // the loop over the hook, near its tip
+            pouch.localRotation = Quaternion.Euler(0f, 15f, 0f);
+            pouch.localScale = Vector3.one * 2.2f;   // (the model is a belt pouch: a bit bigger reads from across a yard)
+            if (PouchModel.Make(pouch, scene) == null) Plugin.Log.LogWarning("No material for the coin pouch: the board shows none");
+            pouch.gameObject.SetActive(false);
         }
 
         /// <summary>Boxes the player and the building checks bump into: the posts and the panel with its roof (the chest keeps its own).</summary>
