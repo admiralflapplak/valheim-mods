@@ -30,5 +30,9 @@
   "wanted_short": "{0}: only {1}/{2} in the box.",
   "wanted_box_full": "The box has no room for the reward.",
   "wanted_already_paid": "That notice has already been paid.",
-  "wanted_paid": "Paid for {0}: {1}"
+  "wanted_paid": "Paid for {0}: {1}",
+  "wanted_status_box": "In the box: {0}/{1}",
+  "wanted_status_needs": "Needs {0}",
+  "wanted_too_close": "Another Wanted board is {0} m away: boards need {1} m between them.",
+  "wanted_board_empty": "No notices yet. New ones are posted at dawn."
 }

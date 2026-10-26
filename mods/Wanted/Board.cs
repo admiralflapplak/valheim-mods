@@ -15,7 +15,7 @@ namespace Wanted
     {
         public const string PrefabName = "nick_wanted_board";
         public const string PieceName = "$wanted_board";
-        public const int Slots = 5;
+        public const int Slots = 10;   // places a notice can hang; at most Plugin.MaxNotices of them are used at once
 
         internal static GameObject Prefab;
         private static PieceTable _table;   // the build menu it was put on, kept so an unload can take it off again at the main menu
@@ -186,21 +186,24 @@ namespace Wanted
             AddColliders(board);
         }
 
-        /// <summary>The five places a notice can hang (three across the top, two below), each a little askew. All shown on the prefab (the build-menu picture); NoticeBoard shows the ones a placed board holds.</summary>
+        /// <summary>
+        /// The ten places a notice can hang (two loose rows of five), each a little askew and a few millimetres off its neighbours'
+        /// depth (so two that overlap never flicker). Each has its paper, a hover box, and three pins of which NoticeBoard shows one: a
+        /// nail, an arrow shot through the paper, a knife driven through it. On the prefab (the build-menu picture, the ghost) every
+        /// other place is shown, with an arrow and a knife among them; a placed board shows the ones it holds.
+        /// </summary>
         private static void AddNotices(Transform look, ZNetScene scene, Material iron, System.Random rnd)
         {
             float R(float from, float to) => from + (float)rnd.NextDouble() * (to - from);
-            var places = new[]
-            {
-                new Vector2(-0.6f, 1.86f), new Vector2(0f, 1.9f), new Vector2(0.6f, 1.85f),
-                new Vector2(-0.31f, 1.38f), new Vector2(0.33f, 1.36f),
-            };
             Mesh quad = QuadMesh();
-            for (int i = 0; i < places.Length; i++)
+            Transform arrow = scene.GetPrefab("ArrowWood")?.transform.Find("model");
+            Transform knife = scene.GetPrefab("KnifeCopper")?.transform.Find("attach/knife");
+            for (int i = 0; i < Slots; i++)
             {
+                float x = -0.8f + 0.4f * (i % 5) + R(-0.03f, 0.03f), y = (i < 5 ? 1.89f : 1.34f) + R(-0.04f, 0.04f);
                 var slot = new GameObject("notice_" + i).transform;
                 slot.SetParent(look, false);
-                slot.localPosition = new Vector3(places[i].x + R(-0.03f, 0.03f), places[i].y + R(-0.03f, 0.03f), PanelFront - 0.025f);   // clear of the planks: closer flickers at a distance
+                slot.localPosition = new Vector3(x, y, PanelFront - 0.025f - 0.004f * (i % 3));   // clear of the planks: closer flickers at a distance
                 slot.localRotation = Quaternion.Euler(0f, 0f, R(-7f, 7f));
                 slot.gameObject.layer = look.parent.gameObject.layer;   // (the piece's layer: the one the player's hover ray looks at)
                 var hit = slot.gameObject.AddComponent<BoxCollider>();   // in front of the panel's, so the crosshair finds the paper first
@@ -214,18 +217,59 @@ namespace Wanted
                 paper.AddComponent<MeshFilter>().sharedMesh = quad;
                 paper.AddComponent<MeshRenderer>().sharedMaterial = Paper.For((Kind)(i % 4), scene);
 
+                var top = new Vector3(0f, Paper.Height / 2f - 0.045f, 0f);   // where it's pinned
+                var nail = new GameObject("pin_nail");
+                nail.transform.SetParent(slot, false);
                 if (iron != null)
                 {
-                    var nail = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-                    Object.DestroyImmediate(nail.GetComponent<Collider>());
-                    nail.name = "nail";
-                    nail.transform.SetParent(slot, false);
-                    nail.transform.localPosition = new Vector3(0f, Paper.Height / 2f - 0.04f, 0f);   // half in the paper, half out
-                    nail.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-                    nail.transform.localScale = new Vector3(0.022f, 0.012f, 0.022f);
-                    nail.GetComponent<MeshRenderer>().sharedMaterial = iron;
+                    var head = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                    Object.DestroyImmediate(head.GetComponent<Collider>());
+                    head.name = "nail";
+                    head.transform.SetParent(nail.transform, false);
+                    head.transform.localPosition = top;   // half in the paper, half out
+                    head.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                    head.transform.localScale = new Vector3(0.022f, 0.012f, 0.022f);
+                    head.GetComponent<MeshRenderer>().sharedMaterial = iron;
                 }
+                // shot in from the front, a little from above and to one side: the shaft stands out of the board towards the player
+                GameObject a = arrow != null ? Stuck(slot, "pin_arrow", arrow, 2, false, 0.75f, 0.08f, top,
+                    Quaternion.Euler(R(8f, 14f), R(-12f, 12f), 0f)) : null;
+                // driven in by hand, blade first, the grip standing out and tipped a little down
+                GameObject k = knife != null ? Stuck(slot, "pin_knife", knife, 1, true, 0.32f, 0.13f, top,
+                    Quaternion.Euler(R(-12f, -6f), R(-8f, 8f), R(0f, 360f))) : null;
+
+                // the prefab's own look: every other place, one with an arrow and one with a knife
+                slot.gameObject.SetActive(i % 2 == 0);
+                Pin shown = i == 2 ? Pin.Arrow : i == 6 ? Pin.Knife : Pin.Nail;
+                nail.SetActive(shown == Pin.Nail);
+                if (a != null) a.SetActive(shown == Pin.Arrow);
+                if (k != null) k.SetActive(shown == Pin.Knife);
             }
+        }
+
+        /// <summary>
+        /// A game item's model driven point first into the board through a notice: <paramref name="axis"/> (0 x, 1 y, 2 z) is the
+        /// model's length, its point at that axis' high end or low end; it's scaled to <paramref name="length"/> metres, its point
+        /// <paramref name="buried"/> metres into the wood under <paramref name="at"/>, and leant by <paramref name="lean"/> from
+        /// straight in.
+        /// </summary>
+        private static GameObject Stuck(Transform slot, string name, Transform source, int axis, bool pointHigh, float length, float buried,
+            Vector3 at, Quaternion lean)
+        {
+            var pin = new GameObject(name);
+            pin.transform.SetParent(slot, false);
+            Transform model = Copy(pin.transform, "model", source);
+            Bounds b = model.GetComponent<MeshFilter>().sharedMesh.bounds;
+            var along = Vector3.zero;
+            along[axis] = pointHigh ? 1f : -1f;
+            Vector3 point = b.center + Vector3.Scale(along, b.extents);
+            float scale = length / b.size[axis];
+            Quaternion turn = lean * Quaternion.FromToRotation(along, Vector3.forward);   // its point into the board (+z)
+            model.localRotation = turn;
+            model.localScale = Vector3.one * scale;
+            var into = at + lean * Vector3.forward * (0.025f + buried);   // through the paper's gap to the planks, then into them
+            model.localPosition = into - turn * (point * scale);
+            return pin;
         }
 
         /// <summary>

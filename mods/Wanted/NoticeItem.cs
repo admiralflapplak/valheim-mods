@@ -160,11 +160,20 @@ namespace Wanted
                 int n = Kills.Progress(item);
                 return n >= c.Count ? "<color=#99e68c>" + T("wanted_status_done") + "</color>" : T("wanted_status_kills", n, c.Count);
             }
+            // counted where the paper is: the player's bag, or the chest open beside it (the box it's about to be handed in at)
             Player p = Player.m_localPlayer;
-            int have = p != null ? HandIn.CountOf(p.GetInventory(), c.Target) : 0;
-            string text = T("wanted_status_have", have, c.Count);
+            Inventory bag = p != null ? p.GetInventory() : null;
+            Inventory chest = InventoryGui.instance != null ? OpenChest(InventoryGui.instance)?.GetInventory() : null;
+            string text;
+            if (bag != null && bag.ContainsItem(item)) text = T("wanted_status_have", HandIn.CountOf(bag, c.Target), c.Count);
+            else if (chest != null && chest.ContainsItem(item)) text = T("wanted_status_box", HandIn.CountOf(chest, c.Target), c.Count);
+            else return T("wanted_status_needs", c.Count);
+            int have = HandIn.CountOf(bag != null && bag.ContainsItem(item) ? bag : chest, c.Target);
             return have >= c.Count ? "<color=#99e68c>" + text + "</color>" : text;
         }
+
+        private static readonly AccessTools.FieldRef<InventoryGui, Container> OpenChest =
+            AccessTools.FieldRefAccess<InventoryGui, Container>("m_currentContainer");
 
         // ---- when the game registers its own ---------------------------------------------------------------------------
         // ZNetScene.Awake can run before ObjectDB.Awake, and the main menu has an ObjectDB copy of its own: register from all three.

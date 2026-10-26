@@ -6,27 +6,32 @@ using static Nick.Shared.Translations;
 namespace Wanted
 {
     /// <summary>
-    /// A board's notices. They are saved on the board itself (its ZDO: five slots, each a contract or empty, and the day notices were last
-    /// posted), so they live in the world save and every player sees the same. The board's owner (the game running its area) posts them:
-    /// a new board starts with a few, and each new day, if there's room, there's a chance of one to three more. Taking one asks the owner,
+    /// A board's notices. They are saved on the board itself (its ZDO: ten places, each a contract or empty, and the day notices were last
+    /// posted), so they live in the world save and every player sees the same. The board's owner (the game running its area) posts them
+    /// at dawn: a new board starts bare (so tearing one down and building it again never brings new notices sooner than waiting would),
+    /// and each new day, while it has room, it gets at least one, more likely two or three. Taking one asks the owner,
     /// which empties the slot and answers with the contract; only then does the paper go into the taker's bag (two players taking the same
     /// notice at once: one gets it, the other is told it's gone).
     /// </summary>
     internal sealed class NoticeBoard : MonoBehaviour
     {
         public const int Slots = Board.Slots;
-        private const string KeyNotices = "Wanted.notices";   // the five slots, ';'-separated, each Contract.Write or empty
+        private const string KeyNotices = "Wanted.notices";   // the slots, ';'-separated, each Contract.Write or empty (boards from before 0.4 have five)
         private const string KeyDay = "Wanted.day";           // the day notices were last posted (-1: never, a new board)
         private const string RpcTake = "Wanted_Take", RpcTaken = "Wanted_Taken";
 
         private ZNetView _view;
         private GameObject[] _slots;
         private MeshRenderer[] _papers;
+        private GameObject[][] _pins;   // per slot, by Pin: the nail, the arrow, the knife
         private GameObject _pouch;
         private Container _box;
         private string _shown;
         private float _nextShow, _nextPost;
         private int _pendingSlot = -1;
+
+        /// <summary>Every placed board this game has loaded (not build ghosts): for the spacing rule.</summary>
+        internal static readonly System.Collections.Generic.List<NoticeBoard> Loaded = new System.Collections.Generic.List<NoticeBoard>();
         private float _pendingSince;
 
         private void Awake()
@@ -34,15 +39,18 @@ namespace Wanted
             _view = GetComponent<ZNetView>();
             _slots = new GameObject[Slots];
             _papers = new MeshRenderer[Slots];
+            _pins = new GameObject[Slots][];
             for (int i = 0; i < Slots; i++)
             {
                 Transform slot = transform.Find("wanted_look/notice_" + i);
                 _slots[i] = slot != null ? slot.gameObject : null;
                 _papers[i] = slot != null ? slot.Find("paper")?.GetComponent<MeshRenderer>() : null;
+                _pins[i] = new[] { slot?.Find("pin_nail")?.gameObject, slot?.Find("pin_arrow")?.gameObject, slot?.Find("pin_knife")?.gameObject };
             }
             _pouch = transform.Find("wanted_look/wanted_pouch")?.gameObject;
             _box = GetComponent<Container>();
             if (_view == null || !_view.IsValid()) return;   // (the build ghost: no saved data, nothing to do)
+            Loaded.Add(this);
             _view.Register<int, string>(RpcTake, RPC_Take);
             _view.Register<int, string>(RpcTaken, RPC_Taken);
             Show(force: true);
@@ -50,6 +58,7 @@ namespace Wanted
 
         private void OnDestroy()
         {
+            Loaded.Remove(this);
             // (a hot reload swaps this component for the new copy's, which registers its own: registering a name twice throws)
             if (_view == null) return;
             try { _view.Unregister(RpcTake); _view.Unregister(RpcTaken); }
@@ -86,6 +95,9 @@ namespace Wanted
 
         private void Write(string[] slots) => _view.GetZDO().Set(KeyNotices, string.Join(";", slots));
 
+        /// <summary>How many notices hang on the board.</summary>
+        public int Count() => _view != null && _view.IsValid() ? Read().Count(s => Contract.Read(s) != null) : 0;
+
         /// <summary>The contract hanging in this slot, or null.</summary>
         public Contract ContractAt(int slot) =>
             _view != null && _view.IsValid() && slot >= 0 && slot < Slots ? Contract.Read(Read()[slot]) : null;
@@ -102,6 +114,9 @@ namespace Wanted
             {
                 Contract c = Contract.Read(slots[i]);
                 if (_slots[i] != null) _slots[i].SetActive(c != null);
+                if (c != null)
+                    for (int p = 0; p < _pins[i].Length; p++)
+                        if (_pins[i][p] != null) _pins[i][p].SetActive(p == (int)c.Pin || (p == 0 && (int)c.Pin >= _pins[i].Length));
                 if (c != null && _papers[i] != null)
                 {
                     Material m = Paper.For(c.Kind, ZNetScene.instance);
@@ -129,26 +144,37 @@ namespace Wanted
             int last = _view.GetZDO().GetInt(KeyDay, -1);
             if (last == today) return;
 
+            if (last < 0 || today < last)
+            {
+                _view.GetZDO().Set(KeyDay, today);   // a new board (or the world's clock went back): its first notices come at the next dawn
+                return;
+            }
             string[] slots = Read();
             var rnd = new System.Random();
             int added = 0;
-            if (last < 0 || today < last)
-                added += Fill(slots, Plugin.FirstNotices.Value, rnd);   // a new board (or the world's clock went back): a few to start with
-            else
-                for (int day = 0; day < Math.Min(today - last, 5); day++)   // each day passed (sleeping through several counts each)
-                    if (rnd.NextDouble() * 100.0 < Plugin.DailyChance.Value) added += Fill(slots, rnd.Next(1, 4), rnd);
+            for (int day = 0; day < Math.Min(today - last, 5); day++)   // each dawn passed (sleeping through several counts each)
+            {
+                int count = 1;
+                if (rnd.NextDouble() * 100.0 < Plugin.SecondChance.Value)
+                {
+                    count = 2;
+                    if (rnd.NextDouble() * 100.0 < Plugin.ThirdChance.Value) count = 3;
+                }
+                added += Fill(slots, count, rnd);
+            }
 
             if (added > 0) Write(slots);
             _view.GetZDO().Set(KeyDay, today);
         }
 
-        /// <summary>Puts up to this many new notices in empty slots; how many it put up.</summary>
+        /// <summary>Puts up to this many new notices in empty places, never more than the board may show at once; how many it put up.</summary>
         private static int Fill(string[] slots, int count, System.Random rnd)
         {
             int added = 0;
             for (int n = 0; n < count; n++)
             {
-                // a random empty slot, so notices don't always fill from the top left
+                if (slots.Count(x => !string.IsNullOrEmpty(x)) >= Plugin.MaxNotices.Value) break;
+                // a random empty place, so notices don't always fill from the top left
                 int[] empties = Enumerable.Range(0, Slots).Where(i => string.IsNullOrEmpty(slots[i])).ToArray();
                 if (empties.Length == 0) break;
                 Contract c = Contracts.Make(rnd);
@@ -252,7 +278,12 @@ namespace Wanted
     /// <summary>The board's wood: says what it is, so looking at the planks doesn't offer to open the box.</summary>
     internal sealed class BoardFace : MonoBehaviour, Hoverable, Interactable
     {
-        public string GetHoverText() => Localization.instance.Localize("$wanted_board") + "\n<size=80%><color=#bdb7a9>" + T("wanted_board_hint") + "</color></size>";
+        public string GetHoverText()
+        {
+            NoticeBoard board = GetComponentInParent<NoticeBoard>();
+            string hint = board != null && board.Count() == 0 ? T("wanted_board_empty") : T("wanted_board_hint");
+            return Localization.instance.Localize("$wanted_board") + "\n<size=80%><color=#bdb7a9>" + hint + "</color></size>";
+        }
         public string GetHoverName() => Localization.instance.Localize("$wanted_board");
         public float GetHoverOffset() => 0f;
         public bool Interact(Humanoid user, bool hold, bool alt) => false;
