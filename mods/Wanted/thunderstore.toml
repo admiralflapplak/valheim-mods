@@ -6,7 +6,7 @@ schemaVersion = "0.0.1"
 [package]
 namespace = "Flap"
 name = "Wanted"
-versionNumber = "1.0.0"
+versionNumber = "1.0.1"
 description = "A craftable notice board (bounty board) that posts notices each dawn: slay creatures, gather, bring trophies, deliver food. Hand them in at its box for coins, materials and rare finds. Finds other mods' creatures and items by itself."
 websiteUrl = "https://github.com/admiralflapplak/valheim-mods"
 containsNsfwContent = false
