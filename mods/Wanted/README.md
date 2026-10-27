@@ -14,7 +14,7 @@ and food to deliver. Take a notice, do what it asks, and drop it in the board's 
 - **Four kinds of notice.**
   - **Bounty** (red): slay a number of a creature. Kills count for you and for everyone fighting within 30 m of the creature.
   - **Gathering** (green): bring materials.
-  - **Trophies** (amber): bring trophies.
+  - **Trophies** (amber): bring trophies, usually one or two. Rare drops, so they pay like a bounty on all the kills it takes.
   - **Provisions** (blue): deliver cooked food, meads or oils.
 - **A notice is a paper you carry.** Taken from the board, it goes in your bag: its tooltip says what it asks, what it pays and how
   far along you are ("Slain: 4/8", or "In your bag: 12/19"). A finished bounty gets a red wax seal on its icon.

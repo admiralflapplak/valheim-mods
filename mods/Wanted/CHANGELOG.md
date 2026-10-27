@@ -2,6 +2,8 @@
 - Notices can be for any land you've opened, not only the newest two: half for the newest, a quarter for the one before it, and so on
   (a server setting, "Newest land share"). Older lands keep turning up late in the game.
 - An idol reward is now of any land you've opened, each as likely, so older idols don't become rare as the game goes on.
+- Trophy notices pay what the hunt is worth: a trophy is priced at the kills it takes at its real drop chance, with a bounty's
+  premium, and they ask for fewer (mostly one or two; a Greydwarf trophy now pays like a bounty on the twenty Greydwarfs it takes, not two).
 - Notices ask for a wider spread of amounts (60% to 150% of the usual), so two notices for the same thing rarely ask for the same.
 - Illustrated notices, each player's own choice ("5 - Your notices", off by default): instead of the exclamation mark, a sketch of what
   the notice wants (a creature's trophy, the item) inked in its kind's colour, the count as tally marks (fitted to the paper however many), and a heading

@@ -115,14 +115,12 @@ namespace Wanted
                     var all = ContractData.AllEntries().ToList();
                     foreach (Entry t in all.Where(e => e.Kind == Kind.Trophy))
                     {
-                        Entry kill = null; float chance = 0f;
-                        foreach (Entry k in all.Where(e => e.Kind == Kind.Kill))
-                            foreach (CharacterDrop.Drop d in ZNetScene.instance.GetPrefab(k.Prefab)?.GetComponent<CharacterDrop>()?.m_drops ?? new List<CharacterDrop.Drop>())
-                                if (d?.m_prefab != null && d.m_prefab.name == t.Prefab && kill == null) { kill = k; chance = d.m_chance; }
-                        if (kill == null) { lines.Add($"t{t.Tier} {t.Prefab} @{t.Value}: no creature found"); continue; }
-                        float perTrophy = kill.Value / Mathf.Max(0.01f, chance);   // what the kills to get one are worth
-                        lines.Add($"t{t.Tier} {t.Prefab} @{t.Value} | {kill.Prefab} @{kill.Value} drops it {chance:P0} ({1f / Mathf.Max(0.01f, chance):0.#} kills) | " +
-                                  $"those kills worth {perTrophy:0} | trophy pays {t.Value * Contracts.Premium(Kind.Trophy):0} vs bounty for those kills {perTrophy * Contracts.Premium(Kind.Kill):0}");
+                        Entry kill = Contracts.TrophySource(t.Prefab, all, out float chance);
+                        if (kill == null) { lines.Add($"t{t.Tier} {t.Prefab}: no creature found, priced @{t.Value} x{t.Count}"); continue; }
+                        float each = kill.Value / Mathf.Max(0.01f, chance);
+                        int usual = Math.Max(1, Mathf.RoundToInt(kill.Count * chance));
+                        lines.Add($"t{t.Tier} {t.Prefab} | {kill.Prefab} @{kill.Value} x{kill.Count} drops it {chance:P0} | " +
+                                  $"usual x{usual}, each worth {each:0}, notice for x{usual} pays {usual * each * Contracts.Premium(Kind.Trophy):0}");
                     }
                     output(new Dictionary<string, object> { { "trophies", lines } });
                     return null;

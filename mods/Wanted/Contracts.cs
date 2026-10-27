@@ -107,7 +107,26 @@ namespace Wanted
         /// The premium on a notice's worth, by kind. A bounty pays twice what the kills are worth (the creatures' own drops are the
         /// hunter's too); a delivery half as much again as what's handed over (the things themselves are given up for it).
         /// </summary>
-        public static float Premium(Kind kind) => kind == Kind.Kill ? 2f : 1.5f;
+        public static float Premium(Kind kind) => kind == Kind.Kill || kind == Kind.Trophy ? 2f : 1.5f;   // a trophy is a bounty paid on proof
+
+        /// <summary>
+        /// The creature that drops this trophy and how often (its first drop chance among the hunted creatures), or null. A trophy
+        /// notice is priced by these: one trophy is worth the kills it takes, and asks about as many as a bounty's kills would drop.
+        /// </summary>
+        public static Entry TrophySource(string trophy, IEnumerable<Entry> all, out float chance)
+        {
+            chance = 0f;
+            ZNetScene scene = ZNetScene.instance;
+            if (scene == null) return null;
+            foreach (Entry k in all.Where(e => e.Kind == Kind.Kill))
+            {
+                CharacterDrop drops = scene.GetPrefab(k.Prefab)?.GetComponent<CharacterDrop>();
+                if (drops == null) continue;
+                foreach (CharacterDrop.Drop d in drops.m_drops)
+                    if (d?.m_prefab != null && d.m_prefab.name == trophy && d.m_chance > 0f) { chance = Mathf.Min(1f, d.m_chance); return k; }
+            }
+            return null;
+        }
 
         public const float CoinShare = 0.4f;   // of a reward's worth, the part paid in coins; the rest in the stage's material
 
@@ -145,12 +164,19 @@ namespace Wanted
 
             List<Entry> entries = kinds[rnd.Next(kinds.Count)];
             Entry e = entries[rnd.Next(entries.Count)];
-            int count = Amount(rnd, e.Count);
+            int usual = e.Count;
+            float each = e.Value;
+            if (e.Kind == Kind.Trophy && TrophySource(e.Prefab, all, out float chance) is Entry kill)
+            {
+                usual = Math.Max(1, Mathf.RoundToInt(kill.Count * chance));   // what a bounty on that creature would see drop
+                each = kill.Value / Mathf.Max(0.01f, chance);                 // the kills it takes to get one
+            }
+            int count = Amount(rnd, usual);
 
             return new Contract
             {
                 Kind = e.Kind, Target = e.Prefab, Count = count, Tier = tier,
-                Reward = MakeReward(rnd, tier, count * e.Value * Premium(e.Kind)),
+                Reward = MakeReward(rnd, tier, count * each * Premium(e.Kind)),
                 Id = ((uint)rnd.Next()).ToString("x8") + ((uint)rnd.Next()).ToString("x8"),
                 Pin = PickPin(rnd),
             };
