@@ -91,11 +91,17 @@ namespace Wanted
         {
             var paper = For(kind, scene)?.mainTexture as Texture2D;
             if (paper == null) return null;
+            return IconFromSheet(paper, "wanted_icon_" + kind + (done ? "_done" : ""), kind == Kind.Kill || kind == Kind.Trophy, done);
+        }
+
+        /// <summary>A notice's picture in the bag from a sheet of its paper: a little turned (left or right), square, the seal if done.</summary>
+        public static Sprite IconFromSheet(Texture2D paper, string name, bool turnLeft, bool done)
+        {
             const int size = 128;
-            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false) { name = "wanted_icon_" + kind + (done ? "_done" : ""), wrapMode = TextureWrapMode.Clamp };
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false) { name = name, wrapMode = TextureWrapMode.Clamp };
             var px = new Color[size * size];
             float h = size * 0.92f, w = h * W / H;   // the paper's own proportions
-            float turn = (kind == Kind.Kill || kind == Kind.Trophy ? -6f : 6f) * Mathf.Deg2Rad, cos = Mathf.Cos(turn), sin = Mathf.Sin(turn);
+            float turn = (turnLeft ? -6f : 6f) * Mathf.Deg2Rad, cos = Mathf.Cos(turn), sin = Mathf.Sin(turn);
             for (int y = 0; y < size; y++)
             for (int x = 0; x < size; x++)
             {

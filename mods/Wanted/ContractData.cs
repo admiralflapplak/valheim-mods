@@ -14,7 +14,7 @@ namespace Wanted
         public Kind Kind;
         public int Tier;
         public string Prefab;
-        public int Count;      // a usual amount: a notice asks for it, give or take a fifth
+        public int Count;      // a usual amount: a notice asks for 60% to 150% of it
         public float Value;    // what one is worth, in coins (a kill's danger and time, an item's trouble to get or make)
 
         public Entry(Kind kind, int tier, string prefab, int count, float value) { Kind = kind; Tier = tier; Prefab = prefab; Count = count; Value = value; }
@@ -250,7 +250,7 @@ namespace Wanted
     ""Add things Wanted notices can ask for, or pay in, and take built-in ones out. Kinds: Kill (a creature prefab), Gather, Trophy,"",
     ""Provisions (item prefabs), Pay (an item notices of that stage pay in), Rare and Refined (bonuses now and then paid on top)."",
     ""Other mods' creatures, items, food, meads, arrows and valuables are found by themselves: this is for fine-tuning. Tier: 0 Meadows, 1 Black Forest, 2 Swamp,"",
-    ""3 Mountain, 4 Plains, 5 Mistlands, 6 Ashlands, 7 Deep North. Count: a usual amount (a notice asks for it, give or take a fifth)."",
+    ""3 Mountain, 4 Plains, 5 Mistlands, 6 Ashlands, 7 Deep North. Count: a usual amount (a notice asks for 60% to 150% of it)."",
     ""Value: what one is worth in coins; the reward is the notice's worth times a premium for its kind. Remove: prefab names to drop"",
     ""from the built-in lists. Names this game doesn't have are skipped (Claude Tools: wanted names). On a server, the server's file"",
     ""applies to everyone. Changes apply to notices posted afterwards.""

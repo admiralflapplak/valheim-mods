@@ -2,6 +2,10 @@
 - Notices can be for any land you've opened, not only the newest two: half for the newest, a quarter for the one before it, and so on
   (a server setting, "Newest land share"). Older lands keep turning up late in the game.
 - An idol reward is now of any land you've opened, each as likely, so older idols don't become rare as the game goes on.
+- Notices ask for a wider spread of amounts (60% to 150% of the usual), so two notices for the same thing rarely ask for the same.
+- Illustrated notices, each player's own choice ("5 - Your notices", off by default): instead of the exclamation mark, a sketch of what
+  the notice wants (a creature's trophy, the item) inked in its kind's colour, the count as tally marks, and "WANTED" across bounties
+  (its own setting). The notice in the bag shows the same sketch.
 
 ## 1.0.0
 - First release.

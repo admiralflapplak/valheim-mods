@@ -148,7 +148,9 @@ namespace Wanted
                 Sprite[] icons = __instance.m_shared.m_icons;
                 Contract c = ContractOf(__instance);
                 if (c == null || icons == null || icons.Length < Kinds * 2) return;
-                __result = icons[(int)c.Kind + (IsDone(__instance) ? Kinds : 0)] ?? __result;
+                bool done = IsDone(__instance);
+                Sprite sketch = Plugin.Illustrated.Value ? Sketch.IconFor(c, ZNetScene.instance, Plugin.WantedHeading.Value, done) : null;
+                __result = sketch ?? icons[(int)c.Kind + (done ? Kinds : 0)] ?? __result;
             }
         }
 

@@ -48,6 +48,7 @@ namespace Wanted
         public static void Forget()
         {
             Made.Clear();   // (not destroyed: boards standing may show them; a new copy draws its own)
+            Icons.Clear();
             foreach (Texture2D t in Readable.Values) if (t != null) Object.Destroy(t);
             Readable.Clear();
         }
@@ -77,19 +78,52 @@ namespace Wanted
 
         // ---- the drawing (a mask: how much ink at each pixel of the sheet, rows from the bottom) -----------------------------
 
-        private static float[] Draw(Sprite icon, int count, bool heading, float seed)
+        /// <summary>
+        /// The notice in the bag, illustrated: the same sketch on the same paper as on the board (the heading too), without the tally
+        /// marks (they'd blur at the size of a bag's slot; the tooltip has the count), the picture as big as fits; a red wax seal once a
+        /// bounty is done. Null when there's no picture (the plain icon is shown).
+        /// </summary>
+        public static Sprite IconFor(Contract c, ZNetScene scene, bool heading, bool done)
+        {
+            heading &= c.Kind == Kind.Kill;
+            string key = $"{(int)c.Kind}|{c.Target}|{heading}|{done}";
+            if (Icons.TryGetValue(key, out Sprite had)) return had;
+            Sprite sprite = null;
+            try
+            {
+                Sprite picture = PictureOf(c, scene);
+                float[] mask = picture != null ? Draw(picture, 0, heading, 31.7f + (int)c.Kind * 17.3f, forIcon: true) : null;
+                if (mask != null)
+                {
+                    Texture2D sheet = Paper.Compose("wanted_sketch_icon_" + c.Target, SW, SH, 13.7f + (int)c.Kind * 41.3f, Paper.Ink(c.Kind),
+                        (x, y, u, v) => mask[y * SW + x]);
+                    sprite = Paper.IconFromSheet(sheet, "wanted_sketch_icon_" + c.Target, c.Kind == Kind.Kill || c.Kind == Kind.Trophy, done);
+                    Object.Destroy(sheet);
+                }
+            }
+            catch (Exception e) { Plugin.Log.LogWarning($"Sketching the icon of {c.Target}: {e.Message}"); }
+            Icons[key] = sprite;
+            return sprite;
+        }
+
+        private static readonly Dictionary<string, Sprite> Icons = new Dictionary<string, Sprite>();
+
+        private static float[] Draw(Sprite icon, int count, bool heading, float seed, bool forIcon = false)
         {
             Color[] pic = Pixels(icon, out int iw, out int ih);
             if (pic == null) return null;
             var mask = new float[SW * SH];
 
-            // the picture: a square in the middle, lower down when the heading takes the top
-            int box = Mathf.RoundToInt(SW * (heading ? 0.6f : 0.66f));
-            int cx = SW / 2, cy = Mathf.RoundToInt(SH * (heading ? 0.48f : 0.56f));
+            // the picture: a square in the middle, lower down when the heading takes the top; on an icon, bigger (no tally under it)
+            float size = forIcon ? (heading ? 0.74f : 0.86f) : (heading ? 0.6f : 0.66f);
+            float middle = forIcon ? (heading ? 0.4f : 0.48f) : (heading ? 0.48f : 0.56f);
+            int box = Mathf.RoundToInt(SW * size);
+            int cx = SW / 2, cy = Mathf.RoundToInt(SH * middle);
             DrawPicture(mask, pic, iw, ih, cx - box / 2, cy - box / 2, box, seed);
 
-            if (heading) Letters(mask, "WANTED", SW / 2, Mathf.RoundToInt(SH * 0.8f), 28, seed);   // (under the nail, which goes in near the top)
-            Tally(mask, Mathf.Clamp(count, 1, 40), SW / 2, Mathf.RoundToInt(SH * 0.16f), seed);
+            // the heading under the nail, which goes in near the top (an icon has no nail: the heading goes higher and larger)
+            if (heading) Letters(mask, "WANTED", SW / 2, Mathf.RoundToInt(SH * (forIcon ? 0.84f : 0.8f)), forIcon ? 34 : 28, seed);
+            if (!forIcon) Tally(mask, Mathf.Clamp(count, 1, 40), SW / 2, Mathf.RoundToInt(SH * 0.16f), seed);
             return mask;
         }
 

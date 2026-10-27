@@ -145,7 +145,7 @@ namespace Wanted
 
             List<Entry> entries = kinds[rnd.Next(kinds.Count)];
             Entry e = entries[rnd.Next(entries.Count)];
-            int count = Math.Max(1, (int)Math.Round(e.Count * (0.8 + rnd.NextDouble() * 0.4)));
+            int count = Amount(rnd, e.Count);
 
             return new Contract
             {
@@ -166,6 +166,16 @@ namespace Wanted
             for (int tier = newest; tier > 0; tier--)
                 if (rnd.NextDouble() < share) return tier;
             return 0;
+        }
+
+        /// <summary>
+        /// How many a notice asks for: any whole number from about 60% to 150% of the usual amount, each as likely (a usual 3 is 1 to 5, a
+        /// usual 1 is 1 or 2), so two notices for the same thing rarely ask for the same.
+        /// </summary>
+        private static int Amount(System.Random rnd, int usual)
+        {
+            int least = Math.Max(1, (int)Math.Floor(usual * 0.6)), most = Math.Max(least + 1, (int)Math.Ceiling(usual * 1.5));
+            return rnd.Next(least, most + 1);
         }
 
         /// <summary>The stage whose list to use: this one, or the nearest below it that has anything (Deep North borrows Ashlands').</summary>
