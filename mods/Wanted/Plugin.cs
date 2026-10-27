@@ -15,7 +15,7 @@ namespace Wanted
     {
         public const string Guid = "nick.valheim.wanted";
         public const string Name = "Wanted";
-        public const string Version = "1.0.0";
+        public const string Version = "1.0.1";
 
         internal static Plugin Instance;
         internal static BepInEx.Logging.ManualLogSource Log;
@@ -32,6 +32,7 @@ namespace Wanted
         internal static ConfigEntry<string> MoreChances;
         internal static ConfigEntry<float> BoardSpacing;
         internal static ConfigEntry<int> MaxCarried;
+        internal static ConfigEntry<float> NewestLandShare;
 
         // 3 - Rewards (the server's)
         internal static ConfigEntry<int> RewardPercent;
@@ -69,12 +70,16 @@ namespace Wanted
                 "there was a second, and so on. The defaults give one 25%, two 35%, three 25%, four 12%, five 3% of dawns.");
             BoardSpacing = Synced.Bind("1 - Building", "Least distance between boards", 50f,
                 "A Wanted board can't be built closer than this (metres) to another one.", new AcceptableValueRange<float>(0f, 200f));
+            NewestLandShare = Synced.Bind("2 - Notices", "Newest land share", 50f,
+                "Notices are for any land opened so far (each boss beaten opens the next): this share (percent) is for the newest, the same share " +
+                "of the rest for the one before it, and so on (50: newest 50%, one before 25%, two before 12.5%...). Higher keeps notices near " +
+                "the frontier; lower spreads them over the whole world.", new AcceptableValueRange<float>(1f, 100f));
             MaxCarried = Synced.Bind("2 - Notices", "Notices a player can carry", 3,
                 "How many notices one player can carry at a time.", new AcceptableValueRange<int>(1, 10));
             RewardPercent = Synced.Bind("3 - Rewards", "Reward percent", 100,
                 "Pay as a percentage of the standard rate (50 = half, 200 = double). Notices already posted keep their pay.", new AcceptableValueRange<int>(10, 500));
             IdolChance = Synced.Bind("3 - Rewards", "Idol chance", 3f,
-                "The chance (percent) that a notice also pays one of the Forge of Potential's idols, of its land's tier.", new AcceptableValueRange<float>(0f, 100f));
+                "The chance (percent) that a notice also pays one of the Forge of Potential's idols, of any land opened so far (each as likely).", new AcceptableValueRange<float>(0f, 100f));
             UsefulChance = Synced.Bind("3 - Rewards", "Useful bonus chance", 20f,
                 "The chance (percent) that a notice also pays something useful of its stage on top: a mead or an oil, arrows or bolts, or a refined " +
                 "good (Eitr, linen thread, nails). Worth about half the reward.", new AcceptableValueRange<float>(0f, 100f));

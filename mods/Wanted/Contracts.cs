@@ -122,8 +122,8 @@ namespace Wanted
         }
 
         /// <summary>
-        /// A new notice for this world, or null when nothing fits. Mostly for the newest land opened, now and then the one before it;
-        /// the kind is chosen among those with anything this game knows at that stage (hunting twice as often as each of the others).
+        /// A new notice for this world, or null when nothing fits. For any land opened so far, the newest most often (PickLand); the kind
+        /// is chosen among those with anything this game knows at that stage (hunting twice as often as each of the others).
         /// </summary>
         public static Contract Make(System.Random rnd) => Make(rnd, -1);
 
@@ -131,7 +131,7 @@ namespace Wanted
         public static Contract Make(System.Random rnd, int forTier)
         {
             int newest = WorldTier();
-            int tier = forTier >= 0 ? forTier : newest > 0 && rnd.NextDouble() < 0.3 ? newest - 1 : newest;
+            int tier = forTier >= 0 ? forTier : PickLand(rnd, newest);
             List<Entry> all = ContractData.AllEntries().ToList();
             int list = ListTier(tier, all.Select(e => e.Tier));
 
@@ -154,6 +154,18 @@ namespace Wanted
                 Id = ((uint)rnd.Next()).ToString("x8") + ((uint)rnd.Next()).ToString("x8"),
                 Pin = PickPin(rnd),
             };
+        }
+
+        /// <summary>
+        /// Which opened land a notice is for: the newest with the server's share (50%), each one before it with that share of what's left
+        /// (25%, 12.5%...), the oldest taking the rest. Older lands keep turning up late in the game, with their materials and their idols.
+        /// </summary>
+        private static int PickLand(System.Random rnd, int newest)
+        {
+            double share = Mathf.Clamp(Plugin.NewestLandShare.Value, 1f, 100f) / 100.0;
+            for (int tier = newest; tier > 0; tier--)
+                if (rnd.NextDouble() < share) return tier;
+            return 0;
         }
 
         /// <summary>The stage whose list to use: this one, or the nearest below it that has anything (Deep North borrows Ashlands').</summary>
@@ -194,10 +206,12 @@ namespace Wanted
             string bonus = Bonus(rnd, tier, worth * BonusShare);
             if (bonus != null) parts.Add(bonus);
 
-            // now and then one of the Forge of Potential's idols, of this stage's tier
+            // now and then one of the Forge of Potential's idols: of any land opened so far, evenly (not the notice's own land: notices for
+            // old lands are rare late in the game, and their idols would all but vanish with them)
             if (rnd.NextDouble() * 100.0 < Plugin.IdolChance.Value)
             {
-                string idol = $"Upgrader{Math.Min(tier, 7)}{(rnd.Next(2) == 0 ? "Weapon" : "Armor")}";
+                int idolTier = rnd.Next(0, Math.Max(tier, WorldTier()) + 1);
+                string idol = $"Upgrader{Math.Min(idolTier, 7)}{(rnd.Next(2) == 0 ? "Weapon" : "Armor")}";
                 if (Known(idol)) parts.Add(idol + ":1");
             }
             return string.Join(",", parts);

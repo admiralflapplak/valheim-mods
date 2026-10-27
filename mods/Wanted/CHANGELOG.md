@@ -1,3 +1,8 @@
+## 1.0.1
+- Notices can be for any land you've opened, not only the newest two: half for the newest, a quarter for the one before it, and so on
+  (a server setting, "Newest land share"). Older lands keep turning up late in the game.
+- An idol reward is now of any land you've opened, each as likely, so older idols don't become rare as the game goes on.
+
 ## 1.0.0
 - First release.
 - Tested in single player; multiplayer and dedicated servers are untested.

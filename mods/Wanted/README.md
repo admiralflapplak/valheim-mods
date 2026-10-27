@@ -9,7 +9,8 @@ and food to deliver. Take a notice, do what it asks, and drop it in the board's 
   colour: red for a bounty, green for gathering, amber for trophies, blue for provisions. Look at one to read it. Press E to take it.
   Now and then a notice is pinned with an arrow or a knife instead of a nail.
 - **Work that suits your world.** Notices follow how far the world has come: every boss beaten opens the next land's creatures,
-  things and food, from the Meadows to the Deep North. Most are for the newest land you've reached, now and then the one before it.
+  things and food, from the Meadows to the Deep North. Notices can be for any land you've opened: about half are for the newest,
+  a quarter for the one before it, and so on, so older lands keep turning up late in the game.
 - **Four kinds of notice.**
   - **Bounty** (red): slay a number of a creature. Kills count for you and for everyone fighting within 30 m of the creature.
   - **Gathering** (green): bring materials.
@@ -25,7 +26,7 @@ and food to deliver. Take a notice, do what it asks, and drop it in the board's 
   - something useful of its land (meads and oils, arrows and bolts, refined goods such as Refined Eitr, linen thread and nails), 20%;
   - a valuable (amber, rubies, silver necklaces...), 10%;
   - a rare find (a boss's summoning item, Dragon Tears, Thunderstones, Sealbreaker fragments, Bell fragments...), 5%;
-  - an idol of the Forge of Potential, 3%.
+  - an idol of the Forge of Potential, 3%: of any land you've opened, each as likely, so older idols never run out.
 
 ![Looking at a notice: what it asks, what it pays, and E to take it](thunderstore/screenshots/02-hover.png)
 
@@ -73,7 +74,7 @@ Everything is in the F1 Configuration Manager. The server decides all of them.
 | Section | What's in it |
 |---|---|
 | **1 - Building** | The board's cost and crafting station, and the least distance between two boards (50 m) |
-| **2 - Notices** | The most notices on a board (5), how many a new board gets at its first dawn (3 to 5), the chances of more notices each dawn ("75, 55, 40, 20": a second, a third...), and how many a player can carry (3) |
+| **2 - Notices** | The newest land's share of notices (50%: the rest go to older lands, each half as often as the next), the most notices on a board (5), how many a new board gets at its first dawn (3 to 5), the chances of more notices each dawn ("75, 55, 40, 20": a second, a third...), and how many a player can carry (3) |
 | **3 - Rewards** | The pay as a percentage (100), and the chances of an idol (3%), a useful bonus (20%), a valuable (10%) and a rare find (5%) |
 | **4 - Looks** | The chances a notice is pinned with an arrow (15%) or a knife (10%) |
 
