@@ -104,6 +104,13 @@ namespace Wanted
             _view != null && _view.IsValid() && slot >= 0 && slot < Slots ? Contract.Read(Read()[slot]) : null;
 
         /// <summary>Papers shown for the slots that hold a notice, each in its kind's paper; the empty ones hidden (their hover too).</summary>
+        /// <summary>Every loaded board draws its notices again (a look setting changed).</summary>
+        public static void RedrawAll()
+        {
+            foreach (NoticeBoard b in Loaded)
+                if (b != null && b._view != null && b._view.IsValid()) b.Show(force: true);
+        }
+
         private void Show(bool force)
         {
             if (_pouch != null) _pouch.SetActive(!string.IsNullOrEmpty(_view.GetZDO().GetString(HandIn.KeyPouch, "")));
@@ -120,7 +127,8 @@ namespace Wanted
                         if (_pins[i][p] != null) _pins[i][p].SetActive(p == (int)c.Pin || (p == 0 && (int)c.Pin >= _pins[i].Length));
                 if (c != null && _papers[i] != null)
                 {
-                    Material m = Paper.For(c.Kind, ZNetScene.instance);
+                    Material m = (Plugin.Illustrated.Value ? Sketch.For(c, ZNetScene.instance, Plugin.WantedHeading.Value) : null)
+                                 ?? Paper.For(c.Kind, ZNetScene.instance);
                     if (m != null) _papers[i].sharedMaterial = m;
                 }
             }

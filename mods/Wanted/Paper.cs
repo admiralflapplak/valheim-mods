@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -51,6 +52,16 @@ namespace Wanted
             var m = Flat(new Material(source) { name = "wanted_paper_" + kind });
             m.mainTexture = Draw(kind);
             Materials[kind] = m;
+            return m;
+        }
+
+        /// <summary>A paper material showing this texture (a copy of the cartography table's, as every notice's). Null without one to copy.</summary>
+        public static Material MaterialWith(ZNetScene scene, string name, Texture2D texture)
+        {
+            Material source = BaseMaterial(scene);
+            if (source == null) return null;
+            Material m = Flat(new Material(source) { name = name });
+            m.mainTexture = texture;
             return m;
         }
 
@@ -127,6 +138,7 @@ namespace Wanted
             // boards with no paper or planks after a hot reload). Four small textures per reload, only while making the mod.
             Materials.Clear();
             _label = null;
+            Sketch.Forget();
         }
 
         private static Material BaseMaterial(ZNetScene scene)
@@ -141,20 +153,31 @@ namespace Wanted
 
         private static Texture2D Draw(Kind kind, bool coin = false)
         {
-            var tex = new Texture2D(W, H, TextureFormat.RGBA32, true) { name = coin ? "wanted_label" : "wanted_paper_" + kind, wrapMode = TextureWrapMode.Clamp };
-            var px = new Color[W * H];
             float seed = coin ? 91.1f : 13.7f + (int)kind * 41.3f;
-            Color ink = coin ? new Color(0.74f, 0.52f, 0.1f) : Ink(kind);
+            return Compose(coin ? "wanted_label" : "wanted_paper_" + kind, W, H, seed, coin ? new Color(0.74f, 0.52f, 0.1f) : Ink(kind),
+                (x, y, u, v) => coin ? Coin(u, v, seed) : Mark(u, v, seed));
+        }
 
-            for (int y = 0; y < H; y++)
-            for (int x = 0; x < W; x++)
+        /// <summary>
+        /// A sheet of the notices' paper, <paramref name="w"/> by <paramref name="h"/> pixels (the proportions of a notice), with ink where
+        /// <paramref name="paint"/> says (0 none, 1 solid; given the pixel and its place 0..1 on the sheet): warm parchment, cloudy and
+        /// stained, browner at its torn edges, the ink laid on with a dry brush. Every size looks the same, only finer.
+        /// </summary>
+        public static Texture2D Compose(string name, int w, int h, float seed, Color ink, Func<int, int, float, float, float> paint)
+        {
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, true) { name = name, wrapMode = TextureWrapMode.Clamp };
+            var px = new Color[w * h];
+            float k = w / (float)W;   // pixels per pixel of the plain notice: the edge's tear and burn keep their size on the sheet
+
+            for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
             {
-                float u = (x + 0.5f) / W, v = (y + 0.5f) / H;
+                float u = (x + 0.5f) / w, v = (y + 0.5f) / h;
 
                 // the torn edge: how far in from the nearest side, pushed in and out by noise along the edge
-                float edge = Mathf.Min(Mathf.Min(u, 1f - u) * W, Mathf.Min(v, 1f - v) * H);
-                float tear = 3.5f + 3f * Fbm(u * 9f + seed, v * 9f - seed, 3);
-                if (edge < tear) { px[y * W + x] = new Color(0, 0, 0, 0); continue; }
+                float edge = Mathf.Min(Mathf.Min(u, 1f - u) * w, Mathf.Min(v, 1f - v) * h);
+                float tear = (3.5f + 3f * Fbm(u * 9f + seed, v * 9f - seed, 3)) * k;
+                if (edge < tear) { px[y * w + x] = new Color(0, 0, 0, 0); continue; }
 
                 // paper: warm parchment, cloudy, with stains, darker and browner towards the edges
                 float cloud = Fbm(u * 4f + seed, v * 4f + seed * 0.5f, 4);
@@ -163,18 +186,17 @@ namespace Wanted
                 c *= 0.92f + 0.12f * grain;
                 float stain = Mathf.Clamp01((Fbm(u * 2.5f - seed, v * 2.5f + 3.1f, 3) - 0.62f) * 4f);
                 c = Color.Lerp(c, new Color(0.48f, 0.36f, 0.22f), stain * 0.55f);
-                float burn = Mathf.Clamp01(1f - (edge - tear) / 14f);
+                float burn = Mathf.Clamp01(1f - (edge - tear) / (14f * k));
                 c = Color.Lerp(c, new Color(0.38f, 0.26f, 0.14f), burn * burn * 0.8f);
 
-                // the mark: a brush stroke narrowing towards the bottom, and a blot under it
-                float paint = coin ? Coin(u, v, seed) : Mark(u, v, seed);
-                if (paint > 0f)
+                float ink01 = paint(x, y, u, v);
+                if (ink01 > 0f)
                 {
                     float dry = 0.75f + 0.25f * Mathf.PerlinNoise(u * 30f - seed, v * 30f + seed);   // dry-brush streaks
-                    c = Color.Lerp(c, ink * (0.85f + 0.3f * grain), paint * dry);
+                    c = Color.Lerp(c, ink * (0.85f + 0.3f * grain), Mathf.Clamp01(ink01) * dry);
                 }
                 c.a = 1f;
-                px[y * W + x] = c;
+                px[y * w + x] = c;
             }
             tex.SetPixels(px);
             tex.Apply(true);

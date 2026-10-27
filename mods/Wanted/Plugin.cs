@@ -45,6 +45,10 @@ namespace Wanted
         internal static ConfigEntry<float> ArrowChance;
         internal static ConfigEntry<float> KnifeChance;
 
+        // 5 - Your notices (each player's own: how notices look to them)
+        internal static ConfigEntry<bool> Illustrated;
+        internal static ConfigEntry<bool> WantedHeading;
+
         private Harmony _harmony;
 
         private void Awake()
@@ -93,11 +97,18 @@ namespace Wanted
                 "The chance (percent) that a new notice is pinned to the board with an arrow instead of a nail.", new AcceptableValueRange<float>(0f, 100f));
             KnifeChance = Synced.Bind("4 - Looks", "Knife chance", 10f,
                 "The chance (percent) that a new notice is pinned to the board with a knife instead of a nail.", new AcceptableValueRange<float>(0f, 100f));
+            Illustrated = Config.Bind("5 - Your notices", "Illustrated notices", false,
+                "Notices show a sketch of what they want (a creature's trophy, the item), inked in their kind's colour, with the count as tally " +
+                "marks, instead of an exclamation mark. Only how they look to you.");
+            WantedHeading = Config.Bind("5 - Your notices", "Wanted heading", true,
+                "With illustrated notices: bounties have \"WANTED\" lettered across the top.");
             Config.SaveOnConfigSet = true;
             Config.Save();
 
             BoardCost.SettingChanged += (s, e) => Board.ApplyCost();
             BoardStation.SettingChanged += (s, e) => Board.ApplyCost();
+            Illustrated.SettingChanged += (s, e) => NoticeBoard.RedrawAll();
+            WantedHeading.SettingChanged += (s, e) => NoticeBoard.RedrawAll();
             Synced.AddText(ContractData.SyncKey, ContractData.OwnText, ContractData.Use);
 
             _harmony = Harmony.CreateAndPatchAll(typeof(Plugin).Assembly, Guid);
