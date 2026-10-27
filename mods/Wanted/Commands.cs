@@ -109,6 +109,24 @@ namespace Wanted
                     output(new Dictionary<string, object> { { "paper", paper }, { "icon", bag }, { "picture", Sketch.PictureInfo(c, ZNetScene.instance) } });
                     return null;
                 }
+                if (what == "trophies")   // each trophy notice's worth beside what its kills are worth, at the trophy's real drop chance
+                {
+                    var lines = new List<string>();
+                    var all = ContractData.AllEntries().ToList();
+                    foreach (Entry t in all.Where(e => e.Kind == Kind.Trophy))
+                    {
+                        Entry kill = null; float chance = 0f;
+                        foreach (Entry k in all.Where(e => e.Kind == Kind.Kill))
+                            foreach (CharacterDrop.Drop d in ZNetScene.instance.GetPrefab(k.Prefab)?.GetComponent<CharacterDrop>()?.m_drops ?? new List<CharacterDrop.Drop>())
+                                if (d?.m_prefab != null && d.m_prefab.name == t.Prefab && kill == null) { kill = k; chance = d.m_chance; }
+                        if (kill == null) { lines.Add($"t{t.Tier} {t.Prefab} @{t.Value}: no creature found"); continue; }
+                        float perTrophy = kill.Value / Mathf.Max(0.01f, chance);   // what the kills to get one are worth
+                        lines.Add($"t{t.Tier} {t.Prefab} @{t.Value} | {kill.Prefab} @{kill.Value} drops it {chance:P0} ({1f / Mathf.Max(0.01f, chance):0.#} kills) | " +
+                                  $"those kills worth {perTrophy:0} | trophy pays {t.Value * Contracts.Premium(Kind.Trophy):0} vs bounty for those kills {perTrophy * Contracts.Premium(Kind.Kill):0}");
+                    }
+                    output(new Dictionary<string, object> { { "trophies", lines } });
+                    return null;
+                }
                 if (what == "sample")   // notices as a board would write them (nothing posted): for checking what they ask and pay
                 {
                     int count = args.Length > 2 && int.TryParse(args[2], out int n) ? n : 10;

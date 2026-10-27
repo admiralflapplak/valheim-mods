@@ -105,7 +105,9 @@ namespace Wanted
                 float[] mask = picture != null ? Draw(picture, 0, word, heading == Heading.Runes, 31.7f + (int)c.Kind * 17.3f, forIcon: true) : null;
                 if (mask != null)
                 {
-                    Texture2D sheet = Paper.Compose("wanted_sketch_icon_" + c.Target, SW, SH, 13.7f + (int)c.Kind * 41.3f, Paper.Ink(c.Kind),
+                    // the ink a shade darker than on the board (a third for amber): small in a bag's slot, it needs the contrast
+                    Color ink = Color.Lerp(Paper.Ink(c.Kind), Color.black, c.Kind == Kind.Trophy ? 0.35f : 0.15f);
+                    Texture2D sheet = Paper.Compose("wanted_sketch_icon_" + c.Target, SW, SH, 13.7f + (int)c.Kind * 41.3f, ink,
                         (x, y, u, v) => mask[y * SW + x]);
                     sprite = Paper.IconFromSheet(sheet, "wanted_sketch_icon_" + c.Target, c.Kind == Kind.Kill || c.Kind == Kind.Trophy, done);
                     Object.Destroy(sheet);
@@ -177,6 +179,18 @@ namespace Wanted
             var b = new float[box * box];
             // the picture keeps its own proportions, fitted inside the square (another mod's icon may not be square)
             float fit = box / (float)Mathf.Max(iw, ih), dw = iw * fit, dh = ih * fit, ox = (box - dw) / 2f, oy = (box - dh) / 2f;
+
+            // which edges of the picture its drawing runs into (cut off by its frame, as the Draugr's trophy is at its sides and bottom):
+            // only those fray
+            bool Touches(int x0, int y0, int x1, int y1)
+            {
+                int solid = 0, all = 0;
+                for (int y = y0; y < y1; y++)
+                for (int x = x0; x < x1; x++) { all++; if (pic[y * iw + x].a > 0.5f) solid++; }
+                return all > 0 && solid > all * 0.08f;
+            }
+            int bw = Mathf.Max(1, iw / 40), bh = Mathf.Max(1, ih / 40);
+            bool cutLeft = Touches(0, 0, bw, ih), cutRight = Touches(iw - bw, 0, iw, ih), cutBottom = Touches(0, 0, iw, bh), cutTop = Touches(0, ih - bh, iw, ih);
             for (int y = 0; y < box; y++)
             for (int x = 0; x < box; x++)
             {
@@ -230,9 +244,16 @@ namespace Wanted
                 // near the edges of the picture's frame the ink thins out raggedly: a picture cut off by its frame (a trophy that fills its
                 // icon) ends as if the hand stopped there, not in a straight line
                 float pxu = (x + 0.5f - ox) / dw, pyv = (y + 0.5f - oy) / dh;
-                float toEdge = Mathf.Min(Mathf.Min(pxu, 1f - pxu), Mathf.Min(pyv, 1f - pyv));
-                float ragged = 0.02f + 0.09f * Mathf.PerlinNoise(x * 0.09f + seed * 3f, y * 0.09f - seed);
-                ink *= Mathf.Clamp01((toEdge - ragged) / 0.07f);
+                float toEdge = 1f;
+                if (cutLeft) toEdge = Mathf.Min(toEdge, pxu);
+                if (cutRight) toEdge = Mathf.Min(toEdge, 1f - pxu);
+                if (cutBottom) toEdge = Mathf.Min(toEdge, pyv);
+                if (cutTop) toEdge = Mathf.Min(toEdge, 1f - pyv);
+                if (toEdge < 0.2f)
+                {
+                    float ragged = 0.01f + 0.06f * Mathf.PerlinNoise(x * 0.09f + seed * 3f, y * 0.09f - seed);
+                    ink *= Mathf.Clamp01((toEdge - ragged) / 0.05f);
+                }
                 int i = sy * SW + sx;
                 mask[i] = Mathf.Max(mask[i], Mathf.Clamp01(ink));
             }
