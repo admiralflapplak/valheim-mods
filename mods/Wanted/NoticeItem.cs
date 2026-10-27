@@ -149,7 +149,7 @@ namespace Wanted
                 Contract c = ContractOf(__instance);
                 if (c == null || icons == null || icons.Length < Kinds * 2) return;
                 bool done = IsDone(__instance);
-                Sprite sketch = Plugin.Illustrated.Value ? Sketch.IconFor(c, ZNetScene.instance, Plugin.WantedHeading.Value, done) : null;
+                Sprite sketch = Plugin.Illustrated.Value ? Sketch.IconFor(c, ZNetScene.instance, Plugin.NoticeHeading.Value, done) : null;
                 __result = sketch ?? icons[(int)c.Kind + (done ? Kinds : 0)] ?? __result;
             }
         }

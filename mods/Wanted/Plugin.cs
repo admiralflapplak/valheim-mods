@@ -47,7 +47,7 @@ namespace Wanted
 
         // 5 - Your notices (each player's own: how notices look to them)
         internal static ConfigEntry<bool> Illustrated;
-        internal static ConfigEntry<bool> WantedHeading;
+        internal static ConfigEntry<Heading> NoticeHeading;
 
         private Harmony _harmony;
 
@@ -100,15 +100,16 @@ namespace Wanted
             Illustrated = Config.Bind("5 - Your notices", "Illustrated notices", false,
                 "Notices show a sketch of what they want (a creature's trophy, the item), inked in their kind's colour, with the count as tally " +
                 "marks, instead of an exclamation mark. Only how they look to you.");
-            WantedHeading = Config.Bind("5 - Your notices", "Wanted heading", true,
-                "With illustrated notices: bounties have \"WANTED\" lettered across the top.");
+            NoticeHeading = Config.Bind("5 - Your notices", "Heading", Heading.Runes,
+                "With illustrated notices, what's written across the top: Runes (each kind its own word in the Elder Futhark: WANTED, NEEDED, " +
+                "PROOF, SUPPLY), Wanted (\"WANTED\" in letters, on bounties only), or None.");
             Config.SaveOnConfigSet = true;
             Config.Save();
 
             BoardCost.SettingChanged += (s, e) => Board.ApplyCost();
             BoardStation.SettingChanged += (s, e) => Board.ApplyCost();
             Illustrated.SettingChanged += (s, e) => NoticeBoard.RedrawAll();
-            WantedHeading.SettingChanged += (s, e) => NoticeBoard.RedrawAll();
+            NoticeHeading.SettingChanged += (s, e) => NoticeBoard.RedrawAll();
             Synced.AddText(ContractData.SyncKey, ContractData.OwnText, ContractData.Use);
 
             _harmony = Harmony.CreateAndPatchAll(typeof(Plugin).Assembly, Guid);

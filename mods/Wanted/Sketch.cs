@@ -9,9 +9,12 @@ namespace Wanted
     /// Illustrated notices (each player's own choice, "Illustrated notices"): instead of the exclamation mark, the paper shows what the
     /// notice wants, sketched in ink of its kind's colour from the game's own picture of it (a creature's trophy, an item's icon): its
     /// outline and its darker parts hatched, a little rough, soaked into the paper. Under it, the count as tally marks; across the top of
-    /// a bounty, "WANTED" in straight, rune-like strokes (its own choice, "Wanted heading"). One drawing per notice wanted (kind, target,
+    /// each kind, its word in runes, or WANTED in letters on bounties (its own choice, "Heading"). One drawing per notice wanted (kind, target,
     /// count), made the first time it's shown and kept. Anything without a picture keeps the plain notice.
     /// </summary>
+    /// <summary>What's lettered across the top of an illustrated notice (each player's choice).</summary>
+    internal enum Heading { None, Wanted, Runes }
+
     internal static class Sketch
     {
         private const int SW = 240, SH = 304;   // twice the plain notice: the drawing needs the detail
@@ -20,9 +23,9 @@ namespace Wanted
         private static readonly Dictionary<Texture, Texture2D> Readable = new Dictionary<Texture, Texture2D>();
 
         /// <summary>The illustrated paper for this notice, or null (no picture of its target: the plain notice is shown).</summary>
-        public static Material For(Contract c, ZNetScene scene, bool heading)
+        public static Material For(Contract c, ZNetScene scene, Heading heading)
         {
-            heading &= c.Kind == Kind.Kill;
+            string word = WordFor(c.Kind, heading);
             string key = $"{(int)c.Kind}|{c.Target}|{c.Count}|{heading}";
             if (Made.TryGetValue(key, out Material had)) return had;   // (null too: tried, no picture)
             Material m = null;
@@ -31,7 +34,7 @@ namespace Wanted
                 Sprite icon = PictureOf(c, scene);
                 if (icon != null)
                 {
-                    float[] mask = Draw(icon, c.Count, heading, 31.7f + (int)c.Kind * 17.3f);
+                    float[] mask = Draw(icon, c.Count, word, heading == Heading.Runes, 31.7f + (int)c.Kind * 17.3f);
                     if (mask != null)
                     {
                         Texture2D tex = Paper.Compose("wanted_sketch_" + c.Target, SW, SH, 13.7f + (int)c.Kind * 41.3f, Paper.Ink(c.Kind),
@@ -83,16 +86,16 @@ namespace Wanted
         /// marks (they'd blur at the size of a bag's slot; the tooltip has the count), the picture as big as fits; a red wax seal once a
         /// bounty is done. Null when there's no picture (the plain icon is shown).
         /// </summary>
-        public static Sprite IconFor(Contract c, ZNetScene scene, bool heading, bool done)
+        public static Sprite IconFor(Contract c, ZNetScene scene, Heading heading, bool done)
         {
-            heading &= c.Kind == Kind.Kill;
+            string word = WordFor(c.Kind, heading);
             string key = $"{(int)c.Kind}|{c.Target}|{heading}|{done}";
             if (Icons.TryGetValue(key, out Sprite had)) return had;
             Sprite sprite = null;
             try
             {
                 Sprite picture = PictureOf(c, scene);
-                float[] mask = picture != null ? Draw(picture, 0, heading, 31.7f + (int)c.Kind * 17.3f, forIcon: true) : null;
+                float[] mask = picture != null ? Draw(picture, 0, word, heading == Heading.Runes, 31.7f + (int)c.Kind * 17.3f, forIcon: true) : null;
                 if (mask != null)
                 {
                     Texture2D sheet = Paper.Compose("wanted_sketch_icon_" + c.Target, SW, SH, 13.7f + (int)c.Kind * 41.3f, Paper.Ink(c.Kind),
@@ -108,8 +111,26 @@ namespace Wanted
 
         private static readonly Dictionary<string, Sprite> Icons = new Dictionary<string, Sprite>();
 
-        private static float[] Draw(Sprite icon, int count, bool heading, float seed, bool forIcon = false)
+        /// <summary>
+        /// The word across the top: in runes, each kind's own (a bounty WANTED, gathering NEEDED, trophies PROOF, provisions SUPPLY,
+        /// spelt in the Elder Futhark), so one kind's notices all carry the same runes; or WANTED in letters, on bounties only; or none.
+        /// </summary>
+        private static string WordFor(Kind kind, Heading heading)
         {
+            if (heading == Heading.Wanted) return kind == Kind.Kill ? "WANTED" : null;
+            if (heading != Heading.Runes) return null;
+            switch (kind)
+            {
+                case Kind.Kill: return "WANTED";
+                case Kind.Gather: return "NEEDED";
+                case Kind.Trophy: return "PROOF";
+                default: return "SUPPLY";
+            }
+        }
+
+        private static float[] Draw(Sprite icon, int count, string word, bool runes, float seed, bool forIcon = false)
+        {
+            bool heading = word != null;
             Color[] pic = Pixels(icon, out int iw, out int ih);
             if (pic == null) return null;
             var mask = new float[SW * SH];
@@ -122,8 +143,13 @@ namespace Wanted
             DrawPicture(mask, pic, iw, ih, cx - box / 2, cy - box / 2, box, seed);
 
             // the heading under the nail, which goes in near the top (an icon has no nail: the heading goes higher and larger)
-            if (heading) Letters(mask, "WANTED", SW / 2, Mathf.RoundToInt(SH * (forIcon ? 0.84f : 0.8f)), forIcon ? 34 : 28, seed);
-            if (!forIcon) Tally(mask, Math.Max(1, count), SW / 2, Mathf.RoundToInt(SH * 0.16f), seed);
+            if (heading)
+            {
+                int hy = Mathf.RoundToInt(SH * (forIcon ? 0.84f : 0.8f));
+                if (runes) Runes(mask, word, SW / 2, hy, forIcon ? 38 : 32, seed);
+                else Letters(mask, word, SW / 2, hy, forIcon ? 34 : 28, seed);
+            }
+            if (!forIcon) Tally(mask, Math.Max(1, count), seed);
             return mask;
         }
 
@@ -142,10 +168,13 @@ namespace Wanted
             var r = new float[box * box];
             var g = new float[box * box];
             var b = new float[box * box];
+            // the picture keeps its own proportions, fitted inside the square (another mod's icon may not be square)
+            float fit = box / (float)Mathf.Max(iw, ih), dw = iw * fit, dh = ih * fit, ox = (box - dw) / 2f, oy = (box - dh) / 2f;
             for (int y = 0; y < box; y++)
             for (int x = 0; x < box; x++)
             {
-                Color c = Sample(pic, iw, ih, (x + 0.5f) / box, (y + 0.5f) / box);
+                float pu = (x + 0.5f - ox) / dw, pv = (y + 0.5f - oy) / dh;
+                Color c = pu < 0f || pu > 1f || pv < 0f || pv > 1f ? new Color(0, 0, 0, 0) : Sample(pic, iw, ih, pu, pv);
                 int k = y * box + x;
                 a[k] = c.a;
                 r[k] = c.r * c.a; g[k] = c.g * c.a; b[k] = c.b * c.a;
@@ -191,6 +220,12 @@ namespace Wanted
                 float wash = alpha * 0.06f;
                 float ink = Mathf.Max(Mathf.Max(outline, inner), Mathf.Max(drawn, Mathf.Max(hatch, wash)));
                 ink *= 0.75f + 0.5f * Mathf.PerlinNoise(sx * 0.15f + seed, sy * 0.15f - seed);   // the hand wavers
+                // near the edges of the picture's frame the ink thins out raggedly: a picture cut off by its frame (a trophy that fills its
+                // icon) ends as if the hand stopped there, not in a straight line
+                float pxu = (x + 0.5f - ox) / dw, pyv = (y + 0.5f - oy) / dh;
+                float toEdge = Mathf.Min(Mathf.Min(pxu, 1f - pxu), Mathf.Min(pyv, 1f - pyv));
+                float ragged = 0.02f + 0.09f * Mathf.PerlinNoise(x * 0.09f + seed * 3f, y * 0.09f - seed);
+                ink *= Mathf.Clamp01((toEdge - ragged) / 0.07f);
                 int i = sy * SW + sx;
                 mask[i] = Mathf.Max(mask[i], Mathf.Clamp01(ink));
             }
@@ -200,30 +235,41 @@ namespace Wanted
         /// The count as tally marks: four strokes and one across, in rows of up to four bundles; over 20 (too many to count at a glance),
         /// written instead, as "x34".
         /// </summary>
-        private static void Tally(float[] mask, int count, int cx, int cy, float seed)
+        private static void Tally(float[] mask, int count, float seed)
         {
-            if (count > 20)
-            {
-                Letters(mask, "x" + count, cx, cy, 34, seed);
-                return;
-            }
-            const float tall = 30f, gap = 8f, between = 14f;
+            // their own strip along the bottom, clear of the torn edge below and the picture above; the marks keep their full size while
+            // they fit, and shrink (in as many rows as gives them the most room) when there are many
+            float stripLeft = SW * 0.12f, stripRight = SW * 0.88f, stripBottom = SH * 0.07f, stripTop = SH * 0.25f;
+            float stripW = stripRight - stripLeft, stripH = stripTop - stripBottom;
+            const float tall = 30f, gap = 8f, between = 14f, rowGap = 10f;
             float bundle = 3 * gap;
-            int bundles = (count + 4) / 5, perRow = Math.Min(4, bundles), rows = (bundles + 3) / 4;
-            float rowWidth = perRow * bundle + (perRow - 1) * between;
+            int bundles = (count + 4) / 5;
+            int bestRows = 1; float scale = 0f;
+            for (int rows = 1; rows <= 4; rows++)
+            {
+                int perRow = (bundles + rows - 1) / rows;
+                float width = perRow * bundle + (perRow - 1) * between + 10f, height = rows * tall + (rows - 1) * rowGap;
+                float s = Mathf.Min(1f, Mathf.Min(stripW / width, stripH / height));
+                if (s > scale + 0.001f) { scale = s; bestRows = rows; }
+            }
+            int perRowBest = (bundles + bestRows - 1) / bestRows;
+            float t = tall * scale, g = gap * scale, bw = bundle * scale, bt = between * scale, rg = rowGap * scale, width2 = 2.6f * Mathf.Max(0.6f, scale);
+            float cx = SW / 2f, cy = (stripBottom + stripTop) / 2f;
             var rnd = new System.Random((int)(seed * 100) + count);
-            float J() => (float)rnd.NextDouble() * 3f - 1.5f;
+            float J() => ((float)rnd.NextDouble() * 3f - 1.5f) * scale;
             for (int i = 0; i < count; i++)
             {
-                int b = i / 5, k = i % 5, row = b / 4, col = b % 4;
-                float left = cx - rowWidth / 2f + col * (bundle + between);
-                float bottom = cy - tall / 2f + ((rows - 1) / 2f - row) * (tall + 10f);   // (rows stacked about the middle, the first on top)
+                int b = i / 5, k = i % 5, row = b / perRowBest, col = b % perRowBest;
+                int inRow = Math.Min(perRowBest, bundles - row * perRowBest);
+                float rowWidth = inRow * bw + (inRow - 1) * bt;
+                float left = cx - rowWidth / 2f + col * (bw + bt);
+                float bottom = cy - t / 2f + ((bestRows - 1) / 2f - row) * (t + rg);   // (rows stacked about the strip's middle, the first on top)
                 if (k < 4)
                 {
-                    float x = left + k * gap;
-                    Stroke(mask, x + J(), bottom + J(), x + J(), bottom + tall + J(), 2.6f, seed + i);
+                    float x = left + k * g;
+                    Stroke(mask, x + J(), bottom + J(), x + J(), bottom + t + J(), width2, seed + i);
                 }
-                else Stroke(mask, left - 5f + J(), bottom + 6f + J(), left + bundle + 5f + J(), bottom + tall - 6f + J(), 2.6f, seed + i);
+                else Stroke(mask, left - 5f * scale + J(), bottom + 6f * scale + J(), left + bw + 5f * scale + J(), bottom + t - 6f * scale + J(), width2, seed + i);
             }
         }
 
@@ -254,6 +300,46 @@ namespace Wanted
                 lx += w + space;
             }
         }
+
+        /// <summary>A word in Elder Futhark runes (one rune for each letter of it), each <paramref name="tall"/> high and narrow, cut straight.</summary>
+        private static void Runes(float[] mask, string word, int cx, int cy, float tall, float seed)
+        {
+            float wide = tall * 0.5f, space = tall * 0.28f;
+            float total = word.Length * wide + (word.Length - 1) * space;
+            float x0 = cx - total / 2f, y0 = cy - tall / 2f;
+            for (int n = 0; n < word.Length; n++)
+            {
+                float left = x0 + n * (wide + space);
+                Vector2 P(float u, float v) => new Vector2(left + u * wide, y0 + v * tall);
+                if (!RuneGlyphs.TryGetValue(word[n], out float[][] lines)) continue;
+                foreach (float[] uv in lines)
+                    for (int i = 0; i + 3 < uv.Length; i += 2)
+                    {
+                        Vector2 a = P(uv[i], uv[i + 1]), b = P(uv[i + 2], uv[i + 3]);
+                        Stroke(mask, a.x, a.y, b.x, b.y, 3.2f, seed + n * 11 + i);
+                    }
+            }
+        }
+
+        // The Elder Futhark rune for each letter the headings use: W wunjo, A ansuz, N naudiz, T tiwaz, E ehwaz, D dagaz, P perth,
+        // R raido, O othala, F fehu, S sowilo, U uruz, L laguz, Y (as I) isa. Lines as (u, v) points, 0..1 across its box, 0 at the bottom.
+        private static readonly Dictionary<char, float[][]> RuneGlyphs = new Dictionary<char, float[][]>
+        {
+            { 'W', new[] { new[] { 0.2f, 0, 0.2f, 1 }, new[] { 0.2f, 1, 0.85f, 0.75f, 0.2f, 0.5f } } },
+            { 'A', new[] { new[] { 0.2f, 0, 0.2f, 1 }, new[] { 0.2f, 1, 0.85f, 0.72f }, new[] { 0.2f, 0.72f, 0.85f, 0.44f } } },
+            { 'N', new[] { new[] { 0.5f, 0, 0.5f, 1 }, new[] { 0.1f, 0.68f, 0.9f, 0.38f } } },
+            { 'T', new[] { new[] { 0.5f, 0, 0.5f, 1 }, new[] { 0.05f, 0.68f, 0.5f, 1, 0.95f, 0.68f } } },
+            { 'E', new[] { new[] { 0.05f, 0, 0.05f, 1, 0.5f, 0.62f, 0.95f, 1, 0.95f, 0 } } },
+            { 'D', new[] { new[] { 0f, 0, 0, 1 }, new[] { 1f, 0, 1, 1 }, new[] { 0f, 1, 1, 0 }, new[] { 0f, 0, 1, 1 } } },
+            { 'P', new[] { new[] { 0.1f, 0, 0.1f, 1 }, new[] { 0.1f, 1, 0.55f, 0.72f, 0.95f, 1 }, new[] { 0.1f, 0, 0.55f, 0.28f, 0.95f, 0 } } },
+            { 'R', new[] { new[] { 0.15f, 0, 0.15f, 1, 0.8f, 0.78f, 0.15f, 0.55f, 0.85f, 0 } } },
+            { 'O', new[] { new[] { 0.05f, 0, 0.95f, 0.62f, 0.5f, 1, 0.05f, 0.62f, 0.95f, 0 } } },
+            { 'F', new[] { new[] { 0.15f, 0, 0.15f, 1 }, new[] { 0.15f, 0.78f, 0.9f, 1 }, new[] { 0.15f, 0.52f, 0.9f, 0.76f } } },
+            { 'S', new[] { new[] { 0.8f, 1, 0.2f, 0.66f, 0.8f, 0.34f, 0.2f, 0 } } },
+            { 'U', new[] { new[] { 0.1f, 0, 0.1f, 1, 0.9f, 0.68f, 0.9f, 0 } } },
+            { 'L', new[] { new[] { 0.25f, 0, 0.25f, 1, 0.85f, 0.68f } } },
+            { 'Y', new[] { new[] { 0.5f, 0, 0.5f, 1 } } },
+        };
 
         // Each glyph: lines as (u, v) points, 0..1 across its box, 0 at the bottom.
         private static readonly Dictionary<char, float[][]> Glyphs = new Dictionary<char, float[][]>

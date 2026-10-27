@@ -127,7 +127,7 @@ namespace Wanted
                         if (_pins[i][p] != null) _pins[i][p].SetActive(p == (int)c.Pin || (p == 0 && (int)c.Pin >= _pins[i].Length));
                 if (c != null && _papers[i] != null)
                 {
-                    Material m = (Plugin.Illustrated.Value ? Sketch.For(c, ZNetScene.instance, Plugin.WantedHeading.Value) : null)
+                    Material m = (Plugin.Illustrated.Value ? Sketch.For(c, ZNetScene.instance, Plugin.NoticeHeading.Value) : null)
                                  ?? Paper.For(c.Kind, ZNetScene.instance);
                     if (m != null) _papers[i].sharedMaterial = m;
                 }
