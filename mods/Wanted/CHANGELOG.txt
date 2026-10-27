@@ -1,5 +1,5 @@
 1.0.1
-- Notices can be for any land you've opened (half the newest, a quarter the one before, and so on: "Newest land share"), and an idol reward is of any opened land, each as likely, so older idols stay as common as new ones. Wider spread of amounts asked. Illustrated notices (each player's choice, off by default): a sketch of the target in its kind's colour, tally marks and "WANTED" on bounties, on the board and in the bag.
+- Notices can be for any land you've opened (half the newest, a quarter the one before, and so on: "Newest land share"), and an idol reward is of any opened land, each as likely, so older idols stay as common as new ones. Wider spread of amounts asked. Illustrated notices (each player's choice, off by default): a sketch of the target in its kind's colour, tally marks (over 20 written as "x34") and "WANTED" on bounties, on the board and in the bag.
 
 1.0.0
 - First release: a craftable Wanted board posting bounty, gathering, trophy and provisions notices each dawn, matched to the world's progress; take a notice, do it, hand it in at any board's box for coins, the land's materials and now and then a bonus. Finds other mods' creatures and items by itself. Nine languages.

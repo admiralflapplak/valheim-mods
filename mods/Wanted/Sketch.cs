@@ -123,24 +123,33 @@ namespace Wanted
 
             // the heading under the nail, which goes in near the top (an icon has no nail: the heading goes higher and larger)
             if (heading) Letters(mask, "WANTED", SW / 2, Mathf.RoundToInt(SH * (forIcon ? 0.84f : 0.8f)), forIcon ? 34 : 28, seed);
-            if (!forIcon) Tally(mask, Mathf.Clamp(count, 1, 40), SW / 2, Mathf.RoundToInt(SH * 0.16f), seed);
+            if (!forIcon) Tally(mask, Math.Max(1, count), SW / 2, Mathf.RoundToInt(SH * 0.16f), seed);
             return mask;
         }
 
         /// <summary>
-        /// The picture as an ink sketch in a square on the sheet: its outline (where it turns from nothing to something, or from light to
-        /// dark), its darker parts hatched (crossed where darkest), a faint wash over the rest; the line wavers a little, as by hand.
+        /// The picture as an ink sketch in a square on the sheet, the way one draws from a thing rather than tracing its shadow:
+        ///   - its outline, where it turns from nothing to something;
+        ///   - its inner lines: wherever its colour or its light changes sharply (a rim, a face, the stew in its bowl), and the fine dark
+        ///     lines its painter drew (a pixel darker than the ones round it);
+        ///   - hatching: light and sparse in the middle tones, closer in the darkest parts (crossed where darkest), the faintest wash over the rest;
+        /// the line wavering a little, as by hand.
         /// </summary>
         private static void DrawPicture(float[] mask, Color[] pic, int iw, int ih, int x0, int y0, int box, float seed)
         {
             var a = new float[box * box];
             var l = new float[box * box];
+            var r = new float[box * box];
+            var g = new float[box * box];
+            var b = new float[box * box];
             for (int y = 0; y < box; y++)
             for (int x = 0; x < box; x++)
             {
                 Color c = Sample(pic, iw, ih, (x + 0.5f) / box, (y + 0.5f) / box);
-                a[y * box + x] = c.a;
-                l[y * box + x] = (0.3f * c.r + 0.59f * c.g + 0.11f * c.b) * c.a;
+                int k = y * box + x;
+                a[k] = c.a;
+                r[k] = c.r * c.a; g[k] = c.g * c.a; b[k] = c.b * c.a;
+                l[k] = 0.3f * r[k] + 0.59f * g[k] + 0.11f * b[k];
             }
             float At(float[] f, int x, int y) => f[Mathf.Clamp(y, 0, box - 1) * box + Mathf.Clamp(x, 0, box - 1)];
             float Sobel(float[] f, int x, int y)
@@ -150,28 +159,54 @@ namespace Wanted
                 return Mathf.Sqrt(gx * gx + gy * gy);
             }
 
+            // the light round each pixel (a box blur about a fortieth of the picture across): a pixel darker than it is a drawn line
+            int rad = Mathf.Max(1, box / 40);
+            var around = new float[box * box];
+            for (int y = 0; y < box; y++)
+            for (int x = 0; x < box; x++)
+            {
+                float sum = 0f; int n = 0;
+                for (int dy = -rad; dy <= rad; dy++)
+                for (int dx = -rad; dx <= rad; dx++) { sum += At(l, x + dx, y + dy); n++; }
+                around[y * box + x] = sum / n;
+            }
+
             for (int y = 0; y < box; y++)
             for (int x = 0; x < box; x++)
             {
                 int sx = x0 + x, sy = y0 + y;
                 if (sx < 0 || sy < 0 || sx >= SW || sy >= SH) continue;
-                float alpha = a[y * box + x];
-                float outline = Mathf.Clamp01(Sobel(a, x, y) * 0.9f + Sobel(l, x, y) * 1.1f);
-                float dark = alpha > 0.5f ? Mathf.Clamp01(1f - l[y * box + x] / Mathf.Max(alpha, 0.01f)) : 0f;
+                int k = y * box + x;
+                float alpha = a[k];
+                float outline = Mathf.Clamp01(Sobel(a, x, y) * 1.1f);
+                float inner = alpha > 0.4f
+                    ? Mathf.Clamp01(Mathf.Max(Sobel(l, x, y) * 1.6f, Mathf.Max(Sobel(r, x, y), Mathf.Max(Sobel(g, x, y), Sobel(b, x, y))) * 1.1f) - 0.12f)
+                    : 0f;
+                float drawn = alpha > 0.4f ? Mathf.Clamp01((around[k] - l[k]) * 6f) : 0f;
+                float dark = alpha > 0.5f ? Mathf.Clamp01(1f - l[k] / Mathf.Max(alpha, 0.01f)) : 0f;
                 float hatch = 0f;
-                if (dark > 0.35f && Mod(x + y, 6) < 2) hatch = 0.8f;
-                if (dark > 0.6f && Mod(x - y, 6) < 2) hatch = 0.9f;
-                float wash = alpha * 0.1f;
-                float ink = Mathf.Max(outline, Mathf.Max(hatch, wash));
+                if (dark > 0.4f && Mod(x + y, 9) < 1) hatch = 0.45f;   // mid-tones: light and sparse (a loaf, a pale stone still get shape)
+                if (dark > 0.62f && Mod(x + y, 6) < 2) hatch = 0.7f;
+                if (dark > 0.8f && Mod(x - y, 6) < 2) hatch = 0.85f;
+                float wash = alpha * 0.06f;
+                float ink = Mathf.Max(Mathf.Max(outline, inner), Mathf.Max(drawn, Mathf.Max(hatch, wash)));
                 ink *= 0.75f + 0.5f * Mathf.PerlinNoise(sx * 0.15f + seed, sy * 0.15f - seed);   // the hand wavers
                 int i = sy * SW + sx;
                 mask[i] = Mathf.Max(mask[i], Mathf.Clamp01(ink));
             }
         }
 
-        /// <summary>The count as tally marks: four strokes and one across, in rows of up to four bundles.</summary>
+        /// <summary>
+        /// The count as tally marks: four strokes and one across, in rows of up to four bundles; over 20 (too many to count at a glance),
+        /// written instead, as "x34".
+        /// </summary>
         private static void Tally(float[] mask, int count, int cx, int cy, float seed)
         {
+            if (count > 20)
+            {
+                Letters(mask, "x" + count, cx, cy, 34, seed);
+                return;
+            }
             const float tall = 30f, gap = 8f, between = 14f;
             float bundle = 3 * gap;
             int bundles = (count + 4) / 5, perRow = Math.Min(4, bundles), rows = (bundles + 3) / 4;
@@ -192,35 +227,68 @@ namespace Wanted
             }
         }
 
-        /// <summary>Capital letters in straight strokes (only those "WANTED" needs), each in a box <paramref name="tall"/> high.</summary>
+        /// <summary>
+        /// Capital letters, digits and a small "x" in straight strokes (corners for curves, as cut or scratched), each in a box
+        /// <paramref name="tall"/> high, leaning a little. Letters it doesn't know are left as a space.
+        /// </summary>
         private static void Letters(float[] mask, string word, int cx, int cy, float tall, float seed)
         {
             float wide = tall * 0.72f, space = tall * 0.24f;
-            float total = word.Length * wide + (word.Length - 1) * space;
-            float x0 = cx - total / 2f, y0 = cy - tall / 2f;
+            float total = 0f;
+            foreach (char ch in word) total += (ch == 'x' ? wide * 0.7f : ch == 'I' || ch == '1' ? wide * 0.5f : wide) + space;
+            total -= space;
+            float lx = cx - total / 2f, y0 = cy - tall / 2f;
             for (int n = 0; n < word.Length; n++)
             {
-                float lx = x0 + n * (wide + space);
-                Vector2 P(float u, float v) => new Vector2(lx + u * wide + (v - 0.5f) * tall * 0.12f, y0 + v * tall);   // (a slight lean)
-                void Line(params float[] uv)
-                {
-                    for (int i = 0; i + 3 < uv.Length; i += 2)
-                    {
-                        Vector2 a = P(uv[i], uv[i + 1]), b = P(uv[i + 2], uv[i + 3]);
-                        Stroke(mask, a.x, a.y, b.x, b.y, 3.2f, seed + n * 7 + i);
-                    }
-                }
-                switch (word[n])
-                {
-                    case 'W': Line(0, 1, 0.25f, 0, 0.5f, 0.6f, 0.75f, 0, 1, 1); break;
-                    case 'A': Line(0, 0, 0.5f, 1, 1, 0); Line(0.24f, 0.42f, 0.76f, 0.42f); break;
-                    case 'N': Line(0, 0, 0, 1, 1, 0, 1, 1); break;
-                    case 'T': Line(0, 1, 1, 1); Line(0.5f, 1, 0.5f, 0); break;
-                    case 'E': Line(1, 1, 0, 1, 0, 0, 1, 0); Line(0, 0.5f, 0.7f, 0.5f); break;
-                    case 'D': Line(0, 0, 0, 1, 0.55f, 1, 1, 0.72f, 1, 0.28f, 0.55f, 0, 0, 0); break;
-                }
+                char ch = word[n];
+                float w = ch == 'x' ? wide * 0.7f : ch == 'I' || ch == '1' ? wide * 0.5f : wide;
+                float left = lx;
+                Vector2 P(float u, float v) => new Vector2(left + u * w + (v - 0.5f) * tall * 0.12f, y0 + v * tall);
+                if (Glyphs.TryGetValue(ch, out float[][] lines))
+                    foreach (float[] uv in lines)
+                        for (int i = 0; i + 3 < uv.Length; i += 2)
+                        {
+                            Vector2 a = P(uv[i], uv[i + 1]), b = P(uv[i + 2], uv[i + 3]);
+                            Stroke(mask, a.x, a.y, b.x, b.y, 3.2f, seed + n * 7 + i);
+                        }
+                lx += w + space;
             }
         }
+
+        // Each glyph: lines as (u, v) points, 0..1 across its box, 0 at the bottom.
+        private static readonly Dictionary<char, float[][]> Glyphs = new Dictionary<char, float[][]>
+        {
+            { 'A', new[] { new[] { 0f, 0, 0.5f, 1, 1, 0 }, new[] { 0.24f, 0.42f, 0.76f, 0.42f } } },
+            { 'C', new[] { new[] { 1f, 0.85f, 0.8f, 1, 0.2f, 1, 0, 0.8f, 0, 0.2f, 0.2f, 0, 0.8f, 0, 1, 0.15f } } },
+            { 'D', new[] { new[] { 0f, 0, 0, 1, 0.55f, 1, 1, 0.72f, 1, 0.28f, 0.55f, 0, 0, 0 } } },
+            { 'E', new[] { new[] { 1f, 1, 0, 1, 0, 0, 1, 0 }, new[] { 0f, 0.5f, 0.7f, 0.5f } } },
+            { 'F', new[] { new[] { 1f, 1, 0, 1, 0, 0 }, new[] { 0f, 0.5f, 0.7f, 0.5f } } },
+            { 'G', new[] { new[] { 1f, 0.85f, 0.8f, 1, 0.2f, 1, 0, 0.8f, 0, 0.2f, 0.2f, 0, 0.8f, 0, 1, 0.2f, 1, 0.45f, 0.55f, 0.45f } } },
+            { 'H', new[] { new[] { 0f, 0, 0, 1 }, new[] { 1f, 0, 1, 1 }, new[] { 0f, 0.5f, 1, 0.5f } } },
+            { 'I', new[] { new[] { 0.5f, 0, 0.5f, 1 } } },
+            { 'L', new[] { new[] { 0f, 1, 0, 0, 1, 0 } } },
+            { 'N', new[] { new[] { 0f, 0, 0, 1, 1, 0, 1, 1 } } },
+            { 'O', new[] { new[] { 0.2f, 0, 0, 0.2f, 0, 0.8f, 0.2f, 1, 0.8f, 1, 1, 0.8f, 1, 0.2f, 0.8f, 0, 0.2f, 0 } } },
+            { 'P', new[] { new[] { 0f, 0, 0, 1, 0.8f, 1, 1, 0.85f, 1, 0.6f, 0.8f, 0.45f, 0, 0.45f } } },
+            { 'R', new[] { new[] { 0f, 0, 0, 1, 0.8f, 1, 1, 0.85f, 1, 0.6f, 0.8f, 0.45f, 0, 0.45f }, new[] { 0.45f, 0.45f, 1, 0 } } },
+            { 'S', new[] { new[] { 1f, 0.85f, 0.8f, 1, 0.2f, 1, 0, 0.82f, 0, 0.65f, 0.2f, 0.52f, 0.8f, 0.48f, 1, 0.35f, 1, 0.18f, 0.8f, 0, 0.2f, 0, 0, 0.15f } } },
+            { 'T', new[] { new[] { 0f, 1, 1, 1 }, new[] { 0.5f, 1, 0.5f, 0 } } },
+            { 'U', new[] { new[] { 0f, 1, 0, 0.2f, 0.2f, 0, 0.8f, 0, 1, 0.2f, 1, 1 } } },
+            { 'V', new[] { new[] { 0f, 1, 0.5f, 0, 1, 1 } } },
+            { 'W', new[] { new[] { 0f, 1, 0.25f, 0, 0.5f, 0.6f, 0.75f, 0, 1, 1 } } },
+            { 'Y', new[] { new[] { 0f, 1, 0.5f, 0.5f, 1, 1 }, new[] { 0.5f, 0.5f, 0.5f, 0 } } },
+            { 'x', new[] { new[] { 0f, 0.62f, 1, 0 }, new[] { 0f, 0, 1, 0.62f } } },
+            { '0', new[] { new[] { 0.2f, 0, 0, 0.2f, 0, 0.8f, 0.2f, 1, 0.8f, 1, 1, 0.8f, 1, 0.2f, 0.8f, 0, 0.2f, 0 } } },
+            { '1', new[] { new[] { 0.1f, 0.8f, 0.6f, 1, 0.6f, 0 } } },
+            { '2', new[] { new[] { 0f, 0.8f, 0.2f, 1, 0.8f, 1, 1, 0.8f, 1, 0.6f, 0, 0, 1, 0 } } },
+            { '3', new[] { new[] { 0f, 0.85f, 0.2f, 1, 0.8f, 1, 1, 0.82f, 1, 0.62f, 0.75f, 0.5f, 1, 0.38f, 1, 0.18f, 0.8f, 0, 0.2f, 0, 0, 0.15f }, new[] { 0.4f, 0.5f, 0.75f, 0.5f } } },
+            { '4', new[] { new[] { 0.8f, 0, 0.8f, 1, 0, 0.35f, 1, 0.35f } } },
+            { '5', new[] { new[] { 1f, 1, 0.1f, 1, 0, 0.55f, 0.7f, 0.6f, 1, 0.4f, 1, 0.18f, 0.8f, 0, 0.2f, 0, 0, 0.15f } } },
+            { '6', new[] { new[] { 0.9f, 1, 0.3f, 1, 0, 0.6f, 0, 0.2f, 0.2f, 0, 0.8f, 0, 1, 0.2f, 1, 0.4f, 0.8f, 0.55f, 0.2f, 0.55f, 0, 0.4f } } },
+            { '7', new[] { new[] { 0f, 1, 1, 1, 0.35f, 0 } } },
+            { '8', new[] { new[] { 0.2f, 0.5f, 0, 0.7f, 0, 0.85f, 0.2f, 1, 0.8f, 1, 1, 0.85f, 1, 0.7f, 0.8f, 0.5f, 0.2f, 0.5f, 0, 0.3f, 0, 0.15f, 0.2f, 0, 0.8f, 0, 1, 0.15f, 1, 0.3f, 0.8f, 0.5f } } },
+            { '9', new[] { new[] { 0.1f, 0, 0.7f, 0, 1, 0.4f, 1, 0.8f, 0.8f, 1, 0.2f, 1, 0, 0.8f, 0, 0.6f, 0.2f, 0.45f, 0.8f, 0.45f, 1, 0.6f } } },
+        };
 
         /// <summary>A brush stroke from one point to another, its edge ragged and its width wavering.</summary>
         private static void Stroke(float[] mask, float x0, float y0, float x1, float y1, float width, float seed)

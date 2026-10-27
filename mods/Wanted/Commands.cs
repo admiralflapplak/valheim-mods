@@ -19,7 +19,7 @@ namespace Wanted
     {
         private const string Owner = "Wanted";
         private static readonly string[] ToolGuids = { "com.quad.claudetools", "com.dhack.claudetools" };
-        private const string Usage = "wanted boards [radius]: the Wanted boards near the player, which way they face, their notices and materials | wanted names: prefab names the contract lists use that this game doesn't have, and the world's stage | wanted found: what discovery adds beyond the built-in lists (other mods' creatures, things, food, metals) | wanted spawns <creature>: its entries in the world's spawn lists | wanted sample [count] [stage]: notices as a board would write them, nothing posted | wanted post [count] [nail|arrow|knife ...]: put notices up on the nearest board now (single player, host or devcommands)";
+        private const string Usage = "wanted boards [radius]: the Wanted boards near the player, which way they face, their notices and materials | wanted names: prefab names the contract lists use that this game doesn't have, and the world's stage | wanted found: what discovery adds beyond the built-in lists (other mods' creatures, things, food, metals) | wanted spawns <creature>: its entries in the world's spawn lists | wanted sample [count] [stage]: notices as a board would write them, nothing posted | wanted sketch <kind> <prefab> <count> [noheading]: a notice's illustrated paper and bag icon as PNGs in claude/shots | wanted post [count] [nail|arrow|knife ...]: put notices up on the nearest board now (single player, host or devcommands)";
 
         private static BaseUnityPlugin _registeredWith;
         private static float _nextLook;
@@ -91,6 +91,22 @@ namespace Wanted
                     var pins = new List<Pin>();
                     for (int i = 3; i < args.Length; i++) if (Enum.TryParse(args[i], true, out Pin pin)) pins.Add(pin);
                     output(new Dictionary<string, object> { { "posted", board.PostNow(n, pins) } });
+                    return null;
+                }
+                if (what == "sketch" && args.Length > 4)   // a notice's illustrated paper (and its bag icon) as PNGs, for looking at: nothing in the world changes
+                {
+                    if (!Enum.TryParse(args[2], true, out Kind kind)) { error("Kind: Kill, Gather, Trophy or Provisions."); return null; }
+                    var c = new Contract { Kind = kind, Target = args[3], Count = int.TryParse(args[4], out int n) ? n : 1, Id = "sketch" };
+                    bool heading = args.Length <= 5 || args[5] != "noheading";
+                    Material m = Sketch.For(c, ZNetScene.instance, heading);
+                    Sprite icon = Sketch.IconFor(c, ZNetScene.instance, heading, false);
+                    if (m == null || icon == null) { error($"No picture of {args[3]}."); return null; }
+                    string dir = System.IO.Path.Combine(Paths.BepInExRootPath, "claude", "shots");
+                    string paper = System.IO.Path.Combine(dir, $"wanted_sketch_{kind}_{args[3]}_{c.Count}.png");
+                    string bag = System.IO.Path.Combine(dir, $"wanted_icon_{kind}_{args[3]}.png");
+                    System.IO.File.WriteAllBytes(paper, ImageConversion.EncodeToPNG((Texture2D)m.mainTexture));
+                    System.IO.File.WriteAllBytes(bag, ImageConversion.EncodeToPNG(icon.texture));
+                    output(new Dictionary<string, object> { { "paper", paper }, { "icon", bag } });
                     return null;
                 }
                 if (what == "sample")   // notices as a board would write them (nothing posted): for checking what they ask and pay

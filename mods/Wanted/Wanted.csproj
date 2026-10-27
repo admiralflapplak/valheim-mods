@@ -8,4 +8,9 @@
   <ItemGroup>
     <Compile Include="../Shared/ServerSettings.cs" Link="Shared/ServerSettings.cs" />
   </ItemGroup>
+
+  <!-- Unity modules beyond ../Directory.Build.props: writing a notice's drawing to a PNG (wanted sketch) -->
+  <ItemGroup>
+    <Reference Include="UnityEngine.ImageConversionModule"><HintPath>$(ManagedDir)/UnityEngine.ImageConversionModule.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
 </Project>
