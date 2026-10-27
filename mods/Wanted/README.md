@@ -13,7 +13,8 @@ and food to deliver. Take a notice, do what it asks, and drop it in the board's 
   Now and then a notice is pinned with an arrow or a knife instead of a nail.
 - **Work that suits your world.** Notices follow how far the world has come: every boss beaten opens the next land's creatures,
   things and food, from the Meadows to the Deep North. Notices can be for any land you've opened: about half are for the newest,
-  a quarter for the one before it, and so on, so older lands keep turning up late in the game.
+  a quarter for the one before it, and so on, so older lands keep turning up late in the game. Amounts vary from notice to notice,
+  so two notices for the same thing rarely ask the same.
 - **Four kinds of notice.**
   - **Bounty** (red): slay a number of a creature. Kills count for you and for everyone fighting within 30 m of the creature.
   - **Gathering** (green): bring materials.
@@ -72,7 +73,7 @@ to everyone. Notices for something the game no longer has (a mod was removed) co
 
 ## Settings
 
-Everything is in the F1 Configuration Manager. The server decides all of them.
+Everything is in the F1 Configuration Manager. The server decides sections 1 to 4; section 5 is each player's own.
 
 | Section | What's in it |
 |---|---|
@@ -80,6 +81,7 @@ Everything is in the F1 Configuration Manager. The server decides all of them.
 | **2 - Notices** | The newest land's share of notices (50%: the rest go to older lands, each half as often as the next), the most notices on a board (5), how many a new board gets at its first dawn (3 to 5), the chances of more notices each dawn ("75, 55, 40, 20": a second, a third...), and how many a player can carry (3) |
 | **3 - Rewards** | The pay as a percentage (100), and the chances of an idol (3%), a useful bonus (20%), a valuable (10%) and a rare find (5%) |
 | **4 - Looks** | The chances a notice is pinned with an arrow (15%) or a knife (10%) |
+| **5 - Your notices** | Illustrated notices (on: a sketch, tally marks and a heading; off: a plain exclamation mark), and the heading across the top (runes for each kind, WANTED in letters on bounties, or none). Only how notices look to you |
 
 ## Playing on a server
 
