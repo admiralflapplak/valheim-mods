@@ -106,7 +106,7 @@ namespace Wanted
                     string bag = System.IO.Path.Combine(dir, $"wanted_icon_{kind}_{args[3]}_{heading}.png");
                     System.IO.File.WriteAllBytes(paper, ImageConversion.EncodeToPNG((Texture2D)m.mainTexture));
                     System.IO.File.WriteAllBytes(bag, ImageConversion.EncodeToPNG(icon.texture));
-                    output(new Dictionary<string, object> { { "paper", paper }, { "icon", bag } });
+                    output(new Dictionary<string, object> { { "paper", paper }, { "icon", bag }, { "picture", Sketch.PictureInfo(c, ZNetScene.instance) } });
                     return null;
                 }
                 if (what == "sample")   // notices as a board would write them (nothing posted): for checking what they ask and pay

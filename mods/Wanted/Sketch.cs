@@ -56,6 +56,13 @@ namespace Wanted
             Readable.Clear();
         }
 
+        /// <summary>For `wanted sketch`: the picture's size on its atlas, and the atlas's.</summary>
+        public static string PictureInfo(Contract c, ZNetScene scene)
+        {
+            Sprite p = PictureOf(c, scene);
+            return p == null ? "none" : $"{p.name}: rect {p.textureRect.width}x{p.textureRect.height} at {p.textureRect.x},{p.textureRect.y} on {p.texture.name} {p.texture.width}x{p.texture.height}, sprite bounds {p.bounds.size}";
+        }
+
         /// <summary>The game's picture of what a notice wants: a creature's trophy, or the item itself.</summary>
         private static Sprite PictureOf(Contract c, ZNetScene scene)
         {
@@ -411,11 +418,15 @@ namespace Wanted
         /// <summary>A sprite's pixels (from its place on its atlas), read through the GPU: game textures can't be read directly.</summary>
         private static Color[] Pixels(Sprite sprite, out int w, out int h)
         {
+            // The whole picture as the game shows it (sprite.rect), with its stored part (textureRect: trimmed tight round what's drawn,
+            // for some sprites) put back where it sits in it (textureRectOffset), transparent round it. Sketching the trimmed part alone
+            // stretched or cropped pictures whose drawing doesn't fill them (Weapon Oils' bottles).
             Rect r = sprite.textureRect;
-            w = Mathf.RoundToInt(r.width);
-            h = Mathf.RoundToInt(r.height);
+            int tw = Mathf.RoundToInt(r.width), th = Mathf.RoundToInt(r.height);
+            w = Mathf.Max(tw, Mathf.RoundToInt(sprite.rect.width));
+            h = Mathf.Max(th, Mathf.RoundToInt(sprite.rect.height));
             Texture source = sprite.texture;
-            if (source == null || w <= 0 || h <= 0) return null;
+            if (source == null || tw <= 0 || th <= 0) return null;
             if (!Readable.TryGetValue(source, out Texture2D atlas) || atlas == null)
             {
                 RenderTexture target = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGB32);
@@ -435,7 +446,12 @@ namespace Wanted
                     RenderTexture.ReleaseTemporary(target);
                 }
             }
-            return atlas.GetPixels(Mathf.RoundToInt(r.x), Mathf.RoundToInt(r.y), w, h);
+            Color[] part = atlas.GetPixels(Mathf.RoundToInt(r.x), Mathf.RoundToInt(r.y), tw, th);
+            if (tw == w && th == h) return part;
+            var whole = new Color[w * h];   // (transparent)
+            int ox = Mathf.Clamp(Mathf.RoundToInt(sprite.textureRectOffset.x), 0, w - tw), oy = Mathf.Clamp(Mathf.RoundToInt(sprite.textureRectOffset.y), 0, h - th);
+            for (int y = 0; y < th; y++) Array.Copy(part, y * tw, whole, (y + oy) * w + ox, tw);
+            return whole;
         }
     }
 }
