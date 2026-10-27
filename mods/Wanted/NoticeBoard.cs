@@ -182,22 +182,32 @@ namespace Wanted
         /// For testing (`wanted post`): put up this many notices now, the first ones pinned as asked. Only on the board's owner. Returns
         /// how many went up.
         /// </summary>
-        public int PostNow(int count, System.Collections.Generic.IList<Pin> pins)
+        public int PostNow(int count, System.Collections.Generic.IList<Pin> pins, System.Collections.Generic.IList<Kind> kinds, bool clear)
         {
             if (_view == null || !_view.IsValid() || !_view.IsOwner()) return 0;
-            string[] slots = Read();
+            string[] slots = clear ? new string[Slots] : Read();
             var before = new System.Collections.Generic.HashSet<int>(Enumerable.Range(0, Slots).Where(i => !string.IsNullOrEmpty(slots[i])));
             var rnd = new System.Random();
             int added = Fill(slots, count, rnd);
-            int p = 0;
-            for (int i = 0; i < Slots && p < pins.Count; i++)
+            int p = 0, k = 0;
+            for (int i = 0; i < Slots; i++)
             {
                 if (before.Contains(i)) continue;
                 Contract c = Contract.Read(slots[i]);
                 if (c == null) continue;
-                c.Pin = pins[p++];
+                if (k < kinds.Count)   // asked for this kind: draw again until one is (keeping its place on the board)
+                {
+                    Kind want = kinds[k++];
+                    for (int tries = 0; tries < 200 && c.Kind != want; tries++)
+                    {
+                        Contract again = Contracts.Make(rnd);
+                        if (again != null) { again.Pin = c.Pin; c = again; }
+                    }
+                }
+                if (p < pins.Count) c.Pin = pins[p++];
                 slots[i] = c.Write();
             }
+            if (clear) { Write(slots); return added; }
             if (added > 0) Write(slots);
             return added;
         }

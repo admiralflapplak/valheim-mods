@@ -19,7 +19,7 @@ namespace Wanted
     {
         private const string Owner = "Wanted";
         private static readonly string[] ToolGuids = { "com.quad.claudetools", "com.dhack.claudetools" };
-        private const string Usage = "wanted boards [radius]: the Wanted boards near the player, which way they face, their notices and materials | wanted names: prefab names the contract lists use that this game doesn't have, and the world's stage | wanted found: what discovery adds beyond the built-in lists (other mods' creatures, things, food, metals) | wanted spawns <creature>: its entries in the world's spawn lists | wanted sample [count] [stage]: notices as a board would write them, nothing posted | wanted sketch <kind> <prefab> <count> [runes|wanted|none]: a notice's illustrated paper and bag icon as PNGs in claude/shots | wanted post [count] [nail|arrow|knife ...]: put notices up on the nearest board now (single player, host or devcommands)";
+        private const string Usage = "wanted boards [radius]: the Wanted boards near the player, which way they face, their notices and materials | wanted names: prefab names the contract lists use that this game doesn't have, and the world's stage | wanted found: what discovery adds beyond the built-in lists (other mods' creatures, things, food, metals) | wanted spawns <creature>: its entries in the world's spawn lists | wanted sample [count] [stage]: notices as a board would write them, nothing posted | wanted sketch <kind> <prefab> <count> [runes|wanted|none]: a notice's illustrated paper and bag icon as PNGs in claude/shots | wanted post [count] [clear] [nail|arrow|knife ...] [kill|gather|trophy|provisions ...]: put notices up (clear: take the others down first; pins and kinds in place order) on the nearest board now (single player, host or devcommands)";
 
         private static BaseUnityPlugin _registeredWith;
         private static float _nextLook;
@@ -89,8 +89,15 @@ namespace Wanted
                     if (board == null || Vector3.Distance(board.transform.position, me.transform.position) > 20f) { error("No Wanted board within 20 m."); return null; }
                     int n = args.Length > 2 && int.TryParse(args[2], out int k) ? k : 1;
                     var pins = new List<Pin>();
-                    for (int i = 3; i < args.Length; i++) if (Enum.TryParse(args[i], true, out Pin pin)) pins.Add(pin);
-                    output(new Dictionary<string, object> { { "posted", board.PostNow(n, pins) } });
+                    var kinds = new List<Kind>();
+                    bool clear = false;
+                    for (int i = 3; i < args.Length; i++)
+                    {
+                        if (args[i].Equals("clear", StringComparison.OrdinalIgnoreCase)) clear = true;
+                        else if (Enum.TryParse(args[i], true, out Pin pin)) pins.Add(pin);
+                        else if (Enum.TryParse(args[i], true, out Kind kind)) kinds.Add(kind);
+                    }
+                    output(new Dictionary<string, object> { { "posted", board.PostNow(n, pins, kinds, clear) } });
                     return null;
                 }
                 if (what == "sketch" && args.Length > 4)   // a notice's illustrated paper (and its bag icon) as PNGs, for looking at: nothing in the world changes
