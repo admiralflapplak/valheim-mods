@@ -132,6 +132,25 @@ namespace Wanted
                     output(new Dictionary<string, object> { { "trophies", lines } });
                     return null;
                 }
+                if (what == "gathers")   // each gathering notice's worth beside where its thing comes from and how many each source gives
+                {
+                    var lines = new List<string>();
+                    var all = ContractData.AllEntries().ToList();
+                    var sources = Gathering.Sources();
+                    foreach (Entry g in all.Where(e => e.Kind == Kind.Gather).OrderBy(e => e.Tier))
+                    {
+                        string from = sources.TryGetValue(g.Prefab, out var list)
+                            ? string.Join(", ", list.OrderByDescending(x => x.Each).Take(3).Select(x => $"{x.Prefab}[{x.Way}] {x.Each:0.##}"))
+                            : "no source found";
+                        bool builtIn = ContractData.Entries.Any(e => e.Kind == Kind.Gather && e.Prefab == g.Prefab);
+                        Gathering.Price(g, all, out int usual, out float each);
+                        string easiest = Gathering.Easiest(g, all, out float cost, out int most) ? $"one takes {cost:0.#}, most x{most}" : "no way found";
+                        lines.Add($"t{g.Tier} {g.Prefab}{(builtIn ? "" : " (found)")} | was x{g.Count} @{g.Value} = {g.Count * g.Value:0} | {easiest} | " +
+                                  $"now x{usual} @{each:0.#} = {usual * each:0} | {from}");
+                    }
+                    output(new Dictionary<string, object> { { "gathers", lines } });
+                    return null;
+                }
                 if (what == "sample")   // notices as a board would write them (nothing posted): for checking what they ask and pay
                 {
                     int count = args.Length > 2 && int.TryParse(args[2], out int n) ? n : 10;

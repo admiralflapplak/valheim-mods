@@ -1,3 +1,8 @@
+## 1.0.2
+- Gathering notices pay for what their things take to get: each thing's easiest source in the world (a creature, a tree, a rock, a
+  plant) and how many it gives decide its least worth and the most a notice asks. Pine and fir cones, birch seeds, Greydwarf eyes,
+  Withered Bone and other rare drops now ask for a few and pay for the trees or kills behind them; plentiful things are unchanged.
+
 ## 1.0.1
 - Notices can be for any land you've opened, not only the newest two: half for the newest, a quarter for the one before it, and so on
   (a server setting, "Newest land share"). Older lands keep turning up late in the game.

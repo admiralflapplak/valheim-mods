@@ -72,6 +72,7 @@ namespace Wanted
             FoundPay = new List<PayEntry>();
             Ammo = new List<PayEntry>();
             Valuables = new List<PayEntry>();
+            Gathering.Forget();
         }
 
         // ---- stages -----------------------------------------------------------------------------------------------------

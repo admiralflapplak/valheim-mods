@@ -15,7 +15,7 @@ namespace Wanted
     {
         public const string Guid = "nick.valheim.wanted";
         public const string Name = "Wanted";
-        public const string Version = "1.0.1";
+        public const string Version = "1.0.2";
 
         internal static Plugin Instance;
         internal static BepInEx.Logging.ManualLogSource Log;

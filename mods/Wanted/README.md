@@ -17,7 +17,7 @@ and food to deliver. Take a notice, do what it asks, and drop it in the board's 
   so two notices for the same thing rarely ask the same.
 - **Four kinds of notice.**
   - **Bounty** (red): slay a number of a creature. Kills count for you and for everyone fighting within 30 m of the creature.
-  - **Gathering** (green): bring materials.
+  - **Gathering** (green): bring materials. A rare drop (a pine cone, a Withered Bone) asks for a few and pays for the trees or kills it takes.
   - **Trophies** (amber): bring trophies, usually one or two. Rare drops, so they pay like a bounty on all the kills it takes.
   - **Provisions** (blue): deliver cooked food, meads or oils.
 - **A notice is a paper you carry.** Taken from the board, it goes in your bag: its tooltip says what it asks, what it pays and how

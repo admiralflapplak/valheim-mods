@@ -1,3 +1,6 @@
+1.0.2
+- Gathering notices priced by what their things take to get (the easiest source in the world and how many it gives): rare drops such as pine cones, Greydwarf eyes and Withered Bone ask for a few and pay for the trees or kills behind them.
+
 1.0.1
 - Notices can be for any land you've opened (half the newest, a quarter the one before, and so on: "Newest land share"), and an idol reward is of any opened land, each as likely, so older idols stay as common as new ones. Trophy notices priced at the kills a trophy takes at its real drop chance, asking mostly one or two. Wider spread of amounts asked. Illustrated notices, on by default (each player can switch back to the exclamation mark): a sketch of the target in its kind's colour, tally marks and a heading (each kind's word in runes, WANTED in letters, or none), on the board and in the bag.
 

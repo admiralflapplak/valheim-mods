@@ -171,6 +171,7 @@ namespace Wanted
                 usual = Math.Max(1, Mathf.RoundToInt(kill.Count * chance));   // what a bounty on that creature would see drop
                 each = kill.Value / Mathf.Max(0.01f, chance);                 // the kills it takes to get one
             }
+            else if (e.Kind == Kind.Gather) Gathering.Price(e, all, out usual, out each);   // (a rare find is worth the trees or kills it takes)
             int count = Amount(rnd, usual);
 
             return new Contract
