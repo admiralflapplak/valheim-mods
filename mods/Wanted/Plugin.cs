@@ -97,9 +97,9 @@ namespace Wanted
                 "The chance (percent) that a new notice is pinned to the board with an arrow instead of a nail.", new AcceptableValueRange<float>(0f, 100f));
             KnifeChance = Synced.Bind("4 - Looks", "Knife chance", 10f,
                 "The chance (percent) that a new notice is pinned to the board with a knife instead of a nail.", new AcceptableValueRange<float>(0f, 100f));
-            Illustrated = Config.Bind("5 - Your notices", "Illustrated notices", false,
+            Illustrated = Config.Bind("5 - Your notices", "Illustrated notices", true,
                 "Notices show a sketch of what they want (a creature's trophy, the item), inked in their kind's colour, with the count as tally " +
-                "marks, instead of an exclamation mark. Only how they look to you.");
+                "marks. Off: a plain exclamation mark in the kind's colour instead. Only how they look to you.");
             NoticeHeading = Config.Bind("5 - Your notices", "Heading", Heading.Runes,
                 "With illustrated notices, what's written across the top: Runes (each kind its own word in the Elder Futhark: WANTED, NEEDED, " +
                 "PROOF, SUPPLY), Wanted (\"WANTED\" in letters, on bounties only), or None.");

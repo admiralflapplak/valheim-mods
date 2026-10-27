@@ -5,7 +5,7 @@
 - Trophy notices pay what the hunt is worth: a trophy is priced at the kills it takes at its real drop chance, with a bounty's
   premium, and they ask for fewer (mostly one or two; a Greydwarf trophy now pays like a bounty on the twenty Greydwarfs it takes, not two).
 - Notices ask for a wider spread of amounts (60% to 150% of the usual), so two notices for the same thing rarely ask for the same.
-- Illustrated notices, each player's own choice ("5 - Your notices", off by default): instead of the exclamation mark, a sketch of what
+- Illustrated notices, on by default (each player can turn them off in "5 - Your notices" for the old exclamation mark): a sketch of what
   the notice wants (a creature's trophy, the item) inked in its kind's colour, the count as tally marks (fitted to the paper however many), and a heading
   (its own setting: each kind's word in runes, WANTED in letters on bounties, or none). The notice in the bag shows the same sketch.
 

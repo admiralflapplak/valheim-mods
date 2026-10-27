@@ -5,8 +5,11 @@ and food to deliver. Take a notice, do what it asks, and drop it in the board's 
 
 ![A Wanted board in a Meadows village: five notices pinned to its planks, and its iron-banded box at its foot](thunderstore/screenshots/01-board.png)
 
-- **Notices you can read on the board.** Each one is an old sheet of paper with an exclamation mark painted on it in its kind's
-  colour: red for a bounty, green for gathering, amber for trophies, blue for provisions. Look at one to read it. Press E to take it.
+- **Notices you can read on the board.** Each one is an old sheet of paper with an ink sketch of what it wants (a creature's trophy,
+  the item), the count in tally marks and its kind's word in runes, inked in its kind's colour: red for a bounty, green for gathering,
+  amber for trophies, blue for provisions. Look at one to read it. Press E to take it. The notice in your bag shows the same sketch.
+  Prefer it plainer? "Illustrated notices" off (each player's own setting) paints a simple exclamation mark instead, and "Heading"
+  swaps the runes for WANTED in letters, or nothing.
   Now and then a notice is pinned with an arrow or a knife instead of a nail.
 - **Work that suits your world.** Notices follow how far the world has come: every boss beaten opens the next land's creatures,
   things and food, from the Meadows to the Deep North. Notices can be for any land you've opened: about half are for the newest,
