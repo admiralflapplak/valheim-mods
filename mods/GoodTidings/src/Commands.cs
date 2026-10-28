@@ -197,6 +197,32 @@ namespace GoodTidings
                     t.AddString(sb.ToString());
                     return;
                 }
+                case "aim":
+                {
+                    // what the player is looking at, for the Atlas / Dagny choice
+                    GameObject hover = p ? p.GetHoverObject() : null;
+                    TraderVisitor v = Object.FindAnyObjectByType<TraderVisitor>();
+                    if (v == null) { t.AddString("No trader."); return; }
+                    Transform cam = GameCamera.instance.transform;
+                    Transform visual = v.transform.Find("Visual");
+                    Transform head = visual ? Utils.FindChild(visual, "Head") : null;
+                    Collider hc = Utils.FindChild(v.transform, "Capsule (1)")?.GetComponent<Collider>();
+                    string Ang(Vector3 at) => $"{Vector3.Angle(cam.forward, at - cam.position):0.0} deg, {Vector3.Distance(cam.position, at):0.0} m";
+                    t.AddString($"hover {(hover ? hover.name : "none")}, at head {TraderVisitor.AtHead(p)}; head bone {(head ? Ang(head.position) : "none")}; " +
+                                $"head collider {(hc ? Ang(hc.bounds.center) : "none")}; rider {Ang(v.transform.position + Vector3.up * 3f)}; " +
+                                $"atlas at {v.transform.position}, facing {v.transform.forward}, head bone at {(head ? head.position.ToString() : "-")}, collider at {(hc ? hc.bounds.center.ToString() : "-")}");
+                    return;
+                }
+                case "colliders":
+                {
+                    TraderVisitor v = Object.FindAnyObjectByType<TraderVisitor>();
+                    if (v == null || p == null) { t.AddString("No trader."); return; }
+                    int mask = Traverse.Create(p).Field("m_interactMask").GetValue<int>();
+                    foreach (Collider c in v.GetComponentsInChildren<Collider>(true))
+                        t.AddString($"{c.name}: {c.GetType().Name}, layer {LayerMask.LayerToName(c.gameObject.layer)}, enabled {c.enabled && c.gameObject.activeInHierarchy}, " +
+                                    $"trigger {c.isTrigger}, interact sees it {((mask >> c.gameObject.layer) & 1) == 1}, size {c.bounds.size}");
+                    return;
+                }
                 case "anims":
                 {
                     GameObject body = DvergerLook.Body(null);

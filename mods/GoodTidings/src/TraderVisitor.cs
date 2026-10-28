@@ -65,10 +65,16 @@ namespace GoodTidings
         private void OnDestroy()
         {
             All.Remove(_character);
+            _pins.Remove();
         }
+
+        private readonly MapPins _pins = new MapPins();
 
         private void Update()
         {
+            if (_rider && _nview.GetZDO() != null)   // (only where she's dressed: a dedicated server has no map)
+                _pins.Update(_nview.GetZDO().GetVec3(TraderAI.HomeKey, transform.position), transform.position,
+                    Localization.instance.Localize("$goodtidings_dagny"));
             Greeting();
             // while this player has her shop open, tell her owner every couple of seconds (she stands still for a few seconds after each)
             if (_shop == null || !StoreGuiShowing(_shop)) return;
@@ -90,25 +96,16 @@ namespace GoodTidings
         /// <summary>Whether the player is looking at Atlas's head (pet him) rather than at Dagny or the load (trade).</summary>
         internal static bool AtHead(Player p)
         {
-            // Which of the two the view passes closer to: Atlas's head or Dagny in the saddle (his head collider alone is small and low
-            // on a big animal: hard to hit). The game's hover object is the whole creature, so this is checked here.
+            // the view hits his head (a copy of its shape the game's looking test sees: TraderPrefab), within reach
             GameObject hover = p ? p.GetHoverObject() : null;
             TraderVisitor v = hover ? hover.GetComponentInParent<TraderVisitor>() : null;
             if (v == null || GameCamera.instance == null) return false;
-            Transform visual = v.transform.Find("Visual");   // (only the Lox's own bones: the rider's head is "head" too)
-            if (v._headBone == null && visual) v._headBone = Utils.FindChild(visual, "Head");
-            if (v._headBone == null) return false;
+            if (v._headShape == null) v._headShape = Utils.FindChild(v.transform, TraderPrefab.HeadReach)?.GetComponent<Collider>();
             Transform cam = GameCamera.instance.transform;
-            var ray = new Ray(cam.position, cam.forward);
-            float toHead = DistanceToRay(ray, v._headBone.position);
-            float toRider = v._rider ? DistanceToRay(ray, v._rider.transform.position + Vector3.up * 0.8f) : float.MaxValue;
-            return toHead < 2.2f && toHead < toRider;
+            return v._headShape && v._headShape.Raycast(new Ray(cam.position, cam.forward), out _, 60f);
         }
 
-        private static float DistanceToRay(Ray ray, Vector3 point) =>
-            Vector3.Cross(ray.direction, point - ray.origin).magnitude / Mathf.Max(ray.direction.magnitude, 1e-5f);
-
-        private Transform _headBone;
+        private Collider _headShape;
 
         public bool Interact(Humanoid user, bool hold, bool alt)
         {

@@ -38,16 +38,26 @@ namespace GoodTidings
             return go;
         }
 
-        /// <summary>A spot on dry ground 35-45 m from the base, to ride in from.</summary>
+        private static int _blockMask;
+
+        /// <summary>
+        /// A spot on open, dry ground 35-45 m from the base, to ride in from: the solid surface there is the ground itself (not a roof or
+        /// a floor: she once arrived inside a Draugr house), and nothing stands in the room a Lox takes up.
+        /// </summary>
         private static bool FindArrival(Vector3 home, out Vector3 at)
         {
-            for (int i = 0; i < 24; i++)
+            if (_blockMask == 0) _blockMask = LayerMask.GetMask("Default", "static_solid", "Default_small", "piece", "vehicle", "character");
+            for (int i = 0; i < 40; i++)
             {
                 float a = UnityEngine.Random.Range(0f, Mathf.PI * 2f), d = UnityEngine.Random.Range(35f, 45f);
                 Vector3 p = home + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * d;
                 if (!ZoneSystem.instance.GetSolidHeight(p, out float h, 1000)) continue;
                 if (h < ZoneSystem.instance.m_waterLevel + 0.5f) continue;
-                at = new Vector3(p.x, h + 0.5f, p.z);
+                if (Mathf.Abs(h - ZoneSystem.instance.GetGroundHeight(p)) > 0.3f) continue;   // standing on something built, not the ground
+                Vector3 feet = new Vector3(p.x, h, p.z);
+                if (Physics.CheckCapsule(feet + Vector3.up * 2.4f + Vector3.forward * 1.5f, feet + Vector3.up * 2.4f - Vector3.forward * 1.5f,
+                        2f, _blockMask, QueryTriggerInteraction.Ignore)) continue;   // a building, a rock or a tree in the way
+                at = feet + Vector3.up * 0.5f;
                 return true;
             }
             at = Vector3.zero;

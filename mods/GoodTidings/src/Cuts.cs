@@ -104,7 +104,7 @@ namespace GoodTidings
         }
 
         /// <summary>A copy of a texture we can read and change (the game's own are locked: drawn through the GPU).</summary>
-        private static Texture2D Readable(Texture source)
+        internal static Texture2D Readable(Texture source)
         {
             if (source == null) return null;
             var rt = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);

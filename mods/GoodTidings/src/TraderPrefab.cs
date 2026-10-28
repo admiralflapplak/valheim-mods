@@ -15,6 +15,7 @@ namespace GoodTidings
     internal static class TraderPrefab
     {
         internal const string Name = "goodtidings_trader";
+        internal const string HeadReach = "goodtidings_reach_head";
         private static GameObject _holder, _prefab;
 
         private static readonly AccessTools.FieldRef<ZNetScene, Dictionary<int, GameObject>> NamedPrefabs =
@@ -90,6 +91,23 @@ namespace GoodTidings
             if (trample) Object.DestroyImmediate(trample.gameObject);
 
             p.GetComponent<Humanoid>().m_name = "$goodtidings_atlas";
+            // reach: the game lets a player use things within about 3 m of their eyes; a Lox's head is far out front and the rider high
+            // up, so the reach to him is 2.5 m longer (the game's own hover offset)
+            p.GetComponent<Humanoid>().m_hoverOffset = 2.5f;
+
+            // His long body and head shapes are on a layer the game's "what is the player looking at" skips (only a 3 m capsule round his
+            // middle counted, ending at his shoulders): copies of them as triggers (they push nothing) on the saddle's layer, which it sees.
+            // Looking at his head then hits "goodtidings_reach_head" (TraderVisitor.AtHead: pet him).
+            int layer = LayerMask.NameToLayer("piece_nonsolid");
+            foreach ((string from, string to) in new[] { ("Capsule", "goodtidings_reach_body"), ("Capsule (1)", HeadReach) })
+            {
+                Transform shape = Utils.FindChild(p.transform, from);
+                if (shape == null || shape.GetComponent<CapsuleCollider>() == null) continue;
+                GameObject copy = Object.Instantiate(shape.gameObject, shape.parent, false);
+                copy.name = to;
+                copy.layer = layer;
+                copy.GetComponent<CapsuleCollider>().isTrigger = true;
+            }
             _prefab = p;
         }
 
