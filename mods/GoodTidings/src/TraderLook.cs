@@ -80,7 +80,7 @@ namespace GoodTidings
                             foreach (Renderer r in levels[i].renderers)
                                 if (r && !keep.Contains(r)) r.enabled = false;
                     }
-                    Object.Destroy(group);
+                    Object.DestroyImmediate(group);   // (now: its models join the Lox's levels just below, and may be in only one)
                 }
                 renderers.AddRange(part.GetComponentsInChildren<Renderer>(true).Where(r => r.enabled && r.GetType().Name != "ParticleSystemRenderer"));
             }

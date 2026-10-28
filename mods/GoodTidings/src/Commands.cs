@@ -321,6 +321,7 @@ namespace GoodTidings
                         return;
                     }
                     t.AddString(Visits.TryStart(a.Length > 2 ? a[2] : null) ? "Visit started." : "No visit could start (is a player at a base?).");
+                    if (p != null) t.AddString($"Your base value here: {p.GetBaseValue()} (raids and visits need 3).");
                     return;
                 default:
                     t.AddString(Usage);
