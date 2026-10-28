@@ -29,8 +29,16 @@ A Dverger merchant riding a Lox with saddle bags.
   move them live) on 2026-10-28; those values are the defaults in Goods.cs. The placement settings are a tuning aid: drop or hide them
   before release.
 
+**Animation and voice** (0.2.4, the user: "working amazing")
+- Riding_Idle on the whole body; Hildir's Greet/Talk/Buy/Sell on a second layer masked to head, arms and fingers (fade in 0.25 s, out
+  0.4 s). Her face (jaw, brows, cheeks: bones the human rig doesn't know) copied each frame from an invisible copy of Hildir's skeleton
+  running her own animator. Hildir's shop sounds (her Trader's effect lists) with our own lines: greet at 6 m, goodbye past 9 m, start
+  trade on E, buy, sell. Gestures and voice are on the trading player's game only.
+
 **Behaviour**
 - Arrives at the base, stays for Stay Minutes, then leaves. The time it leaves is saved on the visitor, so it still goes after a restart.
+  Built (0.2.x): prefab goodtidings_trader (a Lox copy, TraderPrefab.cs), TraderAI (BaseAI subclass: wander round home, stand while
+  someone trades, walk away and despawn), TraderVisitor (dresses it on each game, the shop on E: a switched-off Trader + StoreGui).
 - The Lox wanders around the base while nobody is trading; it stands still while someone is.
 - Trader and Lox can't be hurt and don't react to hits.
 - Pays and charges in coins, through the game's own trader window.

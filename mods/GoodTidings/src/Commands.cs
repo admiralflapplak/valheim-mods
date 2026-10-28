@@ -14,7 +14,7 @@ namespace GoodTidings
     internal static class Commands
     {
         private const string Command = "goodtidings";
-        private const string Usage = "goodtidings look [trader [hood size]|ride [up back [up2 back2]]|loxcolours|loxcolour h s v|ridecolours|beard|hildir|face|hood [sizes]|colours|clear] | goodtidings goods [off] | goodtidings bones | goodtidings mesh <item> | goodtidings tex grid <n>|cut <suit> x0 y0 x1 y1|clear | goodtidings anims | goodtidings pose [rest|<clip> [0-1]] | goodtidings visit [trader]";
+        private const string Usage = "goodtidings look [trader [hood size]|ride [up back [up2 back2]]|loxcolours|loxcolour h s v|ridecolours|beard|hildir|face|hood [sizes]|colours|clear] | goodtidings goods [off] | goodtidings bones | goodtidings mesh <item> | goodtidings tex grid <n>|cut <suit> x0 y0 x1 y1|clear | goodtidings anims | goodtidings pose [rest|<clip> [0-1]] | goodtidings visit [trader [here]]";
 
         private static readonly AccessTools.FieldRef<Dictionary<string, Terminal.ConsoleCommand>> TerminalCommands =
             AccessTools.StaticFieldRefAccess<Dictionary<string, Terminal.ConsoleCommand>>(AccessTools.Field(typeof(Terminal), "commands"));
@@ -70,7 +70,7 @@ namespace GoodTidings
                     {
                         // both versions on a red and on a golden Lox
                         var red = new Vector3(-0.05f, 0.35f, -0.08f);
-                        var gold = new Vector3(0.05f, 0.3f, 0.12f);
+                        var gold = TraderLook.Golden;
                         Ride(Place(p, 0, 4, 10f, 5.2f), true, red, 0.1f, 0.2f);
                         Ride(Place(p, 1, 4, 10f, 5.2f), false, red, 0.1f, 0.2f);
                         Ride(Place(p, 2, 4, 10f, 5.2f), true, gold, 0.1f, 0.2f);
@@ -162,6 +162,41 @@ namespace GoodTidings
                     if (_lastLook != null && p != null) Run(t, _lastLook);
                     t.AddString(Goods.Enabled ? "Goods on." : "Goods off.");
                     return;
+                case "hildirface":
+                {
+                    // how Hildir's face moves: her face mesh's blend shapes, and which head bones each of her clips moves (sampled over time)
+                    GameObject body = DvergerLook.BodyOf("Hildir", "Hildir", null);
+                    var sb = new System.Text.StringBuilder();
+                    foreach (SkinnedMeshRenderer r in body.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                    {
+                        Mesh m = r.sharedMesh;
+                        sb.Append($"{r.name}: {m.blendShapeCount} blend shapes");
+                        for (int i = 0; i < m.blendShapeCount; i++) sb.Append(" " + m.GetBlendShapeName(i));
+                        sb.Append("; materials " + string.Join(",", r.sharedMaterials.Select(x => x ? x.name : "-")) + "\n");
+                    }
+                    Animator anim = body.GetComponent<Animator>();
+                    Transform head = Utils.FindChild(body.transform, "head");
+                    var bones = head.GetComponentsInChildren<Transform>(true);
+                    foreach (AnimationClip clip in anim.runtimeAnimatorController.animationClips.Distinct())
+                    {
+                        var start = new Dictionary<Transform, (Vector3, Quaternion)>();
+                        var moved = new Dictionary<string, float>();
+                        for (int k = 0; k <= 20; k++)
+                        {
+                            clip.SampleAnimation(body, clip.length * k / 20f);
+                            foreach (Transform b in bones)
+                            {
+                                if (!start.ContainsKey(b)) { start[b] = (b.localPosition, b.localRotation); continue; }
+                                float deg = Quaternion.Angle(start[b].Item2, b.localRotation) + (b.localPosition - start[b].Item1).magnitude * 1000f;
+                                if (deg > 0.5f) moved[b.name] = Mathf.Max(moved.TryGetValue(b.name, out float o) ? o : 0f, deg);
+                            }
+                        }
+                        sb.Append($"{clip.name} ({clip.length:0.0}s, human {clip.humanMotion}): " + string.Join(", ", moved.Select(kv => $"{kv.Key} {kv.Value:0}")) + "\n");
+                    }
+                    Object.Destroy(body);
+                    t.AddString(sb.ToString());
+                    return;
+                }
                 case "anims":
                 {
                     GameObject body = DvergerLook.Body(null);
@@ -278,6 +313,13 @@ namespace GoodTidings
                 }
                 case "visit":
                     if (!ZNet.instance.IsServer() && !global::Console.instance.IsCheatsEnabled()) { t.AddString("Host or devcommands only."); return; }
+                    if (a.Length > 3 && a[2] == "trader" && a[3] == "here")
+                    {
+                        // the trader rides in to where this player stands, base or not
+                        if (p == null) { t.AddString("Not in a world."); return; }
+                        t.AddString(new WanderingTrader().Start(p.transform.position) ? "The wandering trader is on her way." : "She couldn't come (one already here, or no dry ground near).");
+                        return;
+                    }
                     t.AddString(Visits.TryStart(a.Length > 2 ? a[2] : null) ? "Visit started." : "No visit could start (is a player at a base?).");
                     return;
                 default:
@@ -287,49 +329,21 @@ namespace GoodTidings
         }
 
         /// <summary>The trader as chosen: ochre clothes; hooded with the cape and hood black, or bare without either.</summary>
-        private static GameObject BuildTrader(Transform parent, bool hooded, float hood)
-        {
-            var buckle = new RectInt(108, 0, 20, 20);
-            var cape = new RectInt(64, 96, 64, 32);
-            var ochre = new Cuts.Tint { Hue = 0.11f, Saturation = 0.55f, Value = 1.2f, Keep = { buckle } };
-            if (hooded) ochre.Black.Add(cape); else ochre.Cut.Add(cape);
-            GameObject body = DvergerLook.Body(parent);
-            DvergerLook.Face(body, "Hildir", "Hildir");
-            DvergerLook.Outfit(body, Ashlands, DvergerLook.Keep.NoHead, 1f, ochre);
-            if (hooded) DvergerLook.Outfit(body, Brown, DvergerLook.Keep.HeadOnly, hood, new Cuts.Tint { Grey = true, Value = 0.35f });
-            DvergerLook.Hair(body, "DvergerHairFemale");
-            return body;
-        }
+        private static GameObject BuildTrader(Transform parent, bool hooded, float hood) => TraderLook.Rider(parent, hooded, hood);
 
-        /// <summary>
-        /// A saddled, loaded Lox (recoloured by <paramref name="hsv"/> if given) with the trader riding it, the player's Riding_Idle playing:
-        /// she follows the seat point, up and back from it by those metres (parented to it she'd take on its stretched scale).
-        /// </summary>
+        /// <summary>A saddled, loaded Lox (recoloured by <paramref name="hsv"/> if given) with the trader riding it.</summary>
         private static bool Ride(Transform place, bool hooded, Vector3? hsv, float up, float back)
         {
             GameObject lox = DvergerLook.Lox(place, hsv);
-            Transform seat = Utils.FindChild(lox.transform, "attachpoint");
-            var rider = new GameObject("goodtidings_rider");
-            var follow = rider.AddComponent<Follow>();
-            follow.Target = seat;
-            follow.Frame = lox.transform;
-            follow.Up = up;
-            follow.Back = back;
-            rider.transform.SetPositionAndRotation(seat.position, seat.rotation);
-            Shown.Add(rider);
-            GameObject body = BuildTrader(rider.transform, hooded, 1.1f);
-            Goods.Load(lox.transform, seat, Shown);
-            return Play(body, "Player", "Riding_Idle");
+            GameObject body = TraderLook.Mount(lox.transform, hooded, Shown);
+            Follow f = body ? body.GetComponentInParent<Follow>() : null;
+            if (f) { f.Up = up; f.Back = back; }
+            return body != null;
         }
 
-        /// <summary>Plays another character's animation clip on a look, looping (human rigs share animations).</summary>
         private static bool Play(GameObject body, string fromPrefab, string clipName)
         {
-            Animator from = ZNetScene.instance.GetPrefab(fromPrefab).GetComponentInChildren<Animator>(true);
-            AnimationClip clip = from.runtimeAnimatorController.animationClips.FirstOrDefault(c => c.name == clipName);
-            Animator anim = body.GetComponent<Animator>();
-            if (clip == null || anim == null) return false;
-            AnimationPlayableUtilities.PlayClip(anim, clip, out PlayableGraph graph);
+            if (!TraderLook.Play(body, fromPrefab, clipName, out PlayableGraph graph)) return false;
             Graphs.Add(graph);
             return true;
         }
@@ -374,7 +388,7 @@ namespace GoodTidings
             return root.transform;
         }
 
-        private const string Ashlands = "DvergerSuitArbalest_Ashlands", Brown = "DvergerSuitArbalest", Braids = "DvergerHairFemale_Redhair";
+        private const string Ashlands = TraderLook.Ashlands, Brown = TraderLook.Brown, Braids = "DvergerHairFemale_Redhair";
 
         private static void ShowLooks(Player p, bool beard)
         {

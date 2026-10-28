@@ -66,7 +66,7 @@ namespace GoodTidings
         }
 
         /// <summary>Puts every good on a Lox (its look) at its seat; adds what it makes to <paramref name="made"/>.</summary>
-        internal static void Load(Transform lox, Transform seat, List<GameObject> made)
+        internal static void Load(Transform lox, Transform seat, List<GameObject> made, Transform under = null)
         {
             if (!Enabled) return;
             foreach (Def d in Defs)
@@ -74,6 +74,7 @@ namespace GoodTidings
                 {
                     if (d.Prefab != SaddleBagPrefab && ZNetScene.instance.GetPrefab(d.Prefab) == null) { Plugin.Log.LogWarning($"No prop {d.Prefab}"); continue; }
                     var holder = new GameObject("goodtidings_goods");
+                    if (under) holder.transform.SetParent(under, false);
                     var f = holder.AddComponent<Follow>();
                     f.Target = seat; f.Frame = lox; f.FrameRotation = true;
                     holder.transform.SetPositionAndRotation(seat.position, lox.rotation);

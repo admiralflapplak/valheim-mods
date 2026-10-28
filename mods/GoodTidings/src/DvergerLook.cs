@@ -40,19 +40,7 @@ namespace GoodTidings
         internal static GameObject Lox(Transform parent, Vector3? hsv = null)
         {
             GameObject lox = Body(parent, "Lox", "Visual");
-            if (hsv is Vector3 shift)
-                foreach (Renderer r in lox.GetComponentsInChildren<Renderer>(true))
-                {
-                    if (r.name == "Sadel") continue;
-                    Material[] mats = r.materials;   // (copies: the game's own Lox keep their colour)
-                    foreach (Material m in mats)
-                    {
-                        m.SetFloat("_Hue", shift.x);
-                        m.SetFloat("_Saturation", shift.y);
-                        m.SetFloat("_Value", shift.z);
-                    }
-                    r.materials = mats;
-                }
+            if (hsv is Vector3 shift) TraderLook.Tint(lox, shift);
             Transform saddle = Utils.FindChild(lox.transform, "Sadel");
             if (saddle)
             {
@@ -82,6 +70,9 @@ namespace GoodTidings
             Object.Destroy(holder);
             return m;
         }
+
+        /// <summary>Any character's look (its visual child, without creature parts), for looking into it.</summary>
+        internal static GameObject BodyOf(string prefab, string visualName, Transform parent) => Body(parent, prefab, visualName);
 
         private static GameObject Body(Transform parent, string prefab, string visualName)
         {

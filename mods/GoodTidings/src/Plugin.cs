@@ -5,8 +5,8 @@ using HarmonyLib;
 using ServerSettings = HeaveHo.Shared.ServerSettings;   // (mods/Shared/ServerSettings.cs, still in the namespace of the mod it was first copied for)
 using Nick.Shared;
 
-// Only patches and settings so far: reloads in a world. Raise to "menu" once visits register pieces or items.
-[assembly: System.Reflection.AssemblyMetadata("ClaudeTools.Reload", "world")]
+// Registers the wandering trader's prefab (goodtidings_trader): reload at the main menu.
+[assembly: System.Reflection.AssemblyMetadata("ClaudeTools.Reload", "menu")]
 
 namespace GoodTidings
 {
@@ -15,7 +15,7 @@ namespace GoodTidings
     {
         public const string Guid = "nick.GoodTidings";
         public const string Name = "GoodTidings";
-        public const string Version = "0.1.35";
+        public const string Version = "0.2.4";
 
         internal static Plugin Instance;
         internal static ManualLogSource Log;
@@ -64,6 +64,7 @@ namespace GoodTidings
             Config.Save();
 
             _harmony = Harmony.CreateAndPatchAll(typeof(Plugin).Assembly, Guid);
+            if (ZNetScene.instance) TraderPrefab.Register(ZNetScene.instance);   // (after a reload: the scene is already up)
             Commands.Register();
             Logger.LogInfo($"{Name} {Version} loaded");
         }
@@ -74,6 +75,7 @@ namespace GoodTidings
         {
             _harmony?.UnpatchSelf();   // hot reload: never leave old patches behind
             Commands.Unregister();
+            TraderPrefab.Unregister();
             Synced?.Dispose();
             Translations.Unload();
         }
