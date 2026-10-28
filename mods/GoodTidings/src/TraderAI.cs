@@ -15,7 +15,7 @@ namespace GoodTidings
     {
         internal const string HomeKey = "GoodTidings.Home", LeaveAtKey = "GoodTidings.LeaveAt", LeavingKey = "GoodTidings.Leaving",
             TradeUntilKey = "GoodTidings.TradeUntil", HoodedKey = "GoodTidings.Hooded", MealsKey = "GoodTidings.Meals",
-            DiscountsKey = "GoodTidings.Discounts";
+            DiscountsKey = "GoodTidings.Discounts", SeedKey = "GoodTidings.Seed", SoldKey = "GoodTidings.Sold";
         internal const int MaxMeals = 3;
         private static readonly long LeaveGrace = TimeSpan.FromSeconds(150).Ticks;   // walking away, then gone even if he's stuck
 
@@ -40,6 +40,7 @@ namespace GoodTidings
             ZDO zdo = m_nview.GetZDO();
             long now = ZNet.instance.GetTime().Ticks;
             m_spawnPoint = zdo.GetVec3(ZDOVars.s_spawnPoint, m_spawnPoint);   // (another owner may have moved it)
+            if (zdo.GetInt(SeedKey) == 0) zdo.Set(SeedKey, UnityEngine.Random.Range(1, int.MaxValue));   // (made by hand: a stock of its own)
 
             long leaveAt = zdo.GetLong(LeaveAtKey, 0L);
             if (leaveAt == 0L)
@@ -172,7 +173,7 @@ namespace GoodTidings
         {
             int meals = zdo.GetInt(MealsKey) + 1;
             zdo.Set(MealsKey, meals);
-            string item = Stock.PickDiscount(zdo.GetString(DiscountsKey, ""));
+            string item = Stock.PickDiscount(zdo.GetInt(SeedKey), zdo.GetString(DiscountsKey, ""), zdo.GetString(SoldKey, ""));
             if (item != null) zdo.Set(DiscountsKey, Stock.AddDiscount(zdo.GetString(DiscountsKey, ""), item));
             string name = item != null ? ObjectDB.instance.GetItemPrefab(item)?.GetComponent<ItemDrop>()?.m_itemData.m_shared.m_name : null;
             string msg = name != null ? $"{Lines.Pick("goodtidings_atlas_fed")} {name}" : Lines.Pick("goodtidings_atlas_munch");

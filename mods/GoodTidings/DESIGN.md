@@ -48,12 +48,15 @@ random item she can sell now, up to three a visit, saved on her ZDO. The goods a
 - Trader and Lox can't be hurt and don't react to hits.
 - Pays and charges in coins, through the game's own trader window.
 
-**Stock** (prefab names checked in the game)
-- Always: some of Haldor's goods: `FishingRod`, `FishingBait`, `BarrelRings`.
-- Ready-made meads (not the bases): `MeadHealthMinor`, `MeadStaminaMinor`, ... more after later bosses.
-- Unlocked by bosses (global keys), for example after the Queen (`defeated_queen`): `GemstoneBlue` (Iolite), `GemstoneGreen` (Jade),
-  `GemstoneRed` (Bloodstone).
-- Ingredients that are hard to gather (list to choose).
+**Stock** (set with the user 2026-10-28, `src/Stock.cs`)
+- 15 lines a visit, rolled from a seed saved on her (every player sees the same): 1-3 always (fishing rod, bait 20 for 10, barrel hoops
+  3 for 100, Haldor's prices); 4-13 random from every unlocked land's goods and meads, a land weighted by (its place)^2 so newer lands
+  dominate; 14 random from the newest land; 15 the newest land's rare.
+- Lands by boss key: Meadows (start), Black Forest (eikthyr), Swamp (gdking), Mountains (bonemass), Plains (dragon), Mistlands
+  (goblinking), Ashlands (queen), Deep North (fader). Goods follow the user's lists; meads placed by where they're made (the Bog Witch's
+  Troll Endurance and Anti-Sting in the Swamp).
+- Ordinary lines 3 buys a visit, the rare 1, shared (her ZDO "Sold", counted by her owner via RPC). Atlas's discounts only on lines in
+  this visit's stock that aren't sold out.
 
 **Open questions**
 - Which Dverger, and the trader's name.

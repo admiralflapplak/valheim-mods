@@ -213,6 +213,22 @@ namespace GoodTidings
                                 $"atlas at {v.transform.position}, facing {v.transform.forward}, head bone at {(head ? head.position.ToString() : "-")}, collider at {(hc ? hc.bounds.center.ToString() : "-")}");
                     return;
                 }
+                case "itemdump":
+                {
+                    // every item the game knows: prefab, English name, type, value, stack size, to a file in Claude Tools' shots folder
+                    var sb = new System.Text.StringBuilder();
+                    foreach (GameObject item in ObjectDB.instance.m_items)
+                    {
+                        ItemDrop d = item ? item.GetComponent<ItemDrop>() : null;
+                        if (d == null) continue;
+                        var sh = d.m_itemData.m_shared;
+                        sb.AppendLine($"{item.name}	{Localization.instance.Localize(sh.m_name)}	{sh.m_itemType}	{sh.m_value}	{sh.m_maxStackSize}");
+                    }
+                    string path = System.IO.Path.Combine(BepInEx.Paths.BepInExRootPath, "claude", "shots", "items.tsv");
+                    System.IO.File.WriteAllText(path, sb.ToString());
+                    t.AddString(path);
+                    return;
+                }
                 case "hurt":
                 {
                     // tries the ways a creature is hurt on the trader: health before and after, and whether poison took hold

@@ -15,7 +15,7 @@ namespace GoodTidings
     {
         public const string Guid = "nick.GoodTidings";
         public const string Name = "GoodTidings";
-        public const string Version = "0.3.12";
+        public const string Version = "0.4.1";
 
         internal static Plugin Instance;
         internal static ManualLogSource Log;

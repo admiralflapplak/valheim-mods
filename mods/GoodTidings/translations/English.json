@@ -6,39 +6,32 @@
   "goodtidings_pet": "Pet",
   "goodtidings_trader_arrives": "Dagny, a wandering trader, is riding up on Atlas",
   "goodtidings_trader_closed": "Dagny has packed up and is moving on",
-
   "goodtidings_trader_greet1": "Who is... never mind. What are you buying?",
   "goodtidings_trader_greet2": "Well met, Viking. I trade, I don't beg, and I don't give.",
   "goodtidings_trader_greet3": "Atlas and I go where the trade is good. It led us here.",
   "goodtidings_trader_greet4": "Odin sent you to this world to fight. I came to it to trade.",
   "goodtidings_trader_greet5": "Don't tell Haldor you saw me. His prices are a crime.",
-
   "goodtidings_trader_hello1": "I don't deal in charity. I deal in fair prices.",
   "goodtidings_trader_hello2": "Everything here was earned. Nothing here is free.",
   "goodtidings_trader_hello3": "Look all you like. Haggling is for Fulings.",
   "goodtidings_trader_hello4": "Coin for goods, goods for coin. No gods need be involved.",
   "goodtidings_trader_hello5": "Hildir sells hats. I sell what keeps you alive.",
-
   "goodtidings_trader_bought1": "Value for value. The only honest trade.",
   "goodtidings_trader_bought2": "You earned that. Spend it well.",
   "goodtidings_trader_bought3": "A fair price, fairly paid.",
   "goodtidings_trader_bought4": "May it serve you better than the gods ever did.",
   "goodtidings_trader_bought5": "Spoken like someone who knows what a thing is worth.",
-
   "goodtidings_trader_sold1": "A fair exchange. The world runs on those.",
   "goodtidings_trader_sold2": "Good work fetches a good price. Remember that.",
   "goodtidings_trader_sold3": "Coin well earned. Even the Dvergr would agree.",
   "goodtidings_trader_sold4": "I'll find a buyer. I always do.",
-
   "goodtidings_trader_goodbye1": "Keep the motor of the world turning, friend.",
   "goodtidings_trader_goodbye2": "Safe roads. Mind the trolls.",
   "goodtidings_trader_goodbye3": "Build something worth trading for. I'll be back.",
   "goodtidings_trader_goodbye4": "Atlas waits for no one. Neither do I.",
-
   "goodtidings_trader_leaving1": "Dagny rides on. Atlas shrugs.",
   "goodtidings_trader_leaving2": "Dagny packs her wares, and Atlas lumbers off down the road.",
   "goodtidings_trader_leaving3": "Dagny has better markets to reach before nightfall.",
-
   "goodtidings_trader_talk1": "The motor of the world runs on those who make things.",
   "goodtidings_trader_talk2": "I never asked anyone to live for my sake. Not even Odin.",
   "goodtidings_trader_talk3": "Atlas carries the whole load. He has never once complained.",
@@ -49,7 +42,6 @@
   "goodtidings_trader_talk8": "Every hall in this world was built by someone who wanted it built.",
   "goodtidings_trader_talk9": "Ten worlds on the great tree, and not one honest market among them.",
   "goodtidings_trader_talk10": "If the gods wanted it given away, they'd have left it lying in a chest.",
-
   "goodtidings_atlas_pet": "Atlas shrugs.",
   "goodtidings_atlas_munch1": "Atlas munches happily.",
   "goodtidings_atlas_munch2": "Atlas crunches away, delighted.",
@@ -59,5 +51,6 @@
   "goodtidings_atlas_fed3": "A well-fed Lox makes a generous trader. 30% off:",
   "goodtidings_atlas_full1": "Atlas is full.",
   "goodtidings_atlas_full2": "Atlas has had plenty.",
-  "goodtidings_discounted": "30% off: Atlas enjoyed his meal"
+  "goodtidings_discounted": "30% off: Atlas enjoyed his meal",
+  "goodtidings_left": "$1 left this visit"
 }

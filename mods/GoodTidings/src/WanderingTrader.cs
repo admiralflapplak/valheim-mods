@@ -33,6 +33,7 @@ namespace GoodTidings
             ZDO zdo = go.GetComponent<ZNetView>().GetZDO();
             zdo.Set(TraderAI.LeaveAtKey, ZNet.instance.GetTime().Ticks + TimeSpan.FromMinutes(Plugin.TraderMinutes.Value).Ticks);
             zdo.Set(TraderAI.HoodedKey, UnityEngine.Random.value < 0.5f);
+            zdo.Set(TraderAI.SeedKey, UnityEngine.Random.Range(1, int.MaxValue));   // (this visit's goods: every game rolls the same from it)
             go.GetComponent<TraderAI>().SetHome(home);
             Plugin.Log.LogInfo($"Wandering trader arrives at {at}, heading for {home}, staying {Plugin.TraderMinutes.Value} minutes");
             return go;

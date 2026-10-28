@@ -33,6 +33,7 @@ namespace GoodTidings
             All.Add(_character);
             if (_nview.GetZDO() == null) return;
             _nview.Register("GoodTidings_Trading", RPC_Trading);
+            _nview.Register<string>("GoodTidings_Sold", RPC_Sold);
         }
 
         private void Start()
@@ -59,7 +60,7 @@ namespace GoodTidings
             _shop = go.AddComponent<Trader>();
             _shop.enabled = false;   // (switched off before its Start: no greeting, head turning or random talk)
             _shop.m_name = "$goodtidings_dagny";
-            _shop.m_items = Stock.Items();
+            _shop.m_items = new List<Trader.TradeItem>();
         }
 
         private void OnDestroy()
@@ -78,6 +79,7 @@ namespace GoodTidings
             Greeting();
             // while this player has her shop open, tell her owner every couple of seconds (she stands still for a few seconds after each)
             if (_shop == null || !StoreGuiShowing(_shop)) return;
+            RefreshStock(false);   // (another player bought something, or Atlas ate)
             if (Time.time - _tradingSent < 2f) return;
             _tradingSent = Time.time;
             _nview.InvokeRPC("GoodTidings_Trading");
@@ -120,7 +122,7 @@ namespace GoodTidings
             }
             if (_shop == null) return false;
             if (_nview.GetZDO()?.GetBool(TraderAI.LeavingKey) == true) { user.Message(MessageHud.MessageType.Center, "$goodtidings_trader_closed"); return true; }
-            _shop.m_items = Stock.Items(_nview.GetZDO()?.GetString(TraderAI.DiscountsKey, "") ?? "");   // (the world's progress, and Atlas's meals)
+            RefreshStock(false);   // (the world's progress, Atlas's meals, what's sold out)
             StoreGui.instance.Show(_shop);
             _tradingSent = 0f;
             Say(Lines.Pick("goodtidings_trader_hello"), "Talk", HildirFx(t => t.m_randomStartTradeFX));
@@ -138,7 +140,53 @@ namespace GoodTidings
             voice?.Create(_rider ? _rider.transform.position + Vector3.up * 1.2f : transform.position, Quaternion.identity);
         }
 
-        internal void Bought() => Say(Lines.Pick("goodtidings_trader_bought"), "Buy", HildirFx(t => t.m_randomBuyFX));
+        internal void Bought(Trader.TradeItem item)
+        {
+            Say(Lines.Pick("goodtidings_trader_bought"), "Buy", HildirFx(t => t.m_randomBuyFX));
+            string prefab = item?.m_prefab ? item.m_prefab.name : null;
+            if (prefab == null) return;
+            _pendingSold = Stock.AddSold(_pendingSold, prefab);   // (counted here at once; her owner keeps the count for everyone)
+            _nview.InvokeRPC("GoodTidings_Sold", prefab);
+            RefreshStock(true);
+        }
+
+        private string _pendingSold = "", _stockSig;
+
+        private void RPC_Sold(long sender, string prefab)
+        {
+            if (!_nview.IsOwner() || string.IsNullOrEmpty(prefab)) return;
+            ZDO zdo = _nview.GetZDO();
+            zdo.Set(TraderAI.SoldKey, Stock.AddSold(zdo.GetString(TraderAI.SoldKey, ""), prefab));
+        }
+
+        private static readonly System.Reflection.MethodInfo FillList = AccessTools.Method(typeof(StoreGui), "FillList");
+
+        /// <summary>
+        /// Her shop's list from what's in her ZDO (this visit's seed, Atlas's discounts, what's sold), with this player's own purchases
+        /// not yet counted there; the open window is filled again when it changes.
+        /// </summary>
+        private void RefreshStock(bool force)
+        {
+            ZDO zdo = _nview.GetZDO();
+            if (_shop == null || zdo == null) return;
+            string sold = zdo.GetString(TraderAI.SoldKey, "");
+            if (_pendingSold.Length > 0)
+            {
+                foreach (string part in _pendingSold.Split(','))
+                {
+                    int colon = part.LastIndexOf(':');
+                    if (colon <= 0) continue;
+                    string prefab = part.Substring(0, colon);
+                    int mine = Stock.Count(_pendingSold, prefab);
+                    while (Stock.Count(sold, prefab) < mine) sold = Stock.AddSold(sold, prefab);
+                }
+            }
+            string sig = zdo.GetInt(TraderAI.SeedKey) + "|" + zdo.GetString(TraderAI.DiscountsKey, "") + "|" + sold;
+            if (!force && sig == _stockSig) return;
+            _stockSig = sig;
+            _shop.m_items = Stock.Items(zdo.GetInt(TraderAI.SeedKey), zdo.GetString(TraderAI.DiscountsKey, ""), sold);
+            if (StoreGuiShowing(_shop) && FillList != null) FillList.Invoke(StoreGui.instance, null);
+        }
         internal void Sold() => Say(Lines.Pick("goodtidings_trader_sold"), "Sell", HildirFx(t => t.m_randomSellFX));
 
         /// <summary>Hildir's own voice for a moment of trading (her Trader's effect lists), if the game still has her.</summary>
@@ -196,11 +244,11 @@ namespace GoodTidings
     [HarmonyPatch(typeof(Trader), nameof(Trader.OnBought))]
     internal static class Trader_OnBought
     {
-        private static bool Prefix(Trader __instance)
+        private static bool Prefix(Trader __instance, Trader.TradeItem item)
         {
             TraderVisitor v = TraderVisitor.Of(__instance);
             if (v == null) return true;
-            v.Bought();
+            v.Bought(item);
             return false;
         }
     }
