@@ -126,7 +126,7 @@ namespace GoodTidings
             _shop.m_items = Stock.Items(_nview.GetZDO()?.GetString(TraderAI.DiscountsKey, "") ?? "");   // (the world's progress, and Atlas's meals)
             StoreGui.instance.Show(_shop);
             _tradingSent = 0f;
-            Say("$goodtidings_trader_hello", "Talk", HildirFx(t => t.m_randomStartTradeFX));
+            Say(Lines.Pick("goodtidings_trader_hello"), "Talk", HildirFx(t => t.m_randomStartTradeFX));
             return true;
         }
 
@@ -141,8 +141,8 @@ namespace GoodTidings
             voice?.Create(_rider ? _rider.transform.position + Vector3.up * 1.2f : transform.position, Quaternion.identity);
         }
 
-        internal void Bought() => Say("$goodtidings_trader_bought", "Buy", HildirFx(t => t.m_randomBuyFX));
-        internal void Sold() => Say("$goodtidings_trader_sold", "Sell", HildirFx(t => t.m_randomSellFX));
+        internal void Bought() => Say(Lines.Pick("goodtidings_trader_bought"), "Buy", HildirFx(t => t.m_randomBuyFX));
+        internal void Sold() => Say(Lines.Pick("goodtidings_trader_sold"), "Sell", HildirFx(t => t.m_randomSellFX));
 
         /// <summary>Hildir's own voice for a moment of trading (her Trader's effect lists), if the game still has her.</summary>
         private static EffectList HildirFx(System.Func<Trader, EffectList> pick)
@@ -154,6 +154,7 @@ namespace GoodTidings
         // greets this player when they come close, says goodbye when they walk off (as the game's traders do), on this game only
         private const float GreetRange = 6f, ByeRange = 9f;
         private bool _greeted;
+        private float _nextTalk;
 
         private void Greeting()
         {
@@ -163,12 +164,19 @@ namespace GoodTidings
             if (!_greeted && d < GreetRange)
             {
                 _greeted = true;
-                Say("$goodtidings_trader_greet", "Greet", HildirFx(t => t.m_randomGreetFX));
+                Say(Lines.Pick("goodtidings_trader_greet"), "Greet", HildirFx(t => t.m_randomGreetFX));
+            }
+            else if (_greeted && d < GreetRange + 2f && Time.time > _nextTalk && !StoreGui.IsVisible())
+            {
+                // a word now and then while this player stays near her (as the game's traders chat)
+                if (_nextTalk > 0f) Say(Lines.Pick("goodtidings_trader_talk"), "Talk", HildirFx(t => t.m_randomTalkFX));
+                _nextTalk = Time.time + UnityEngine.Random.Range(25f, 40f);
             }
             else if (_greeted && d > ByeRange)
             {
                 _greeted = false;
-                Say("$goodtidings_trader_goodbye", null, HildirFx(t => t.m_randomGoodbyeFX));
+                _nextTalk = 0f;
+                Say(Lines.Pick("goodtidings_trader_goodbye"), null, HildirFx(t => t.m_randomGoodbyeFX));
             }
         }
 

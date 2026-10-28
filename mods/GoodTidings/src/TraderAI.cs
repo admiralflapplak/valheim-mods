@@ -60,7 +60,7 @@ namespace GoodTidings
                     m_spawnPoint = home + away.normalized * 90f;
                     zdo.Set(ZDOVars.s_spawnPoint, m_spawnPoint);
                     zdo.Set(LeavingKey, true);
-                    Player.MessageAllInRange(transform.position, 60f, MessageHud.MessageType.Center, "$goodtidings_trader_leaving", null);
+                    Player.MessageAllInRange(transform.position, 60f, MessageHud.MessageType.Center, Lines.Pick("goodtidings_trader_leaving"), null);
                 }
                 if (Utils.DistanceXZ(transform.position, home) > 60f || now > leaveAt + LeaveGrace)
                 {
@@ -147,8 +147,8 @@ namespace GoodTidings
             string item = Stock.PickDiscount(zdo.GetString(DiscountsKey, ""));
             if (item != null) zdo.Set(DiscountsKey, Stock.AddDiscount(zdo.GetString(DiscountsKey, ""), item));
             string name = item != null ? ObjectDB.instance.GetItemPrefab(item)?.GetComponent<ItemDrop>()?.m_itemData.m_shared.m_name : null;
-            string msg = name != null ? $"$goodtidings_atlas_fed {name}" : "$goodtidings_atlas_munch";
-            if (meals >= MaxMeals) msg += "\n$goodtidings_atlas_full";
+            string msg = name != null ? $"{Lines.Pick("goodtidings_atlas_fed")} {name}" : Lines.Pick("goodtidings_atlas_munch");
+            if (meals >= MaxMeals) msg += "\n" + Lines.Pick("goodtidings_atlas_full");
             Player.MessageAllInRange(transform.position, 30f, MessageHud.MessageType.Center, msg, null);
         }
     }
