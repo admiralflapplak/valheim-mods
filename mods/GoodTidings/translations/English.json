@@ -1,12 +1,20 @@
 {
   "goodtidings_trader": "Wandering Trader",
+  "goodtidings_dagny": "Dagny",
+  "goodtidings_atlas": "Atlas",
   "goodtidings_trade": "Trade",
-  "goodtidings_trader_arrives": "A wandering trader is passing by your home",
-  "goodtidings_trader_leaving": "The wandering trader is moving on",
-  "goodtidings_trader_closed": "She's packed up and moving on",
-  "goodtidings_trader_hello": "Good tidings, traveller! Have a look.",
-  "goodtidings_trader_bought": "May it serve you well.",
-  "goodtidings_trader_sold": "A fair trade.",
-  "goodtidings_trader_greet": "Well met! Come and see what I've brought.",
-  "goodtidings_trader_goodbye": "Safe roads, friend."
+  "goodtidings_pet": "Pet",
+  "goodtidings_trader_arrives": "Dagny, a wandering trader, is riding up on Atlas",
+  "goodtidings_trader_leaving": "Dagny rides on. Atlas shrugs.",
+  "goodtidings_trader_closed": "Dagny has packed up and is moving on",
+  "goodtidings_trader_greet": "Who is... never mind. What are you buying?",
+  "goodtidings_trader_hello": "I don't deal in charity. I deal in fair prices.",
+  "goodtidings_trader_bought": "Value for value. The only honest trade.",
+  "goodtidings_trader_sold": "A fair exchange. The world runs on those.",
+  "goodtidings_trader_goodbye": "Keep the motor of the world turning, friend.",
+  "goodtidings_atlas_pet": "Atlas shrugs. He seems pleased.",
+  "goodtidings_atlas_munch": "Atlas munches happily.",
+  "goodtidings_atlas_fed": "Atlas munches happily. Dagny knocks 30% off:",
+  "goodtidings_atlas_full": "Atlas is full.",
+  "goodtidings_discounted": "30% off: Atlas enjoyed his meal"
 }

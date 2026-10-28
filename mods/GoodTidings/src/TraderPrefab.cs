@@ -62,8 +62,18 @@ namespace GoodTidings
             ai.m_randomMoveRange = 9f;
             ai.m_randomMoveInterval = 7f;
             ai.m_spawnMessage = "";
+            // what Atlas eats: the Lox's own food (Plains) and the earlier lands' berries and roots, so he can be treated from the start
+            ai.m_consumeItems = new List<ItemDrop>(monster.m_consumeItems);
+            foreach (string food in new[] { "Raspberry", "Blueberries", "Carrot", "Turnip", "Onion" })
+            {
+                ItemDrop item = scene.GetPrefab(food)?.GetComponent<ItemDrop>();
+                if (item && !ai.m_consumeItems.Contains(item)) ai.m_consumeItems.Add(item);
+            }
             Object.DestroyImmediate(monster);
 
+            var visitor = p.AddComponent<TraderVisitor>();
+            Tameable tame = p.GetComponent<Tameable>();
+            if (tame) visitor.m_petEffect = tame.m_petEffect;   // (Atlas can still be petted)
             foreach (System.Type t in new[] { typeof(Tameable), typeof(Procreation), typeof(CharacterDrop), typeof(MovementDamage) })
             {
                 Component c = p.GetComponent(t);
@@ -79,8 +89,7 @@ namespace GoodTidings
             Transform trample = Utils.FindChild(p.transform, "RunHitDamager");
             if (trample) Object.DestroyImmediate(trample.gameObject);
 
-            p.GetComponent<Humanoid>().m_name = "$goodtidings_trader";
-            p.AddComponent<TraderVisitor>();
+            p.GetComponent<Humanoid>().m_name = "$goodtidings_atlas";
             _prefab = p;
         }
 
@@ -121,7 +130,9 @@ namespace GoodTidings
         private static void Postfix(Character __instance, ref string __result)
         {
             if (TraderVisitor.Is(__instance))
-                __result = Localization.instance.Localize(__instance.m_name + "\n[<color=yellow><b>$KEY_Use</b></color>] $goodtidings_trade");
+                __result = Localization.instance.Localize(TraderVisitor.AtHead(Player.m_localPlayer)
+                    ? "$goodtidings_atlas\n[<color=yellow><b>$KEY_Use</b></color>] $goodtidings_pet"
+                    : "$goodtidings_dagny\n[<color=yellow><b>$KEY_Use</b></color>] $goodtidings_trade");
         }
     }
 }

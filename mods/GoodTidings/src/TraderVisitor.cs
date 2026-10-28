@@ -58,7 +58,7 @@ namespace GoodTidings
             go.transform.SetParent(at, false);
             _shop = go.AddComponent<Trader>();
             _shop.enabled = false;   // (switched off before its Start: no greeting, head turning or random talk)
-            _shop.m_name = "$goodtidings_trader";
+            _shop.m_name = "$goodtidings_dagny";
             _shop.m_items = Stock.Items();
         }
 
@@ -83,11 +83,47 @@ namespace GoodTidings
             _nview.GetZDO().Set(TraderAI.TradeUntilKey, ZNet.instance.GetTime().Ticks + TimeSpan.FromSeconds(5).Ticks);
         }
 
+        /// <summary>Atlas's pet effect (the Lox's own, from its Tameable: set on the prefab).</summary>
+        public EffectList m_petEffect = new EffectList();
+        private float _petted;
+
+        /// <summary>Whether the player is looking at Atlas's head (pet him) rather than at Dagny or the load (trade).</summary>
+        internal static bool AtHead(Player p)
+        {
+            // Which of the two the view passes closer to: Atlas's head or Dagny in the saddle (his head collider alone is small and low
+            // on a big animal: hard to hit). The game's hover object is the whole creature, so this is checked here.
+            GameObject hover = p ? p.GetHoverObject() : null;
+            TraderVisitor v = hover ? hover.GetComponentInParent<TraderVisitor>() : null;
+            if (v == null || GameCamera.instance == null) return false;
+            Transform visual = v.transform.Find("Visual");   // (only the Lox's own bones: the rider's head is "head" too)
+            if (v._headBone == null && visual) v._headBone = Utils.FindChild(visual, "Head");
+            if (v._headBone == null) return false;
+            Transform cam = GameCamera.instance.transform;
+            var ray = new Ray(cam.position, cam.forward);
+            float toHead = DistanceToRay(ray, v._headBone.position);
+            float toRider = v._rider ? DistanceToRay(ray, v._rider.transform.position + Vector3.up * 0.8f) : float.MaxValue;
+            return toHead < 2.2f && toHead < toRider;
+        }
+
+        private static float DistanceToRay(Ray ray, Vector3 point) =>
+            Vector3.Cross(ray.direction, point - ray.origin).magnitude / Mathf.Max(ray.direction.magnitude, 1e-5f);
+
+        private Transform _headBone;
+
         public bool Interact(Humanoid user, bool hold, bool alt)
         {
-            if (hold || user != Player.m_localPlayer || _shop == null) return false;
+            if (hold || user != Player.m_localPlayer) return false;
+            if (AtHead(Player.m_localPlayer))
+            {
+                if (Time.time - _petted < 1f) return true;
+                _petted = Time.time;
+                m_petEffect.Create(transform.position, transform.rotation);
+                user.Message(MessageHud.MessageType.Center, "$goodtidings_atlas_pet");
+                return true;
+            }
+            if (_shop == null) return false;
             if (_nview.GetZDO()?.GetBool(TraderAI.LeavingKey) == true) { user.Message(MessageHud.MessageType.Center, "$goodtidings_trader_closed"); return true; }
-            _shop.m_items = Stock.Items();   // (the world's progress may have moved on)
+            _shop.m_items = Stock.Items(_nview.GetZDO()?.GetString(TraderAI.DiscountsKey, "") ?? "");   // (the world's progress, and Atlas's meals)
             StoreGui.instance.Show(_shop);
             _tradingSent = 0f;
             Say("$goodtidings_trader_hello", "Talk", HildirFx(t => t.m_randomStartTradeFX));

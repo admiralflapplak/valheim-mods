@@ -43,8 +43,25 @@ namespace GoodTidings
 
         private static readonly HashSet<string> Missing = new HashSet<string>();
 
-        /// <summary>A fresh list for her shop (the game shows only those whose key the world has).</summary>
-        internal static List<Trader.TradeItem> Items()
+        private static bool Has(string list, string prefab) => ("," + list + ",").Contains("," + prefab + ",");
+
+        internal static string AddDiscount(string list, string prefab) => string.IsNullOrEmpty(list) ? prefab : list + "," + prefab;
+
+        /// <summary>One of her goods the world can buy now and that isn't already cheaper, at random (null: none left).</summary>
+        internal static string PickDiscount(string list)
+        {
+            var open = new List<string>();
+            foreach (var g in Goods)
+                if ((g.key == "" || ZoneSystem.instance.GetGlobalKey(g.key)) && !Has(list, g.prefab) && ObjectDB.instance.GetItemPrefab(g.prefab))
+                    open.Add(g.prefab);
+            return open.Count > 0 ? open[Random.Range(0, open.Count)] : null;
+        }
+
+        internal const float Discount = 0.3f;
+
+        /// <summary>A fresh list for her shop (the game shows only those whose key the world has); <paramref name="discounts"/>: prefab names
+        /// at 30% off (Atlas's meals), comma separated.</summary>
+        internal static List<Trader.TradeItem> Items(string discounts = "")
         {
             var items = new List<Trader.TradeItem>();
             foreach (var g in Goods)
@@ -57,10 +74,12 @@ namespace GoodTidings
                     continue;
                 }
                 // (every text set, and the buy effects: the store window reads them, and a TradeItem made in code leaves them null)
+                bool off = Has(discounts, g.prefab);
                 items.Add(new Trader.TradeItem
                 {
-                    m_prefab = drop, m_stack = g.stack, m_price = g.price, m_requiredGlobalKey = g.key,
-                    m_name = "", m_tooltip = "", m_buyKey = "", m_incrementKey = "", m_buyPlayerEffects = new EffectList(),
+                    m_prefab = drop, m_stack = g.stack, m_price = off ? Mathf.Max(1, Mathf.RoundToInt(g.price * (1f - Discount))) : g.price,
+                    m_requiredGlobalKey = g.key, m_name = "", m_buyKey = "", m_incrementKey = "", m_buyPlayerEffects = new EffectList(),
+                    m_tooltip = off ? drop.m_itemData.GetTooltip(g.stack) + "\n\n<color=yellow>$goodtidings_discounted</color>" : "",
                 });
             }
             return items;

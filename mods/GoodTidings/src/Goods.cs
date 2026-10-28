@@ -77,6 +77,7 @@ namespace GoodTidings
                     if (under) holder.transform.SetParent(under, false);
                     var f = holder.AddComponent<Follow>();
                     f.Target = seat; f.Frame = lox; f.FrameRotation = true;
+                    StrapToHip(f, lox);
                     holder.transform.SetPositionAndRotation(seat.position, lox.rotation);
                     GameObject m = d.Prefab == SaddleBagPrefab ? SaddleBag.Build(holder.transform) : DvergerLook.Model(d.Prefab, holder.transform);
                     var p = new Placed { Def = d, Side = side, Follow = f, Model = m.transform };
@@ -84,6 +85,22 @@ namespace GoodTidings
                     Place(p);
                     made.Add(holder);
                 }
+        }
+
+        /// <summary>
+        /// Straps a good to the Lox's hip bone (the one the saddle hangs from), so it rocks and tilts with his back. Its place is set
+        /// with the Lox at rest: the seat, and the hip's place and turn, measured from the Lox in the game's own Lox prefab.
+        /// </summary>
+        private static void StrapToHip(Follow f, Transform lox)
+        {
+            Transform hip = Utils.FindChild(lox, "Hip");
+            Transform restLox = ZNetScene.instance.GetPrefab("Lox")?.transform.Find("Visual");
+            Transform restHip = restLox ? Utils.FindChild(restLox, "Hip") : null, restSeat = restLox ? Utils.FindChild(restLox, "attachpoint") : null;
+            if (hip == null || restHip == null || restSeat == null) return;   // (then it follows the seat, as before)
+            f.Bone = hip;
+            f.RestSeat = restLox.InverseTransformPoint(restSeat.position);
+            f.RestBone = restLox.InverseTransformPoint(restHip.position);
+            f.RestBoneTurn = Quaternion.Inverse(restLox.rotation) * restHip.rotation;
         }
 
         private static void Place(Placed p)

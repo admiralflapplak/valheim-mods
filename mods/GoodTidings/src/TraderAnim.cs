@@ -22,6 +22,12 @@ namespace GoodTidings
 
         private PlayableGraph _graph;
         private AnimationLayerMixerPlayable _layers;
+        private AnimationMixerPlayable _ride;
+        private Character _mount;
+        private float _pace;
+        // the player's own riding: standing, walking (a Lox walks at 2 m/s) and cantering (it runs at 7)
+        private static readonly string[] RideClips = { "Riding_Idle", "Riding_Walk", "Riding_Canter" };
+        private const float WalkSpeed = 2f, CanterSpeed = 7f;
         private AnimationClipPlayable _gesture;
         private Dictionary<string, AnimationClip> _hildirClips;
         private float _gestureStart = -1f, _gestureLength;
@@ -35,15 +41,21 @@ namespace GoodTidings
         {
             Animator anim = body.GetComponent<Animator>();
             Animator player = ZNetScene.instance.GetPrefab("Player")?.GetComponentInChildren<Animator>(true);
-            AnimationClip riding = player?.runtimeAnimatorController?.animationClips.FirstOrDefault(c => c.name == "Riding_Idle");
-            if (anim == null || riding == null) { Plugin.Log.LogWarning("No riding animation for the trader"); return null; }
+            AnimationClip[] riding = RideClips.Select(n => player?.runtimeAnimatorController?.animationClips.FirstOrDefault(c => c.name == n)).ToArray();
+            if (anim == null || riding.Any(c => c == null)) { Plugin.Log.LogWarning("No riding animation for the trader"); return null; }
 
             var a = body.AddComponent<TraderAnim>();
             a._graph = PlayableGraph.Create("goodtidings_rider");
             a._graph.SetTimeUpdateMode(DirectorUpdateMode.GameTime);
             a._layers = AnimationLayerMixerPlayable.Create(a._graph, 2);
-            var ride = AnimationClipPlayable.Create(a._graph, riding);
-            a._graph.Connect(ride, 0, a._layers, 0);
+            a._ride = AnimationMixerPlayable.Create(a._graph, riding.Length);
+            for (int i = 0; i < riding.Length; i++)
+            {
+                a._graph.Connect(AnimationClipPlayable.Create(a._graph, riding[i]), 0, a._ride, i);
+                a._ride.SetInputWeight(i, i == 0 ? 1f : 0f);
+            }
+            a._graph.Connect(a._ride, 0, a._layers, 0);
+            a._mount = body.GetComponentInParent<Character>();
             a._layers.SetInputWeight(0, 1f);
             a._layers.SetLayerMaskFromAvatarMask(1, UpperBody());
             a._layers.SetInputWeight(1, 0f);
@@ -108,11 +120,25 @@ namespace GoodTidings
 
         private void Update()
         {
+            Pace();
             if (_gestureStart < 0f || !_layers.IsValid()) return;
             float t = Time.time - _gestureStart;
             float w = t < FadeIn ? t / FadeIn : t > _gestureLength - FadeOut ? (_gestureLength - t) / FadeOut : 1f;
             _layers.SetInputWeight(1, Mathf.Clamp01(w));
             if (t >= _gestureLength) _gestureStart = -1f;
+        }
+
+        /// <summary>Blends standing, walking and cantering by how fast her mount goes (smoothed, so a stop or start isn't a jolt).</summary>
+        private void Pace()
+        {
+            if (!_ride.IsValid() || _mount == null) return;
+            Vector3 v = _mount.GetVelocity();
+            v.y = 0f;
+            _pace = Mathf.MoveTowards(_pace, v.magnitude, Time.deltaTime * 6f);
+            float walk = Mathf.Clamp01(_pace / WalkSpeed), canter = Mathf.Clamp01((_pace - WalkSpeed) / (CanterSpeed - WalkSpeed));
+            _ride.SetInputWeight(0, 1f - walk);
+            _ride.SetInputWeight(1, walk * (1f - canter));
+            _ride.SetInputWeight(2, walk * canter);
         }
 
         private void LateUpdate()

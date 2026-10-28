@@ -35,6 +35,11 @@ A Dverger merchant riding a Lox with saddle bags.
   running her own animator. Hildir's shop sounds (her Trader's effect lists) with our own lines: greet at 6 m, goodbye past 9 m, start
   trade on E, buy, sell. Gestures and voice are on the trading player's game only.
 
+**Dagny and Atlas** (0.3.x): the trader is Dagny (a nod to Atlas Shrugged: "value for value" lines), her golden Lox is Atlas ("Atlas
+shrugs" when petted). Riding idle/walk/canter blended by his speed. While someone trades he turns side-on to them. E towards his head
+pets him; towards her, trades. He eats food dropped near him (Lox food and the early berries and roots); each meal knocks 30% off one
+random item she can sell now, up to three a visit, saved on her ZDO. The goods are strapped to his hip bone, so they rock with him.
+
 **Behaviour**
 - Arrives at the base, stays for Stay Minutes, then leaves. The time it leaves is saved on the visitor, so it still goes after a restart.
   Built (0.2.x): prefab goodtidings_trader (a Lox copy, TraderPrefab.cs), TraderAI (BaseAI subclass: wander round home, stand while
