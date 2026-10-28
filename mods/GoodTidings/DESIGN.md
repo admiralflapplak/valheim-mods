@@ -68,6 +68,17 @@ burnt. Look: the boss-summon particles (vfx_prespawn) slowed and tinted wispy gr
 a blue circle on the map. Tested: kiln and smelter loads done in under a minute, fermenter done, beehive full, beech and birch grown
 (oak needs ~27x). While one of our visits is going on, a raid roll is skipped.
 
+## Muninn's Riddle (0.6.x, in progress)
+
+A neutral visit: Odin's white raven of memory (the user chose Muninn; lore: memory, riddle contests like Vafthrudnismal) lands on open
+ground 6-16 m from the base and asks one riddle, first come first served. Our own saved object goodtidings_muninn; each game builds his
+look from a copy of the tutorial's Munin (their tutorial birds untouched; copies need the controller's "flyin" trigger, they start
+"away"), turns him to the player with the controller's "anglevel". Map: the visit circle in yellow (neutral; blue = good) and the
+game's "?" (mapicon_hildir1, as Hildir marks treasure places), no name. Leaves after Stay Minutes. Raids are skipped while he's there.
+Riddles (next): generated "do you remember" riddles from the player's own discoveries (endless, contextual, fair); rare hand-written
+lore riddles (each world remembers which were asked); harder as more are answered. Right: a reward from the current land. Wrong: he
+takes flight with a cry and the land's beasts answer it (ravens and wolves hunt together; carrion birds follow battle).
+
 **Open questions**
 - Which Dverger, and the trader's name.
 - The exact stock and prices for each boss stage.

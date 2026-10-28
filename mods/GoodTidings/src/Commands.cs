@@ -14,7 +14,7 @@ namespace GoodTidings
     internal static class Commands
     {
         private const string Command = "goodtidings";
-        private const string Usage = "goodtidings look [trader [hood size]|ride [up back [up2 back2]]|loxcolours|loxcolour h s v|ridecolours|beard|hildir|face|hood [sizes]|colours|clear] | goodtidings goods [off] | goodtidings bones | goodtidings mesh <item> | goodtidings tex grid <n>|cut <suit> x0 y0 x1 y1|clear | goodtidings anims | goodtidings pose [rest|<clip> [0-1]] | goodtidings visit [trader [here]]";
+        private const string Usage = "goodtidings look [trader [hood size]|ride [up back [up2 back2]]|loxcolours|loxcolour h s v|ridecolours|birds|ravens|hugin|munin|beard|hildir|face|hood [sizes]|colours|clear] | goodtidings goods [off] | goodtidings bones | goodtidings mesh <item> | goodtidings tex grid <n>|cut <suit> x0 y0 x1 y1|clear | goodtidings anims | goodtidings pose [rest|<clip> [0-1]] | goodtidings visit [trader [here]]";
 
         private static readonly AccessTools.FieldRef<Dictionary<string, Terminal.ConsoleCommand>> TerminalCommands =
             AccessTools.StaticFieldRefAccess<Dictionary<string, Terminal.ConsoleCommand>>(AccessTools.Field(typeof(Terminal), "commands"));
@@ -113,6 +113,92 @@ namespace GoodTidings
                         Ride(Place(p, 2, 4, 10f, 5.2f), true, gold, 0.1f, 0.2f);
                         Ride(Place(p, 3, 4, 10f, 5.2f), false, gold, 0.1f, 0.2f);
                         t.AddString("4 Lox in front of you, left to right: red with the hooded trader, red with the bare one, golden with the hooded one, golden with the bare one.");
+                        return;
+                    }
+                    if (a.Length > 2 && (a[2] == "hugin" || a[2] == "munin"))
+                    {
+                        // the real bird, brought by the game as the tutorial does, with a line to say (it lands near the player, talks
+                        // when they come close, and flies off when read)
+                        if (Tutorial.instance == null) { t.AddString("No tutorial ravens in this game."); return; }
+                        if (!Raven.IsInstantiated()) Object.Instantiate(Tutorial.instance.m_ravenPrefab, Vector3.zero, Quaternion.identity);
+                        bool munin = a[2] == "munin";
+                        Raven.AddTempText("goodtidings_look_" + a[2] + Time.time, munin ? "Munin" : "Hugin",
+                            "A look at the raven for Good Tidings.", "", munin);
+                        t.AddString($"{(munin ? "Munin" : "Hugin")} is coming: he lands near you.");
+                        return;
+                    }
+                    if (a.Length > 2 && a[2] == "ravens")
+                    {
+                        // goodtidings look ravens [trigger]: Odin's ravens (the tutorial's prefab holds both): copies, their own code taken out
+                        // (the game's tutorial birds untouched), flown in by their controller's trigger (flyin, talk, flyaway...), with
+                        // their parts and animations listed
+                        GameObject prefab = Tutorial.instance ? Tutorial.instance.m_ravenPrefab : null;
+                        if (prefab == null) { t.AddString("No raven prefab."); return; }
+                        var holder = new GameObject("goodtidings_build");
+                        holder.SetActive(false);
+                        GameObject copy = Object.Instantiate(prefab, holder.transform);
+                        foreach (Raven r in copy.GetComponentsInChildren<Raven>(true))
+                            if (r.m_exclamation) r.m_exclamation.SetActive(false);   // (no tutorial "!")
+                        foreach (MonoBehaviour c in copy.GetComponentsInChildren<MonoBehaviour>(true))
+                            Object.DestroyImmediate(c);
+                        foreach (Collider c in copy.GetComponentsInChildren<Collider>(true)) Object.DestroyImmediate(c);
+                        Transform root = Place(p, 0, 1, 3f);
+                        copy.transform.SetParent(root, false);
+                        copy.transform.localPosition = Vector3.zero;
+                        copy.transform.localRotation = Quaternion.identity;
+                        Object.Destroy(holder);
+                        foreach (Transform child in copy.GetComponentsInChildren<Transform>(true))
+                            if (child.parent == copy.transform || child.GetComponent<Animator>() || child.GetComponent<Renderer>())
+                            {
+                                Animator an = child.GetComponent<Animator>();
+                                string clips = an && an.runtimeAnimatorController ? " clips: " + string.Join(", ", an.runtimeAnimatorController.animationClips.Select(c => c.name).Distinct()) : "";
+                                t.AddString($"{child.name} at {child.localPosition} scale {child.lossyScale.x:0.##} active {child.gameObject.activeSelf}{clips}");
+                            }
+                        // spread the two out side by side
+                        var birds = copy.GetComponentsInChildren<Animator>(true).Select(an => an.transform).ToList();
+                        Vector3 right = Vector3.Cross(Vector3.up, root.forward);
+                        for (int k = 0; k < birds.Count; k++)
+                        {
+                            Transform top = birds[k];
+                            while (top.parent != copy.transform && top.parent != null) top = top.parent;
+                            top.gameObject.SetActive(true);
+                            top.position = root.position + right * ((k - (birds.Count - 1) / 2f) * 1.5f);
+                            top.rotation = root.rotation;
+                        }
+                        // (they start "away", out of sight until called: their own controller flies them in, as the tutorial's does)
+                        string trigger = a.Length > 3 ? a[3] : "flyin";
+                        foreach (Animator an in copy.GetComponentsInChildren<Animator>(true))
+                        {
+                            an.enabled = true;
+                            an.SetTrigger(trigger);
+                        }
+                        foreach (Renderer r in copy.GetComponentsInChildren<Renderer>(true))
+                            t.AddString($"  {r.name} ({r.GetType().Name}) enabled {r.enabled && r.gameObject.activeInHierarchy}, layer {LayerMask.LayerToName(r.gameObject.layer)}, at {r.bounds.center}, size {r.bounds.size}");
+                        t.AddString($"  (you are at {p.transform.position})");
+                        Shown.Add(root.gameObject);
+                        return;
+                    }
+                    if (a.Length > 2 && a[2] == "birds")
+                    {
+                        // the game's birds for the Raven's Riddle: perched (their landed model) and flying (their animator, held mid-flap)
+                        // (the game's crows are built about 2.3 m tall: they only look small because they fly high)
+                        var birds = new (string prefab, string model, float size, string name)[]
+                        {
+                            ("Crow", "crow_sitting", 0.2f, "Crow, perched, 0.2"), ("Crow", "crow_sitting", 0.3f, "Crow, perched, 0.3"),
+                            ("Crow", "crow_sitting", 0.4f, "Crow, perched, 0.4"), ("Crow", "crow_anim", 0.3f, "Crow, flying, 0.3"),
+                            ("AshCrow", "crow_sitting", 0.3f, "Ash Crow, perched, 0.3"), ("Seagal", "crow_sitting", 0.3f, "Seagull, perched, 0.3"),
+                        };
+                        for (int k = 0; k < birds.Length; k++)
+                        {
+                            Transform at = Place(p, k, birds.Length, 3f, 1.0f);
+                            GameObject m = DvergerLook.Model(birds[k].prefab, at);
+                            m.transform.localScale = Vector3.one * birds[k].size;
+                            foreach (Transform child in m.transform)
+                                if (birds[k].model != "" && (child.name == "crow_sitting" || child.name == "crow_anim"))
+                                    child.gameObject.SetActive(child.name == birds[k].model);
+                            foreach (LODGroup g in m.GetComponentsInChildren<LODGroup>(true)) g.enabled = false;
+                        }
+                        t.AddString("Birds in front of you, left to right: " + string.Join(", ", birds.Select(b => b.name)) + ".");
                         return;
                     }
                     if (a.Length > 2 && a[2] == "ride")
@@ -299,6 +385,36 @@ namespace GoodTidings
                     // the game's raids: name, range (its map circle is 0.9 x this, across), whether it needs a base
                     foreach (RandomEvent e in RandEventSystem.instance.m_events)
                         t.AddString($"{e.m_name}: range {e.m_eventRange}, base only {e.m_nearBaseOnly}, duration {e.m_duration}");
+                    return;
+                }
+                case "mapicons":
+                {
+                    if (a.Length > 2)
+                    {
+                        // goodtidings mapicons <sprite names...>: saved as pictures in Claude Tools' shots folder
+                        foreach (string n in a.Skip(2))
+                        {
+                            Sprite sp = Resources.FindObjectsOfTypeAll<Sprite>().FirstOrDefault(x => x.name == n);
+                            if (sp == null) { t.AddString($"{n}: none"); continue; }
+                            Texture2D whole = Cuts.Readable(sp.texture);
+                            Rect r = sp.textureRect;
+                            var part = new Texture2D((int)r.width, (int)r.height, TextureFormat.RGBA32, false);
+                            part.SetPixels(whole.GetPixels((int)r.x, (int)r.y, (int)r.width, (int)r.height));
+                            part.Apply();
+                            string path = System.IO.Path.Combine(BepInEx.Paths.BepInExRootPath, "claude", "shots", "icon_" + n + ".png");
+                            System.IO.File.WriteAllBytes(path, ImageConversion.EncodeToPNG(part));
+                            Object.Destroy(whole);
+                            Object.Destroy(part);
+                            t.AddString(path);
+                        }
+                        return;
+                    }
+                    // the map's icons: by pin type, and the location ones
+                    foreach (Minimap.SpriteData d in Minimap.instance.m_icons) t.AddString($"pin {d.m_name}: {(d.m_icon ? d.m_icon.name : "-")}");
+                    foreach (Minimap.LocationSpriteData l in Minimap.instance.m_locationIcons) t.AddString($"location {l.m_name}: {(l.m_icon ? l.m_icon.name : "-")}");
+                    foreach (Sprite sp in Resources.FindObjectsOfTypeAll<Sprite>())
+                        if (sp.name.ToLowerInvariant().Contains("question") || sp.name.ToLowerInvariant().Contains("unknown") || sp.name.StartsWith("mapicon"))
+                            t.AddString($"sprite {sp.name} {sp.rect.width}x{sp.rect.height}");
                     return;
                 }
                 case "itemdump":

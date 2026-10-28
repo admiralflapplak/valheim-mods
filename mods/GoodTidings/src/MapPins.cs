@@ -10,7 +10,10 @@ namespace GoodTidings
     /// </summary>
     internal sealed class MapPins
     {
-        private static Sprite _blueArea;
+        private static readonly System.Collections.Generic.Dictionary<float, Sprite> Areas = new System.Collections.Generic.Dictionary<float, Sprite>();
+
+        /// <summary>The circle's colour, as a hue: blue for a good visit, yellow for a neutral one (red is the game's, for raids).</summary>
+        internal const float Good = 0.58f, Neutral = 0.14f;
         private Minimap.PinData _area, _icon;
         private float _moved;
 
@@ -18,8 +21,11 @@ namespace GoodTidings
         internal const float Range = 96f;
         private const float AreaRadius = Range;
 
-        /// <summary>The circle on <paramref name="home"/>, and (with <paramref name="withIcon"/>) the trader's icon at <paramref name="at"/>.</summary>
-        internal void Update(Vector3 home, Vector3 at, string name, bool withIcon = true, float radius = AreaRadius)
+        /// <summary>
+        /// The circle on <paramref name="home"/> (in <paramref name="circle"/>'s colour), and (with <paramref name="withIcon"/>) an icon at
+        /// <paramref name="at"/>: <paramref name="icon"/>, or Haldor's trader icon.
+        /// </summary>
+        internal void Update(Vector3 home, Vector3 at, string name, bool withIcon = true, float radius = AreaRadius, Sprite icon = null, float circle = Good)
         {
             Minimap map = Minimap.instance;
             if (map == null) return;
@@ -27,14 +33,14 @@ namespace GoodTidings
             {
                 _area = map.AddPin(home, Minimap.PinType.EventArea, "", false, false);
                 _area.m_worldSize = radius * 2f * 0.9f;   // (as Minimap.UpdateEventPin sizes a raid's)
-                Sprite blue = BlueArea(_area.m_icon);
-                if (blue) _area.m_icon = blue;
+                Sprite coloured = Area(_area.m_icon, circle);
+                if (coloured) _area.m_icon = coloured;
             }
             if (_icon == null && withIcon)
             {
                 _icon = map.AddPin(at, Minimap.PinType.RandomEvent, name, false, false);
-                Sprite trader = HaldorIcon(map);
-                if (trader) _icon.m_icon = trader;
+                Sprite shown = icon ? icon : HaldorIcon(map);
+                if (shown) _icon.m_icon = shown;
             }
             if (Time.time - _moved < 0.5f) return;
             _moved = Time.time;
@@ -66,8 +72,20 @@ namespace GoodTidings
             if (map == null) return;
             Sprite trader = HaldorIcon(map);
             foreach (Minimap.PinData pin in Pins(map).ToArray())
-                if (!pin.m_save && pin.m_icon && (pin.m_icon.name == "goodtidings_area" || pin.m_type == Minimap.PinType.RandomEvent && pin.m_icon == trader))
+                if (!pin.m_save && pin.m_icon && (pin.m_icon.name.StartsWith("goodtidings_")
+                        || pin.m_type == Minimap.PinType.RandomEvent && (pin.m_icon == trader || pin.m_icon == Mystery())))
                     map.RemovePin(pin);
+        }
+
+        private static Sprite _mystery;
+
+        /// <summary>The game's "?" map icon (Hildir marks her treasure places with it), found once among its loaded sprites.</summary>
+        internal static Sprite Mystery()
+        {
+            if (_mystery) return _mystery;
+            foreach (Sprite s in Resources.FindObjectsOfTypeAll<Sprite>())
+                if (s.name == "mapicon_hildir1") return _mystery = s;
+            return null;
         }
 
         /// <summary>Haldor's icon on the map (his location's), if the game still has it.</summary>
@@ -78,10 +96,10 @@ namespace GoodTidings
             return null;
         }
 
-        /// <summary>The event-area circle, its red turned blue (made once).</summary>
-        private static Sprite BlueArea(Sprite red)
+        /// <summary>The event-area circle, its red turned to <paramref name="hue"/> (made once for each).</summary>
+        private static Sprite Area(Sprite red, float hue)
         {
-            if (_blueArea) return _blueArea;
+            if (Areas.TryGetValue(hue, out Sprite made) && made) return made;
             if (red == null) return null;
             Texture2D whole = Cuts.Readable(red.texture);
             Rect r = red.textureRect;
@@ -91,16 +109,16 @@ namespace GoodTidings
             for (int i = 0; i < px.Length; i++)
             {
                 Color.RGBToHSV(px[i], out float _, out float s, out float v);
-                Color c = Color.HSVToRGB(0.58f, s, v);
+                Color c = Color.HSVToRGB(hue, s, v);
                 c.a = px[i].a;
                 px[i] = c;
             }
             var tex = new Texture2D(w, h, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
             tex.SetPixels(px);
             tex.Apply();
-            _blueArea = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), red.pixelsPerUnit);
-            _blueArea.name = "goodtidings_area";
-            return _blueArea;
+            made = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), red.pixelsPerUnit);
+            made.name = "goodtidings_area";
+            return Areas[hue] = made;
         }
     }
 }

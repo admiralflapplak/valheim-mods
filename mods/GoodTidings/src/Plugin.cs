@@ -15,7 +15,7 @@ namespace GoodTidings
     {
         public const string Guid = "nick.GoodTidings";
         public const string Name = "GoodTidings";
-        public const string Version = "0.5.12";
+        public const string Version = "0.6.3";
 
         internal static Plugin Instance;
         internal static ManualLogSource Log;
@@ -33,6 +33,10 @@ namespace GoodTidings
         // 03 - Bountiful Season
         internal static ConfigEntry<bool> BountifulEnabled;
         internal static ConfigEntry<float> BountifulMinutes, BountifulSpeed, BountifulHeadStart, BountifulGrowSpeed;
+
+        // 04 - Muninn's Riddle
+        internal static ConfigEntry<bool> MuninnEnabled;
+        internal static ConfigEntry<float> MuninnMinutes;
 
         // 09 - Testing
         internal static ConfigEntry<bool> DebugLogging;
@@ -71,6 +75,10 @@ namespace GoodTidings
                 "Crops, saplings and beehives take far longer than the rest: this much growing time at once when the season first reaches them.",
                 new AcceptableValueRange<float>(0f, 120f));
 
+            MuninnEnabled = Synced.Bind("04 - Muninn Riddle", "Enabled", true,
+                "Odin's raven of memory can land at the base with one riddle: a reward for the right answer, the land's beasts for a wrong one.");
+            MuninnMinutes = Synced.Bind("04 - Muninn Riddle", "Stay Minutes", 5f, "How long he waits for an answer.", new AcceptableValueRange<float>(1f, 30f));
+
             DebugLogging = Config.Bind("09 - Testing", "Debug Logging", false,
                 "Log why a visit did or didn't happen.");
 
@@ -80,7 +88,7 @@ namespace GoodTidings
             Config.Save();
 
             _harmony = Harmony.CreateAndPatchAll(typeof(Plugin).Assembly, Guid);
-            if (ZNetScene.instance) TraderPrefab.Register(ZNetScene.instance);   // (after a reload: the scene is already up)
+            if (ZNetScene.instance) { TraderPrefab.Register(ZNetScene.instance); MuninnPrefab.Register(ZNetScene.instance); }   // (after a reload: the scene is already up)
             Commands.Register();
             MapPins.CleanUp();
             Net.Register();   // (after a reload: the world is already up)
@@ -97,6 +105,7 @@ namespace GoodTidings
             BountifulSeason.Stop();
             MapPins.CleanUp();
             TraderPrefab.Unregister();
+            MuninnPrefab.Unregister();
             Synced?.Dispose();
             Translations.Unload();
         }
