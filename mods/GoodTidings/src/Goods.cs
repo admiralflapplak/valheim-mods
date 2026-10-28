@@ -32,7 +32,6 @@ namespace GoodTidings
             new Def { Key = "Pelt", Prefab = "LoxPelt", Note = "a rolled pelt behind", Right = 0f, Up = -0.561f, Back = 1.721f, Yaw = 82.43f, Roll = 7.864f, Size = 0.491f },
             new Def { Key = "Lantern Pole", Prefab = "piece_dvergr_lantern_pole", Note = "a lantern on a pole over the load", Right = -0.728f, Up = 1.267f, Back = 1.188f, Yaw = 75.146f, Pitch = -8.832f, Roll = -6.308f, Size = 0.528f },
             new Def { Key = "Pots", Prefab = "piece_pot1", Note = "clay pots tied on, both sides", Right = 0.942f, Up = -0.48f, Back = 0.825f, Yaw = -5.047f, Pitch = 6.505f, Roll = 12.523f, Size = 0.441f, Mirrored = true },
-            new Def { Key = "Tankard", Prefab = "Tankard_dvergr", Note = "a tankard hung from the saddle", Right = 0f, Up = 0.055f, Back = 0.122f, Yaw = -95.455f, Size = 1f },
             new Def { Key = "Saddle Bags", Prefab = SaddleBagPrefab, Note = "our own leather bags, both sides; Roll leans their tops in against the Lox", Right = 1.267f, Up = -0.525f, Back = 0.79f, Roll = 31.879f, Size = 1.804f, Mirrored = true, FacesOut = true },
         };
 

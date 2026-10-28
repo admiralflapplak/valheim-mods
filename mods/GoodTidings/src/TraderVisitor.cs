@@ -159,8 +159,13 @@ namespace GoodTidings
         private void Greeting()
         {
             Player me = Player.m_localPlayer;
-            if (me == null || _rider == null || _nview.GetZDO() == null || _nview.GetZDO().GetBool(TraderAI.LeavingKey)) return;
+            if (me == null || _rider == null || _nview.GetZDO() == null || _nview.GetZDO().GetBool(TraderAI.LeavingKey))
+            {
+                if (_anim) _anim.LookTarget = null;
+                return;
+            }
             float d = Vector3.Distance(me.transform.position, transform.position);
+            if (_anim) _anim.LookTarget = d < 10f ? me.GetHeadPoint() : (Vector3?)null;   // (she looks at this player while they're near)
             if (!_greeted && d < GreetRange)
             {
                 _greeted = true;

@@ -141,8 +141,45 @@ namespace GoodTidings
             _ride.SetInputWeight(2, walk * canter);
         }
 
+        /// <summary>Where she looks (a player's head), or null to look ahead. Set each frame.</summary>
+        internal Vector3? LookTarget;
+        private float _lookWeight;
+        private Vector3 _lookPoint, _lookVel;
+        private Transform _head, _spine;
+
+        /// <summary>
+        /// Turns her head towards <see cref="LookTarget"/>, and her upper spine a little (as the game's LookAt does for its traders, with
+        /// Hildir's weights; that works through animator IK, which her layered animation doesn't run, so it's done here, after it):
+        /// eased in and out, at most 70 degrees, and let go when the target is round behind her.
+        /// </summary>
+        private void Look()
+        {
+            if (_head == null)
+            {
+                Transform armature = transform.Find("Armature");   // (her own bones: the face rig has a "head" too)
+                _head = armature ? Utils.FindChild(armature, "head") : null;
+                _spine = armature ? Utils.FindChild(armature, "spine3") : null;
+                if (_head == null) return;
+            }
+            if (LookTarget is Vector3 target)
+            {
+                if (_lookWeight <= 0.001f) _lookPoint = target;
+                _lookPoint = Vector3.SmoothDamp(_lookPoint, target, ref _lookVel, 0.5f);
+            }
+            _lookWeight = Mathf.MoveTowards(_lookWeight, LookTarget.HasValue ? 1f : 0f, Time.deltaTime * 1.5f);
+            if (_lookWeight <= 0f) return;
+
+            Vector3 ahead = transform.forward, to = _lookPoint - _head.position;
+            float w = _lookWeight * Mathf.InverseLerp(120f, 80f, Vector3.Angle(ahead, to));   // round behind her: let go
+            if (w <= 0f) return;
+            Quaternion turn = Quaternion.RotateTowards(Quaternion.identity, Quaternion.FromToRotation(ahead, to), 70f);
+            if (_spine) _spine.rotation = Quaternion.Slerp(Quaternion.identity, turn, 0.1f * w) * _spine.rotation;
+            _head.rotation = Quaternion.Slerp(Quaternion.identity, turn, 0.9f * w) * _head.rotation;
+        }
+
         private void LateUpdate()
         {
+            Look();
             foreach ((Transform from, Transform to) in _face)
             {
                 if (!from || !to) continue;
