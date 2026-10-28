@@ -118,11 +118,53 @@ namespace GoodTidings
         }
     }
 
-    /// <summary>The trader can't be hurt, and nothing takes her for an enemy (or she anyone): no fights, no reactions to hits.</summary>
+    /// <summary>
+    /// The trader can't be hurt, and nothing takes her for an enemy (or she anyone): no fights, no reactions to hits. Every way in is
+    /// closed: a hit (Damage, and its RPC on the owner), damage applied straight to health (poison, fire and smoke do: a beehive's bees
+    /// hurt Atlas through that), and status effects, which never take hold on her.
+    /// </summary>
     [HarmonyPatch(typeof(Character), nameof(Character.Damage))]
     internal static class Character_Damage
     {
         private static bool Prefix(Character __instance) => !TraderVisitor.Is(__instance);
+    }
+
+    [HarmonyPatch(typeof(Character), "RPC_Damage")]
+    internal static class Character_RPC_Damage
+    {
+        private static bool Prefix(Character __instance) => !TraderVisitor.Is(__instance);
+    }
+
+    [HarmonyPatch(typeof(Character), nameof(Character.ApplyDamage))]
+    internal static class Character_ApplyDamage
+    {
+        private static bool Prefix(Character __instance) => !TraderVisitor.Is(__instance);
+    }
+
+    [HarmonyPatch(typeof(SEMan), nameof(SEMan.AddStatusEffect), typeof(StatusEffect), typeof(bool), typeof(int), typeof(float), typeof(short))]
+    internal static class SEMan_AddStatusEffect
+    {
+        private static readonly AccessTools.FieldRef<SEMan, Character> Owner = AccessTools.FieldRefAccess<SEMan, Character>("m_character");
+
+        private static bool Prefix(SEMan __instance, ref StatusEffect __result)
+        {
+            if (!TraderVisitor.Is(Owner(__instance))) return true;
+            __result = null;
+            return false;
+        }
+    }
+
+    [HarmonyPatch(typeof(SEMan), nameof(SEMan.AddStatusEffect), typeof(int), typeof(bool), typeof(int), typeof(float), typeof(short))]
+    internal static class SEMan_AddStatusEffect_ByHash
+    {
+        private static readonly AccessTools.FieldRef<SEMan, Character> Owner = AccessTools.FieldRefAccess<SEMan, Character>("m_character");
+
+        private static bool Prefix(SEMan __instance, ref StatusEffect __result)
+        {
+            if (!TraderVisitor.Is(Owner(__instance))) return true;
+            __result = null;
+            return false;
+        }
     }
 
     [HarmonyPatch(typeof(BaseAI), nameof(BaseAI.IsEnemy), typeof(Character), typeof(Character))]

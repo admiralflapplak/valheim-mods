@@ -213,6 +213,23 @@ namespace GoodTidings
                                 $"atlas at {v.transform.position}, facing {v.transform.forward}, head bone at {(head ? head.position.ToString() : "-")}, collider at {(hc ? hc.bounds.center.ToString() : "-")}");
                     return;
                 }
+                case "hurt":
+                {
+                    // tries the ways a creature is hurt on the trader: health before and after, and whether poison took hold
+                    TraderVisitor v = Object.FindAnyObjectByType<TraderVisitor>();
+                    Character c = v ? v.GetComponent<Character>() : null;
+                    if (c == null) { t.AddString("No trader."); return; }
+                    float before = c.GetHealth();
+                    var hit = new HitData { m_point = c.transform.position };
+                    hit.m_damage.m_blunt = 50f;
+                    c.Damage(hit);
+                    var raw = new HitData { m_point = c.transform.position };
+                    raw.m_damage.m_poison = 50f;
+                    c.ApplyDamage(raw, true, true, HitData.DamageModifier.Normal);
+                    StatusEffect se = c.GetSEMan().AddStatusEffect("Poison".GetStableHashCode(), true);
+                    t.AddString($"health {before:0} -> {c.GetHealth():0}; poison took hold: {se != null || c.GetSEMan().HaveStatusEffect("Poison".GetStableHashCode())}");
+                    return;
+                }
                 case "colliders":
                 {
                     TraderVisitor v = Object.FindAnyObjectByType<TraderVisitor>();
