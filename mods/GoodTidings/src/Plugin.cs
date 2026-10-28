@@ -15,7 +15,7 @@ namespace GoodTidings
     {
         public const string Guid = "nick.GoodTidings";
         public const string Name = "GoodTidings";
-        public const string Version = "0.4.1";
+        public const string Version = "0.5.11";
 
         internal static Plugin Instance;
         internal static ManualLogSource Log;
@@ -29,6 +29,10 @@ namespace GoodTidings
         // 02 - Wandering Trader
         internal static ConfigEntry<bool> TraderEnabled;
         internal static ConfigEntry<float> TraderMinutes;
+
+        // 03 - Bountiful Season
+        internal static ConfigEntry<bool> BountifulEnabled;
+        internal static ConfigEntry<float> BountifulMinutes, BountifulSpeed, BountifulHeadStart, BountifulGrowSpeed;
 
         // 09 - Testing
         internal static ConfigEntry<bool> DebugLogging;
@@ -55,6 +59,18 @@ namespace GoodTidings
             TraderMinutes = Synced.Bind("02 - Wandering Trader", "Stay Minutes", 6f,
                 "How long the trader stays before moving on.", new AcceptableValueRange<float>(1f, 30f));
 
+            BountifulEnabled = Synced.Bind("03 - Bountiful Season", "Enabled", true,
+                "A warm season can come over the base: for a while crops grow, beehives fill, and fermenters, smelters, kilns and cooking stations work much faster.");
+            BountifulMinutes = Synced.Bind("03 - Bountiful Season", "Minutes", 5f, "How long it lasts.", new AcceptableValueRange<float>(1f, 20f));
+            BountifulSpeed = Synced.Bind("03 - Bountiful Season", "Speed", 8f,
+                "How much faster things work meanwhile (8: eight times as fast).", new AcceptableValueRange<float>(1f, 30f));
+            BountifulGrowSpeed = Synced.Bind("03 - Bountiful Season", "Growing Speed", 20f,
+                "Crops, saplings and beehives take far longer than the rest: how much faster they go meanwhile (20: twenty times as fast).",
+                new AcceptableValueRange<float>(1f, 60f));
+            BountifulHeadStart = Synced.Bind("03 - Bountiful Season", "Head Start Minutes", 0f,
+                "Crops, saplings and beehives take far longer than the rest: this much growing time at once when the season first reaches them.",
+                new AcceptableValueRange<float>(0f, 120f));
+
             DebugLogging = Config.Bind("09 - Testing", "Debug Logging", false,
                 "Log why a visit did or didn't happen.");
 
@@ -66,6 +82,8 @@ namespace GoodTidings
             _harmony = Harmony.CreateAndPatchAll(typeof(Plugin).Assembly, Guid);
             if (ZNetScene.instance) TraderPrefab.Register(ZNetScene.instance);   // (after a reload: the scene is already up)
             Commands.Register();
+            MapPins.CleanUp();
+            Net.Register();   // (after a reload: the world is already up)
             Logger.LogInfo($"{Name} {Version} loaded");
         }
 
@@ -75,6 +93,9 @@ namespace GoodTidings
         {
             _harmony?.UnpatchSelf();   // hot reload: never leave old patches behind
             Commands.Unregister();
+            Net.Unregister();
+            BountifulSeason.Stop();
+            MapPins.CleanUp();
             TraderPrefab.Unregister();
             Synced?.Dispose();
             Translations.Unload();

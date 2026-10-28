@@ -17,18 +17,19 @@ namespace GoodTidings
         /// <summary>The visiting area's radius on the map, in metres (a raid's is about 100; she keeps nearer).</summary>
         private const float AreaRadius = 40f;
 
-        internal void Update(Vector3 home, Vector3 at, string name)
+        /// <summary>The circle on <paramref name="home"/>, and (with <paramref name="withIcon"/>) the trader's icon at <paramref name="at"/>.</summary>
+        internal void Update(Vector3 home, Vector3 at, string name, bool withIcon = true, float radius = AreaRadius)
         {
             Minimap map = Minimap.instance;
             if (map == null) return;
             if (_area == null)
             {
                 _area = map.AddPin(home, Minimap.PinType.EventArea, "", false, false);
-                _area.m_worldSize = AreaRadius * 2f;
+                _area.m_worldSize = radius * 2f;
                 Sprite blue = BlueArea(_area.m_icon);
                 if (blue) _area.m_icon = blue;
             }
-            if (_icon == null)
+            if (_icon == null && withIcon)
             {
                 _icon = map.AddPin(at, Minimap.PinType.RandomEvent, name, false, false);
                 Sprite trader = HaldorIcon(map);
@@ -37,7 +38,7 @@ namespace GoodTidings
             if (Time.time - _moved < 0.5f) return;
             _moved = Time.time;
             _area.m_pos = home;
-            _icon.m_pos = at;
+            if (_icon != null) _icon.m_pos = at;
         }
 
         internal void Remove()
@@ -49,6 +50,23 @@ namespace GoodTidings
                 if (_icon != null) map.RemovePin(_icon);
             }
             _area = _icon = null;
+        }
+
+        private static readonly HarmonyLib.AccessTools.FieldRef<Minimap, System.Collections.Generic.List<Minimap.PinData>> Pins =
+            HarmonyLib.AccessTools.FieldRefAccess<Minimap, System.Collections.Generic.List<Minimap.PinData>>("m_pins");
+
+        /// <summary>
+        /// Takes every marker of ours off the map (on loading and unloading the mod: a copy unloaded mid-visit never removed its own):
+        /// unsaved ones with our blue circle, or Haldor's icon as an event marker (the game shows his only at his camp).
+        /// </summary>
+        internal static void CleanUp()
+        {
+            Minimap map = Minimap.instance;
+            if (map == null) return;
+            Sprite trader = HaldorIcon(map);
+            foreach (Minimap.PinData pin in Pins(map).ToArray())
+                if (!pin.m_save && pin.m_icon && (pin.m_icon.name == "goodtidings_area" || pin.m_type == Minimap.PinType.RandomEvent && pin.m_icon == trader))
+                    map.RemovePin(pin);
         }
 
         /// <summary>Haldor's icon on the map (his location's), if the game still has it.</summary>

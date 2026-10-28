@@ -20,6 +20,43 @@ namespace GoodTidings
             AccessTools.StaticFieldRefAccess<Dictionary<string, Terminal.ConsoleCommand>>(AccessTools.Field(typeof(Terminal), "commands"));
 
         private static readonly List<GameObject> Shown = new List<GameObject>();
+        private static readonly List<GameObject> TestSite = new List<GameObject>();
+
+        /// <summary>
+        /// A spot within 30 m on bare ground with nothing within <paramref name="room"/> metres (other test pieces included), and, if
+        /// <paramref name="roofed"/>, a roof straight overhead within 6 m (a fermenter works only under one).
+        /// </summary>
+        private static bool FindSpot(Vector3 from, float room, bool roofed, int mask, out Vector3 at)
+        {
+            for (int i = 0; i < 400; i++)
+            {
+                Vector2 r = Random.insideUnitCircle * (roofed ? 30f : 22f);
+                Vector3 p = from + new Vector3(r.x, 0f, r.y);
+                if (Utils.DistanceXZ(p, from) < 4f) continue;
+                if (roofed)
+                {
+                    // the floor under a roof: looked for from about head height (from above, the roof itself is the first thing hit)
+                    if (!Physics.Raycast(new Vector3(p.x, from.y + 2.2f, p.z), Vector3.down, out RaycastHit floor, 6f, mask)) continue;
+                    p.y = floor.point.y;
+                }
+                else
+                {
+                    if (!ZoneSystem.instance.GetSolidHeight(p, out float h, 1000)) continue;
+                    p.y = h;
+                }
+                // under a roof (within 6 m), or open sky above (nothing for 30 m: a tree must have room to stand)
+                bool roof = Physics.Raycast(p + Vector3.up * 0.3f, Vector3.up, roofed ? 6f : 30f, mask);
+                if (roofed != roof) continue;
+                // clear all round at the ground, as the game checks a plant's grow space (from its root)
+                // (indoors, just above the floor it stands on, which would count otherwise)
+                if (Physics.CheckSphere(p + Vector3.up * (roofed ? room + 0.2f : 0.3f), room, mask, QueryTriggerInteraction.Ignore)) continue;
+                if (TestSite.Exists(g => g && Vector3.Distance(g.transform.position, p) < room + 1f)) continue;
+                at = p;
+                return true;
+            }
+            at = Vector3.zero;
+            return false;
+        }
         private static string[] _lastLook;
 
         internal static void Register()
@@ -211,6 +248,50 @@ namespace GoodTidings
                     t.AddString($"hover {(hover ? hover.name : "none")}, at head {TraderVisitor.AtHead(p)}; head bone {(head ? Ang(head.position) : "none")}; " +
                                 $"head collider {(hc ? Ang(hc.bounds.center) : "none")}; rider {Ang(v.transform.position + Vector3.up * 3f)}; " +
                                 $"atlas at {v.transform.position}, facing {v.transform.forward}, head bone at {(head ? head.position.ToString() : "-")}, collider at {(hc ? hc.bounds.center.ToString() : "-")}");
+                    return;
+                }
+                case "testsite":
+                {
+                    // goodtidings testsite [clear]: saplings, a beehive, a fermenter with a mead base and a kiln with wood, in a row in front of
+                    // the player, to watch Bountiful Season on; clear removes what it made (cheat: host or devcommands)
+                    if (!ZNet.instance.IsServer() && !global::Console.instance.IsCheatsEnabled()) { t.AddString("Host or devcommands only."); return; }
+                    if (a.Length > 2 && a[2] == "status")
+                    {
+                        foreach (GameObject g in TestSite)
+                        {
+                            Hoverable h = g ? g.GetComponentInChildren<Hoverable>() : null;
+                            string text = h != null ? Localization.instance.Localize(h.GetHoverText()).Replace("\n", " / ") : "-";
+                            t.AddString($"{(g ? g.name : "gone")}: {System.Text.RegularExpressions.Regex.Replace(text, "<[^>]+>", "")}");
+                        }
+                        return;
+                    }
+                    foreach (GameObject g in TestSite) if (g) ZNetScene.instance.Destroy(g);
+                    TestSite.Clear();
+                    if (a.Length > 2 && a[2] == "clear") { t.AddString("Test site cleared."); return; }
+                    if (p == null) return;
+                    var placed = new List<string>();
+                    int mask = LayerMask.GetMask("Default", "static_solid", "Default_small", "piece", "piece_nonsolid", "vehicle");
+                    // each where its piece works: saplings and the beehive in the open, with room round them; the fermenter under a roof
+                    foreach (string prefab in new[] { "Beech_Sapling", "Oak_Sapling", "Birch_Sapling", "piece_beehive", "fermenter", "charcoal_kiln", "smelter" })
+                    {
+                        bool roofed = prefab == "fermenter";
+                        // a sapling's room: its own grow radius (the game's check) and 3 m more, a beehive's a little
+                        Plant plant = ZNetScene.instance.GetPrefab(prefab).GetComponent<Plant>();
+                        float room = plant ? plant.m_growRadius + 3f : prefab == "piece_beehive" ? 3f : 1.2f;
+                        if (!FindSpot(p.transform.position, room, roofed, mask, out Vector3 at)) { placed.Add($"{prefab}: no spot"); continue; }
+                        GameObject g = Object.Instantiate(ZNetScene.instance.GetPrefab(prefab), at, Quaternion.Euler(0f, Random.Range(0f, 360f), 0f));
+                        TestSite.Add(g);
+                        ZNetView nv = g.GetComponent<ZNetView>();
+                        if (prefab == "fermenter") nv.InvokeRPC("RPC_AddItem", "MeadBaseHealthMinor".GetStableHashCode(), false);
+                        if (prefab == "charcoal_kiln") for (int w = 0; w < 20; w++) nv.InvokeRPC("RPC_AddOre", "Wood", false);
+                        if (prefab == "smelter")
+                        {
+                            for (int o = 0; o < 10; o++) nv.InvokeRPC("RPC_AddOre", "CopperOre", false);
+                            for (int c = 0; c < 20; c++) nv.InvokeRPC("RPC_AddFuel");
+                        }
+                        placed.Add($"{prefab} at {at.x:0},{at.z:0} ({Vector3.Distance(at, p.transform.position):0} m away)");
+                    }
+                    t.AddString("Test site: " + string.Join("; ", placed));
                     return;
                 }
                 case "itemdump":

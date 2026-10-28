@@ -16,7 +16,7 @@ namespace GoodTidings
 
     internal static class Visits
     {
-        internal static readonly List<Visit> All = new List<Visit> { new WanderingTrader() };
+        internal static readonly List<Visit> All = new List<Visit> { new WanderingTrader(), new BountifulSeason() };
 
         /// <summary>Picks a base and an enabled visit and starts it. Server only.</summary>
         internal static bool TryStart(string onlyId = null)
@@ -58,6 +58,8 @@ namespace GoodTidings
         {
             if (!ZNet.instance || !ZNet.instance.IsServer() || !Plugin.Enabled.Value) return true;
             if (RandEventSystem.HaveActiveEvent()) return true;
+            // one of ours is going on (Dagny's at a base, or a bountiful season): no raid in the middle of it, this roll is skipped
+            if (TraderVisitor.Count > 0 || BountifulSeason.Running) { Plugin.Debug("A visit is going on: no raid now"); return false; }
             if (Random.Range(0f, 100f) >= Plugin.VisitChance.Value) return true;
             return !Visits.TryStart();   // no visit possible: the raid goes ahead
         }
