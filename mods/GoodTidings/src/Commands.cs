@@ -294,6 +294,13 @@ namespace GoodTidings
                     t.AddString("Test site: " + string.Join("; ", placed));
                     return;
                 }
+                case "events":
+                {
+                    // the game's raids: name, range (its map circle is 0.9 x this, across), whether it needs a base
+                    foreach (RandomEvent e in RandEventSystem.instance.m_events)
+                        t.AddString($"{e.m_name}: range {e.m_eventRange}, base only {e.m_nearBaseOnly}, duration {e.m_duration}");
+                    return;
+                }
                 case "itemdump":
                 {
                     // every item the game knows: prefab, English name, type, value, stack size, to a file in Claude Tools' shots folder

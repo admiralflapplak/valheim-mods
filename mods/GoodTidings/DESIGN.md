@@ -60,7 +60,7 @@ random item she can sell now, up to three a visit, saved on her ZDO. The goods a
 
 ## Bountiful Season (0.5.x, set with the user 2026-10-28)
 
-For 5 minutes (setting) everything within 40 m of the base works faster, including what's started meanwhile: smelters, kilns,
+For 5 minutes (setting) everything within 96 m of the base (a raid's range; the map circle drawn as a raid's, 0.9 of it) works faster, including what's started meanwhile: smelters, kilns,
 fermenters and cooking stations at 8x (setting "Speed"), crops, saplings and beehives at 20x ("Growing Speed": they take far longer;
 the user picked this over a head start, which stays as a setting defaulting to 0). Each piece's own "last updated" clock is moved back
 on the game that owns it (the game's catch-up for time nobody was near): fuel used as usual, cooking boosted only up to done, never

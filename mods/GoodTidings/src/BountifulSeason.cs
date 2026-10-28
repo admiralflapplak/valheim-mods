@@ -20,7 +20,7 @@ namespace GoodTidings
         public override string Id => "bountiful";
         public override bool Enabled => Plugin.BountifulEnabled.Value;
 
-        internal const float Radius = 40f;
+        internal const float Radius = MapPins.Range;   // (a raid's range: the circle on the map shows where it reaches)
         private const float Rescan = 5f, EffectSpacing = 3f, ParticleSpeed = 0.35f;
         private static bool _running;
         /// <summary>A season is going on (raids wait: see Visits).</summary>

@@ -14,8 +14,9 @@ namespace GoodTidings
         private Minimap.PinData _area, _icon;
         private float _moved;
 
-        /// <summary>The visiting area's radius on the map, in metres (a raid's is about 100; she keeps nearer).</summary>
-        private const float AreaRadius = 40f;
+        /// <summary>A visit's range, as a raid's (every raid in the game has 96 m): its circle drawn as the game draws a raid's, at 0.9 of it.</summary>
+        internal const float Range = 96f;
+        private const float AreaRadius = Range;
 
         /// <summary>The circle on <paramref name="home"/>, and (with <paramref name="withIcon"/>) the trader's icon at <paramref name="at"/>.</summary>
         internal void Update(Vector3 home, Vector3 at, string name, bool withIcon = true, float radius = AreaRadius)
@@ -25,7 +26,7 @@ namespace GoodTidings
             if (_area == null)
             {
                 _area = map.AddPin(home, Minimap.PinType.EventArea, "", false, false);
-                _area.m_worldSize = radius * 2f;
+                _area.m_worldSize = radius * 2f * 0.9f;   // (as Minimap.UpdateEventPin sizes a raid's)
                 Sprite blue = BlueArea(_area.m_icon);
                 if (blue) _area.m_icon = blue;
             }
