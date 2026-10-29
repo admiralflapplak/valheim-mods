@@ -75,7 +75,14 @@ ground 6-16 m from the base and asks one riddle, first come first served. Our ow
 look from a copy of the tutorial's Munin (their tutorial birds untouched; copies need the controller's "flyin" trigger, they start
 "away"), turns him to the player with the controller's "anglevel". Map: the visit circle in yellow (neutral; blue = good) and the
 game's "?" (mapicon_hildir1, as Hildir marks treasure places), no name. Leaves after Stay Minutes. Raids are skipped while he's there.
-Riddles (next): generated "do you remember" riddles from the player's own discoveries (endless, contextual, fair); rare hand-written
+Riddles (0.7.x, both outcomes tested by the user): generated in Riddles.cs from the player's own discoveries (known recipes,
+materials, stations; the game's drop tables and vegetation): what a recipe makes, who drops a thing (only things one creature drops),
+where a thing is made, what wakes a beaten boss, which one land grows a thing; wrong answers of the same kind; untranslated names skipped.
+The window (RiddleWindow.cs, GameUi template) shows the riddle and three answers; the answer goes to his owner by RPC, the first counts
+(ZDO Answered), everyone near sees who answered; he says a parting line and leaves 5 s later. Right: two of the newest land's goods
+(Stock.Reward, 1 in 4 its rare) dropped at his feet. Wrong: 3 (4 from the Plains on) of the newest land's creatures hunt the base from
+22-30 m. Still to come: hand-written lore riddles (each world remembers which were asked), harder riddles as more are answered.
+Earlier plan: generated "do you remember" riddles from the player's own discoveries (endless, contextual, fair); rare hand-written
 lore riddles (each world remembers which were asked); harder as more are answered. Right: a reward from the current land. Wrong: he
 takes flight with a cry and the land's beasts answer it (ravens and wolves hunt together; carrion birds follow battle).
 

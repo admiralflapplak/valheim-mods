@@ -13,7 +13,7 @@ namespace GoodTidings
         {
             { "goodtidings_trader_greet", 5 }, { "goodtidings_trader_hello", 5 }, { "goodtidings_trader_bought", 5 },
             { "goodtidings_trader_sold", 4 }, { "goodtidings_trader_goodbye", 4 }, { "goodtidings_trader_leaving", 3 },
-            { "goodtidings_trader_talk", 10 }, { "goodtidings_atlas_munch", 3 }, { "goodtidings_atlas_fed", 3 }, { "goodtidings_atlas_full", 2 }, { "goodtidings_bountiful", 3 },
+            { "goodtidings_trader_talk", 10 }, { "goodtidings_atlas_munch", 3 }, { "goodtidings_atlas_fed", 3 }, { "goodtidings_atlas_full", 2 }, { "goodtidings_bountiful", 3 }, { "goodtidings_muninn_right", 3 }, { "goodtidings_muninn_wrong", 3 },
         };
 
         /// <summary>One of a moment's lines at random, as a "$key" for the game to translate (where it's shown, in that player's language).</summary>

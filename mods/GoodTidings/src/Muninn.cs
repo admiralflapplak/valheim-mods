@@ -112,7 +112,8 @@ namespace GoodTidings
     /// <summary>On the raven's object: his look (each game's own), his turning to face the player, the map markers, and his leaving.</summary>
     internal sealed class MuninnVisitor : MonoBehaviour, Hoverable, Interactable
     {
-        internal const string LeaveAtKey = "GoodTidings.LeaveAt", HomeKey = "GoodTidings.Home", LeavingKey = "GoodTidings.Leaving";
+        internal const string LeaveAtKey = "GoodTidings.LeaveAt", HomeKey = "GoodTidings.Home", LeavingKey = "GoodTidings.Leaving",
+            AnsweredKey = "GoodTidings.Answered", RightKey = "GoodTidings.Right", AnswererKey = "GoodTidings.Answerer";
         private static readonly HashSet<MuninnVisitor> All = new HashSet<MuninnVisitor>();
         internal static int Count => All.Count;
 
@@ -126,6 +127,51 @@ namespace GoodTidings
         {
             _nview = GetComponent<ZNetView>();
             All.Add(this);
+            if (_nview.GetZDO() == null) return;
+            _nview.Register<bool, string>("GoodTidings_Answer", RPC_Answer);
+        }
+
+        /// <summary>Someone has answered his riddle (first come, first served: then he's done).</summary>
+        internal bool Answered => _nview.GetZDO()?.GetBool(AnsweredKey) == true;
+
+        /// <summary>This player's answer, to his owner, who decides (the first to arrive counts).</summary>
+        internal void Answer(bool right)
+        {
+            _nview.InvokeRPC("GoodTidings_Answer", right, Player.m_localPlayer ? Player.m_localPlayer.GetPlayerName() : "");
+            if (_animator) _animator.SetTrigger("talk");
+        }
+
+        private void RPC_Answer(long sender, bool right, string who)
+        {
+            if (!_nview.IsOwner()) return;
+            ZDO zdo = _nview.GetZDO();
+            if (zdo.GetBool(AnsweredKey) || zdo.GetBool(LeavingKey)) return;   // (another was first: his window says so)
+            zdo.Set(AnsweredKey, true);
+            zdo.Set(RightKey, right);
+            zdo.Set(AnswererKey, who ?? "");
+            zdo.Set(LeaveAtKey, ZNet.instance.GetTime().Ticks + TimeSpan.FromSeconds(5).Ticks);   // (a parting line, then off)
+            Vector3 home = zdo.GetVec3(HomeKey, transform.position);
+            if (right) MuninnOutcome.Reward(transform.position + transform.forward * 1.2f + Vector3.up * 0.6f);
+            else MuninnOutcome.CallTheBeasts(home);
+            Plugin.Log.LogInfo($"Muninn's riddle answered {(right ? "rightly" : "wrongly")} by {who}");
+        }
+
+        private bool _toldOutcome;
+
+        /// <summary>On every game near him: once answered, his parting words over his head, and who answered (a message nearby).</summary>
+        private void TellOutcome(ZDO zdo)
+        {
+            if (_toldOutcome || !zdo.GetBool(AnsweredKey)) return;
+            _toldOutcome = true;
+            bool right = zdo.GetBool(RightKey);
+            if (_animator) _animator.SetTrigger("talk");
+            if (_visual && Chat.instance)
+                Chat.instance.SetNpcText(_visual, Vector3.up * 2.6f, 20f, 5f, "",
+                    Localization.instance.Localize(Lines.Pick(right ? "goodtidings_muninn_right" : "goodtidings_muninn_wrong")), false);
+            Player me = Player.m_localPlayer;
+            if (me && Vector3.Distance(me.transform.position, transform.position) < 60f)
+                me.Message(MessageHud.MessageType.TopLeft, Localization.instance.Localize(
+                    right ? "$goodtidings_muninn_answered_right" : "$goodtidings_muninn_answered_wrong", zdo.GetString(AnswererKey, "?")));
         }
 
         private void Start()
@@ -151,6 +197,7 @@ namespace GoodTidings
 
             if (_visual)
             {
+                TellOutcome(zdo);
                 // the game's "?" (as Hildir marks her treasure places) where he sits, no name
                 _pins.Update(zdo.GetVec3(HomeKey, transform.position), transform.position, "", icon: MapPins.Mystery(), circle: MapPins.Neutral);
                 if (leaving && _leftAt < 0f)
@@ -193,17 +240,25 @@ namespace GoodTidings
             else _animator.SetFloat("anglevel", 0f, 0.4f, Time.deltaTime);
         }
 
-        public string GetHoverText() => Localization.instance.Localize("$goodtidings_muninn\n[<color=yellow><b>$KEY_Use</b></color>] $goodtidings_muninn_listen");
+        public string GetHoverText() => Localization.instance.Localize(Answered || _nview.GetZDO()?.GetBool(LeavingKey) == true ? "$goodtidings_muninn"
+            : "$goodtidings_muninn\n[<color=yellow><b>$KEY_Use</b></color>] $goodtidings_muninn_listen");
         public string GetHoverName() => Localization.instance.Localize("$goodtidings_muninn");
         public float GetHoverOffset() => 1.5f;   // (a big bird: reachable from a little further)
 
         public bool Interact(Humanoid user, bool hold, bool alt)
         {
-            if (hold || user != Player.m_localPlayer || _nview.GetZDO()?.GetBool(LeavingKey) == true) return false;
-            // (the riddle comes here next)
+            if (hold || user != Player.m_localPlayer || RiddleWindow.JustClosed) return false;
+            if (_nview.GetZDO()?.GetBool(LeavingKey) == true) return false;
+            if (Answered) { user.Message(MessageHud.MessageType.Center, "$goodtidings_muninn_taken"); return true; }
+            // a riddle from this player's own discoveries (each player who comes gets their own; the first answer counts)
+            if (_riddle == null) _riddle = Riddles.Make(Player.m_localPlayer, new System.Random(UnityEngine.Random.Range(0, int.MaxValue)));
+            if (_riddle == null) { user.Message(MessageHud.MessageType.Center, "$goodtidings_muninn_nothing"); return true; }
             if (_animator) _animator.SetTrigger("talk");
+            RiddleWindow.Open(this, _riddle);
             return true;
         }
+
+        private Riddle _riddle;
 
         public bool UseItem(Humanoid user, ItemDrop.ItemData item) => false;
     }

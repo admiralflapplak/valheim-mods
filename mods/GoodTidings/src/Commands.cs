@@ -417,6 +417,18 @@ namespace GoodTidings
                             t.AddString($"sprite {sp.name} {sp.rect.width}x{sp.rect.height}");
                     return;
                 }
+                case "riddles":
+                {
+                    // a few riddles from this player's discoveries, the right answer marked
+                    var rnd = new System.Random();
+                    for (int k = 0; k < 8; k++)
+                    {
+                        Riddle r = Riddles.Make(p, rnd);
+                        if (r == null) { t.AddString("(none)"); continue; }
+                        t.AddString(r.Text.Replace("\n", " ") + "  ->  " + string.Join(" | ", r.Answers.Select((x, i) => i == r.Correct ? "[" + x + "]" : x)));
+                    }
+                    return;
+                }
                 case "itemdump":
                 {
                     // every item the game knows: prefab, English name, type, value, stack size, to a file in Claude Tools' shots folder
@@ -583,9 +595,23 @@ namespace GoodTidings
                         t.AddString(new WanderingTrader().Start(p.transform.position) ? "The wandering trader is on her way." : "She couldn't come (one already here, or no dry ground near).");
                         return;
                     }
-                    t.AddString(Visits.TryStart(a.Length > 2 ? a[2] : null) ? "Visit started." : "No visit could start (is a player at a base?).");
-                    if (p != null) t.AddString($"Your base value here: {p.GetBaseValue()} (raids and visits need 3).");
+                {
+                    string only = a.Length > 2 ? a[2] : null;
+                    if (only != null && !Visits.All.Any(v => v.Id == only))
+                    {
+                        t.AddString($"No visit called {only}: {string.Join(", ", Visits.All.Select(v => v.Id))}.");
+                        return;
+                    }
+                    if (Visits.TryStart(only)) { t.AddString("Visit started."); return; }
+                    // why not, as plainly as can be told
+                    if (p != null && p.GetBaseValue() < 3) t.AddString($"Not at a base here (base value {p.GetBaseValue()}, visits need 3): go home first.");
+                    else if (TraderVisitor.Count > 0 && (only == null || only == "trader")) t.AddString("Dagny is still here: one at a time.");
+                    else if (MuninnVisitor.Count > 0 && (only == null || only == "muninn")) t.AddString("Muninn is still here (he leaves a few seconds after an answer): try again in a moment.");
+                    else if (BountifulSeason.Running && (only == null || only == "bountiful")) t.AddString("A bountiful season is already going on.");
+                    else if (only != null && !Visits.All.First(v => v.Id == only).Enabled) t.AddString($"{only} is switched off in the settings.");
+                    else t.AddString("No visit could start here (no open ground near the base?).");
                     return;
+                }
                 default:
                     t.AddString(Usage);
                     return;

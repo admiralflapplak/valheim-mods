@@ -15,7 +15,7 @@ namespace GoodTidings
     {
         public const string Guid = "nick.GoodTidings";
         public const string Name = "GoodTidings";
-        public const string Version = "0.6.3";
+        public const string Version = "0.7.2";
 
         internal static Plugin Instance;
         internal static ManualLogSource Log;
@@ -95,7 +95,11 @@ namespace GoodTidings
             Logger.LogInfo($"{Name} {Version} loaded");
         }
 
-        private void Update() => Synced?.Update();
+        private void Update()
+        {
+            Synced?.Update();
+            RiddleWindow.Tick();
+        }
 
         private void OnDestroy()
         {
@@ -106,6 +110,8 @@ namespace GoodTidings
             MapPins.CleanUp();
             TraderPrefab.Unregister();
             MuninnPrefab.Unregister();
+            RiddleWindow.Close();
+            GameUi.Destroy();
             Synced?.Dispose();
             Translations.Unload();
         }
