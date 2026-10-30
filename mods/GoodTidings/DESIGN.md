@@ -81,7 +81,10 @@ where a thing is made, what wakes a beaten boss, which one land grows a thing; w
 The window (RiddleWindow.cs, GameUi template) shows the riddle and three answers; the answer goes to his owner by RPC, the first counts
 (ZDO Answered), everyone near sees who answered; he says a parting line and leaves 5 s later. Right: two of the newest land's goods
 (Stock.Reward, 1 in 4 its rare) dropped at his feet. Wrong: 3 (4 from the Plains on) of the newest land's creatures hunt the base from
-22-30 m. Still to come: hand-written lore riddles (each world remembers which were asked), harder riddles as more are answered.
+22-30 m. Old riddles (0.8.0, Lore.cs): 26 hand-written, from the Eddas and Valheim's story; the server picks one when he lands
+("Old Riddle Chance", 35%), the same for everyone; a global key per riddle remembers which were asked in the world, none repeats
+until all have been (then they start over); the window says "an old riddle"; a right answer always brings the land's rare.
+Still to come: harder riddles as more are answered.
 Earlier plan: generated "do you remember" riddles from the player's own discoveries (endless, contextual, fair); rare hand-written
 lore riddles (each world remembers which were asked); harder as more are answered. Right: a reward from the current land. Wrong: he
 takes flight with a cry and the land's beasts answer it (ravens and wolves hunt together; carrion birds follow battle).

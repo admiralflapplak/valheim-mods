@@ -11,6 +11,8 @@ namespace GoodTidings
         public string Text;
         public string[] Answers;
         public int Correct;
+        /// <summary>One of the old riddles (Lore.cs): a better reward.</summary>
+        public bool IsLore;
     }
 
     /// <summary>

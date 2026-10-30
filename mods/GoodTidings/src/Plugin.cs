@@ -15,7 +15,7 @@ namespace GoodTidings
     {
         public const string Guid = "nick.GoodTidings";
         public const string Name = "GoodTidings";
-        public const string Version = "0.7.3";
+        public const string Version = "0.8.0";
 
         internal static Plugin Instance;
         internal static ManualLogSource Log;
@@ -36,7 +36,7 @@ namespace GoodTidings
 
         // 04 - Muninn's Riddle
         internal static ConfigEntry<bool> MuninnEnabled;
-        internal static ConfigEntry<float> MuninnMinutes;
+        internal static ConfigEntry<float> MuninnMinutes, MuninnLoreChance;
 
         // 09 - Testing
         internal static ConfigEntry<bool> DebugLogging;
@@ -78,6 +78,9 @@ namespace GoodTidings
             MuninnEnabled = Synced.Bind("04 - Muninn Riddle", "Enabled", true,
                 "Odin's raven of memory can land at the base with one riddle: a reward for the right answer, the land's beasts for a wrong one.");
             MuninnMinutes = Synced.Bind("04 - Muninn Riddle", "Stay Minutes", 5f, "How long he waits for an answer.", new AcceptableValueRange<float>(1f, 30f));
+            MuninnLoreChance = Synced.Bind("04 - Muninn Riddle", "Old Riddle Chance", 35f,
+                "The percent chance he asks one of the old riddles (from the Eddas and Valheim's story, none repeated until all are asked) instead of one made from what the player remembers. A right answer always brings the land's rare.",
+                new AcceptableValueRange<float>(0f, 100f));
 
             DebugLogging = Config.Bind("09 - Testing", "Debug Logging", false,
                 "Log why a visit did or didn't happen.");

@@ -11,9 +11,10 @@ namespace GoodTidings
     /// </summary>
     internal static class MuninnOutcome
     {
-        internal static void Reward(Vector3 at)
+        /// <summary>The reward at his feet; an old riddle (<paramref name="lore"/>) always brings the land's rare too.</summary>
+        internal static void Reward(Vector3 at, bool lore = false)
         {
-            foreach ((string prefab, int stack) in Stock.Reward(new System.Random(Random.Range(0, int.MaxValue))))
+            foreach ((string prefab, int stack) in Stock.Reward(new System.Random(Random.Range(0, int.MaxValue)), lore))
             {
                 ItemDrop drop = ObjectDB.instance.GetItemPrefab(prefab)?.GetComponent<ItemDrop>();
                 if (drop == null) continue;

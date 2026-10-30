@@ -68,6 +68,9 @@ namespace GoodTidings
             GameUi.Label(_window, Localization.instance.Localize("$goodtidings_muninn"), new Vector2(0f, -18f), new Vector2(W, 50f), 34f,
                 GameUi.Warm, GameUi.Norse, TextAlignmentOptions.Top, new Vector2(0.5f, 1f));
             GameUi.Braid(_window, new Vector2(0f, -72f), W - 80f);
+            if (_riddle.IsLore)   // (one of the old riddles: said so under his name)
+                GameUi.Label(_window, Localization.instance.Localize("$goodtidings_lore_title"), new Vector2(0f, -82f), new Vector2(W, 26f), 16f,
+                    GameUi.Dim, GameUi.Serif, TextAlignmentOptions.Top, new Vector2(0.5f, 1f));
             GameUi.Label(_window, _riddle.Text, new Vector2(40f, -100f), new Vector2(W - 80f, 140f), 22f, GameUi.Text, GameUi.Serif,
                 TextAlignmentOptions.Center);
             for (int i = 0; i < _riddle.Answers.Length; i++)

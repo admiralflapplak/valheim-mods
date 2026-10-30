@@ -26,6 +26,8 @@ namespace GoodTidings
             ZDO zdo = go.GetComponent<ZNetView>().GetZDO();
             zdo.Set(MuninnVisitor.LeaveAtKey, ZNet.instance.GetTime().Ticks + TimeSpan.FromMinutes(Plugin.MuninnMinutes.Value).Ticks);
             zdo.Set(MuninnVisitor.HomeKey, basePoint);
+            // now and then one of the old riddles, the same for everyone (the world remembers which have been asked)
+            zdo.Set(MuninnVisitor.LoreKey, UnityEngine.Random.value * 100f < Plugin.MuninnLoreChance.Value ? Lore.PickUnasked() : -1);
             Net.MessageAll(MessageHud.MessageType.Center, "$goodtidings_muninn_arrives");
             Plugin.Log.LogInfo($"Muninn lands at {at}, by the base at {basePoint}");
             return true;
@@ -113,7 +115,8 @@ namespace GoodTidings
     internal sealed class MuninnVisitor : MonoBehaviour, Hoverable, Interactable
     {
         internal const string LeaveAtKey = "GoodTidings.LeaveAt", HomeKey = "GoodTidings.Home", LeavingKey = "GoodTidings.Leaving",
-            AnsweredKey = "GoodTidings.Answered", RightKey = "GoodTidings.Right", AnswererKey = "GoodTidings.Answerer";
+            AnsweredKey = "GoodTidings.Answered", RightKey = "GoodTidings.Right", AnswererKey = "GoodTidings.Answerer",
+            LoreKey = "GoodTidings.Lore";
         private static readonly HashSet<MuninnVisitor> All = new HashSet<MuninnVisitor>();
         internal static int Count => All.Count;
 
@@ -151,7 +154,7 @@ namespace GoodTidings
             zdo.Set(AnswererKey, who ?? "");
             zdo.Set(LeaveAtKey, ZNet.instance.GetTime().Ticks + TimeSpan.FromSeconds(5).Ticks);   // (a parting line, then off)
             Vector3 home = zdo.GetVec3(HomeKey, transform.position);
-            if (right) MuninnOutcome.Reward(transform.position + transform.forward * 1.2f + Vector3.up * 0.6f);
+            if (right) MuninnOutcome.Reward(transform.position + transform.forward * 1.2f + Vector3.up * 0.6f, zdo.GetInt(LoreKey, -1) > 0);
             else MuninnOutcome.CallTheBeasts(home);
             Plugin.Log.LogInfo($"Muninn's riddle answered {(right ? "rightly" : "wrongly")} by {who}");
         }
@@ -251,7 +254,9 @@ namespace GoodTidings
             if (_nview.GetZDO()?.GetBool(LeavingKey) == true) return false;
             if (Answered) { user.Message(MessageHud.MessageType.Center, "$goodtidings_muninn_taken"); return true; }
             // a riddle from this player's own discoveries (each player who comes gets their own; the first answer counts)
-            if (_riddle == null) _riddle = Riddles.Make(Player.m_localPlayer, new System.Random(UnityEngine.Random.Range(0, int.MaxValue)));
+            int lore = _nview.GetZDO().GetInt(LoreKey, -1);
+            var rnd = new System.Random(UnityEngine.Random.Range(0, int.MaxValue));
+            if (_riddle == null) _riddle = lore > 0 ? Lore.Riddle(lore, rnd) : Riddles.Make(Player.m_localPlayer, rnd);
             if (_riddle == null) { user.Message(MessageHud.MessageType.Center, "$goodtidings_muninn_nothing"); return true; }
             if (_animator) _animator.SetTrigger("talk");
             RiddleWindow.Open(this, _riddle);
