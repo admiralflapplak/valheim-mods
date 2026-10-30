@@ -107,7 +107,7 @@ namespace GoodTidings
                             MixamoPlayer player = MixamoPlayer.Play(anim, "skald_play");
                             var holder = new SkaldLook.Holder(lute, at, body.transform, MixamoClip.Get("skald_play")?.Length ?? 6f);
                             if (player) player.Posed = holder.Place;
-                            SkaldLook.Play(at.gameObject);
+                            SkaldLook.Play(at.gameObject, UnityEngine.Random.Range(0, int.MaxValue), ZNet.instance.GetTime().Ticks);
                         }
                         else
                         {

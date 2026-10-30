@@ -147,6 +147,15 @@ namespace GoodTidings
         internal static int Count => All.Count;
 
         /// <summary>A skald playing within <paramref name="range"/> of a point (his comfort, the listening).</summary>
+        /// <summary>How far the nearest playing skald is from a point (no one playing: very far).</summary>
+        internal static float NearestPlaying(Vector3 point)
+        {
+            float best = float.MaxValue;
+            foreach (SkaldVisitor s in All)
+                if (s && s._phase == 1) best = Mathf.Min(best, Vector3.Distance(s.transform.position, point));
+            return best;
+        }
+
         internal static bool Near(Vector3 point, float range) =>
             All.Any(s => s && !s.Leaving && Vector3.Distance(s.transform.position, point) < range);
 
@@ -220,8 +229,9 @@ namespace GoodTidings
                     _player.Posed = _holder.Place;
                 }
                 else SkaldLook.OnBack(_lute, _body.transform);
-                if (_song == null) _song = SkaldLook.Play(gameObject);
-                else if (!_song.isPlaying) _song.Play();
+                // (his songs, shuffled for this visit, timed from when he began: the same for everyone)
+                if (_song == null) _song = SkaldLook.Play(gameObject, _nview.GetZDO().m_uid.GetHashCode(),
+                    _nview.GetZDO().GetLong(ArrivedKey, ZNet.instance.GetTime().Ticks) + TimeSpan.FromSeconds(RiseTime).Ticks);
                 if (_motes == null) _motes = SkaldLook.Motes(transform);
                 _motes.Play(true);
                 if (_motes.GetComponentInChildren<Light>() is Light glow) glow.enabled = true;

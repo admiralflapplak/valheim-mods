@@ -15,7 +15,7 @@ namespace GoodTidings
     {
         public const string Guid = "nick.GoodTidings";
         public const string Name = "GoodTidings";
-        public const string Version = "0.13.5";
+        public const string Version = "0.14.0";
 
         internal static Plugin Instance;
         internal static ManualLogSource Log;
@@ -47,7 +47,7 @@ namespace GoodTidings
         internal static ConfigEntry<bool> SkaldEnabled;
         internal static ConfigEntry<float> SkaldMinutes, SkaldSkillGain, SkaldListenSeconds;
         internal static ConfigEntry<int> SkaldComfort;
-        internal static ConfigEntry<float> SkaldVolume;
+        internal static ConfigEntry<float> SkaldVolume, SkaldMusicDuck;
 
         // 09 - Testing
         internal static ConfigEntry<bool> DebugLogging;
@@ -114,6 +114,9 @@ namespace GoodTidings
             SkaldComfort = Synced.Bind("06 - Skald", "Comfort", 2, "How much comfort he adds near him while he plays.", new AcceptableValueRange<int>(0, 5));
             SkaldVolume = Config.Bind("06 - Skald", "Song Volume", 80f,
                 new ConfigDescription("How loud his song is for you (your own setting; the game's sound effects volume applies too).",
+                    new AcceptableValueRange<float>(0f, 100f)));
+            SkaldMusicDuck = Config.Bind("06 - Skald", "Music Near Skald", 20f,
+                new ConfigDescription("How loud the game's own music is when you're near him (percent of its usual volume: 0 silences it; your own setting). It fades down within 25 m and is lowest within 10 m.",
                     new AcceptableValueRange<float>(0f, 100f)));
 
             DebugLogging = Config.Bind("09 - Testing", "Debug Logging", false,

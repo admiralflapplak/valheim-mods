@@ -143,8 +143,12 @@ A positive visit, its reward skill (and comfort). Decided with the user 2026-10-
   0.123, side 0.08, up 0.3, tilt 44.563), the neck aimed at his fretting hand's average spot (learnt over the first loop) moved by
   "Neck point" (side 0.053, up 0.03). Smoothing toward the live hand floated; fixed is right. On his back (BackShield_attach) while
   he rises; that fit isn't tuned yet. Settings F1 "98 - Skald Lute" (local, testing).
-- His song: reference/ModellMelodi.mp3 as mono Ogg Vorbis (assets/skald_song.ogg, embedded, written to BepInEx/cache, loaded with
-  UnityWebRequestMultimedia), a 3D looping sound through the game's sfx mixer group. Licence to check before release.
+- His songs (0.14.0): three made by the user with ElevenLabs (paid plan: they may ship in the mod; Thunderstore's AI disclosure applies):
+  Lyre of the North, Northwind Lyre, Runes of the Lyre (reference/*.mp3 -> assets/skald_song1-3.ogg, mono Ogg Vorbis 96 kbps by Blender's
+  aud). Embedded, written to BepInEx/cache, loaded with UnityWebRequestMultimedia. Shuffled per visit (seed: his ZDO id), played back
+  to back from the server clock (the time he began), so everyone hears the same song at the same moment. 3D, the game's sfx mixer group,
+  Song Volume (each player's). The game's music is lowered near him (Music Near Skald, each player's, 20%: lowest within 10 m, full
+  at 25 m) through MusicVolume.UpdateProximityVolumes, which the game fades to.
 - Outfit (the user's): Celebratory Cap, Bronze Plate Tunic, Bronze Plate Leggings (SkaldVisitor.Outfit).
 - The visit (Skald.cs): saved object goodtidings_skald (empty, a trigger to look at, as Muninn's). He takes the most comfortable spot
   within 20 m of the base (the game's own SE_Rested.CalculateComfortLevel with Cover's shelter check, a 2 m grid, floors found by a ray

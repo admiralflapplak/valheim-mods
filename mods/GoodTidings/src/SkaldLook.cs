@@ -268,16 +268,21 @@ namespace GoodTidings
             return ps;
         }
 
-        // ---- the song (assets/skald_song.ogg, in the DLL): written out once and loaded as the game's audio would be
+        // ---- his songs (assets/skald_song*.ogg, in the DLL): written out once and loaded as the game's audio would be. He plays them one
+        // after another in an order shuffled for each visit; where he is in them comes from the server's clock (the time he began), so
+        // every player hears the same song at the same moment.
 
         /// <summary>The song's volume for this player (Song Volume).</summary>
         internal static float Volume => Mathf.Clamp01((Plugin.SkaldVolume?.Value ?? 80f) / 100f);
 
-        private static AudioClip _song;
-        private static bool _loading;
+        private static readonly List<AudioClip> Songs = new List<AudioClip>();
+        private static bool _loaded, _loading;
 
-        /// <summary>Plays the song from <paramref name="on"/> (a 3D sound, the game's sound-effects volume), looping.</summary>
-        internal static AudioSource Play(GameObject on)
+        /// <summary>
+        /// Plays his songs from <paramref name="on"/> (a 3D sound, the game's sound-effects volume): shuffled by <paramref name="seed"/>,
+        /// the first begun at <paramref name="began"/> (server time, ticks), round again after the last.
+        /// </summary>
+        internal static AudioSource Play(GameObject on, int seed, long began)
         {
             AudioSource source = on.AddComponent<AudioSource>();
             source.spatialBlend = 1f;
@@ -285,47 +290,100 @@ namespace GoodTidings
             source.minDistance = 3f;
             source.maxDistance = 35f;
             source.volume = Volume;
-            source.loop = true;
+            source.loop = false;
             source.dopplerLevel = 0f;
             source.outputAudioMixerGroup = MixerGroup();
-            if (_song) { source.clip = _song; source.Play(); }
-            else on.AddComponent<SongLoader>().Source = source;
+            var player = on.AddComponent<SongPlayer>();
+            player.Source = source;
+            player.Seed = seed;
+            player.Began = began;
             return source;
         }
 
         private static AudioMixerGroup MixerGroup() =>
             ZNetScene.instance?.GetPrefab("sfx_skeleton_idle")?.GetComponentInChildren<AudioSource>(true)?.outputAudioMixerGroup;
 
-        private sealed class SongLoader : MonoBehaviour
+        /// <summary>Keeps the source on the song (and the place in it) the visit's clock says, changing at each song's end.</summary>
+        private sealed class SongPlayer : MonoBehaviour
         {
             internal AudioSource Source;
+            internal int Seed;
+            internal long Began;
+            private int[] _order;
+            private int _playing = -1;
 
             private IEnumerator Start()
             {
                 while (_loading) yield return null;
-                if (_song == null)
+                if (!_loaded) yield return Load();
+                if (Songs.Count == 0) yield break;
+                var rnd = new System.Random(Seed);
+                _order = Enumerable.Range(0, Songs.Count).OrderBy(_ => rnd.Next()).ToArray();
+            }
+
+            private void Update()
+            {
+                if (_order == null || Source == null || ZNet.instance == null) return;
+                float total = _order.Sum(i => Songs[i].length);
+                if (total <= 0f) return;
+                double elapsed = (ZNet.instance.GetTime().Ticks - Began) / (double)System.TimeSpan.TicksPerSecond;
+                float t = (float)(((elapsed % total) + total) % total);
+                int n = 0;
+                while (n < _order.Length - 1 && t >= Songs[_order[n]].length) { t -= Songs[_order[n]].length; n++; }
+                if (n == _playing && Source.isPlaying) return;
+                _playing = n;
+                Source.clip = Songs[_order[n]];
+                Source.time = Mathf.Clamp(t, 0f, Source.clip.length - 0.05f);
+                Source.Play();
+            }
+
+            private static IEnumerator Load()
+            {
+                _loading = true;
+                var asm = typeof(SkaldLook).Assembly;
+                foreach (string resource in asm.GetManifestResourceNames().Where(r => r.Contains("skald_song") && r.EndsWith(".ogg")).OrderBy(r => r))
                 {
-                    _loading = true;
-                    string path = Path.Combine(BepInEx.Paths.CachePath, "goodtidings_skald_song.ogg");
+                    string name = resource.Substring(0, resource.Length - 4);
+                    name = name.Substring(name.LastIndexOf('.') + 1);
+                    string path = Path.Combine(BepInEx.Paths.CachePath, "goodtidings_" + name + ".ogg");
                     try
                     {
-                        string resource = typeof(SkaldLook).Assembly.GetManifestResourceNames().FirstOrDefault(r => r.EndsWith("skald_song.ogg"));
-                        using (Stream s = typeof(SkaldLook).Assembly.GetManifestResourceStream(resource))
+                        using (Stream s = asm.GetManifestResourceStream(resource))
                         using (FileStream f = File.Create(path)) s.CopyTo(f);
                     }
-                    catch (System.Exception e) { Plugin.Log.LogWarning($"The skald's song couldn't be written out: {e.Message}"); _loading = false; yield break; }
-                    using (UnityWebRequest req = UnityWebRequestMultimedia.GetAudioClip("file:///" + path.Replace('\\', '/'), AudioType.OGGVORBIS))
+                    catch (System.Exception e) { Plugin.Log.LogWarning($"A skald's song couldn't be written out: {e.Message}"); continue; }
+                    using (UnityWebRequest req = UnityWebRequestMultimedia.GetAudioClip("file:///" + path.Replace(Path.DirectorySeparatorChar, '/'), AudioType.OGGVORBIS))
                     {
                         yield return req.SendWebRequest();
-                        if (req.result == UnityWebRequest.Result.Success) _song = DownloadHandlerAudioClip.GetContent(req);
-                        else Plugin.Log.LogWarning($"The skald's song couldn't be loaded: {req.error}");
+                        if (req.result != UnityWebRequest.Result.Success) { Plugin.Log.LogWarning($"A skald's song couldn't be loaded: {req.error}"); continue; }
+                        AudioClip clip = DownloadHandlerAudioClip.GetContent(req);
+                        clip.name = "goodtidings_" + name;
+                        Songs.Add(clip);
                     }
-                    if (_song) _song.name = "goodtidings_skald_song";
-                    _loading = false;
                 }
-                if (_song && Source) { Source.clip = _song; Source.Play(); }
-                Destroy(this);
+                Plugin.Log.LogInfo($"The skald knows {Songs.Count} songs");
+                _loaded = true;
+                _loading = false;
             }
         }
+
+        // ---- the game's music made quieter near him (its own "music quieter here" answer, which it fades to: no sudden cut)
+
+        /// <summary>How loud the game's music may be at this player's place: Music Near Skald within 10 m of him, rising to full at 25 m.</summary>
+        internal static float MusicDuck()
+        {
+            Player p = Player.m_localPlayer;
+            if (p == null || SkaldVisitor.Count == 0) return 1f;
+            float d = SkaldVisitor.NearestPlaying(p.transform.position);
+            if (d >= 25f) return 1f;
+            float low = Mathf.Clamp01((Plugin.SkaldMusicDuck?.Value ?? 20f) / 100f);
+            return Mathf.Lerp(low, 1f, Mathf.InverseLerp(10f, 25f, d));
+        }
+    }
+
+    [HarmonyLib.HarmonyPatch(typeof(MusicVolume), nameof(MusicVolume.UpdateProximityVolumes))]
+    internal static class MusicVolume_UpdateProximityVolumes
+    {
+        private static void Postfix(ref float __result) => __result *= SkaldLook.MusicDuck();
     }
 }
