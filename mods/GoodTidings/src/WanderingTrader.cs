@@ -20,7 +20,7 @@ namespace GoodTidings
             if (!FindArrival(basePoint, out Vector3 at)) { Plugin.Debug($"No dry ground to arrive on near {basePoint}"); return false; }
             Spawn(prefab, at, basePoint);
             // Sent as a key: each player's game shows it in their own language.
-            MessageHud.instance.MessageAll(MessageHud.MessageType.Center, "$goodtidings_trader_arrives");
+            Net.MessageAll(MessageHud.MessageType.Center, "$goodtidings_trader_arrives");
             return true;
         }
 

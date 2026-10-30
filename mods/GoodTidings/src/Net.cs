@@ -14,6 +14,13 @@ namespace GoodTidings
         private static readonly string[] All = { Bountiful };
         private static ZRoutedRpc _registeredOn;
 
+        /// <summary>
+        /// A message on every player's screen, as MessageHud.MessageAll sends it (its own routed "ShowMessage"), but without needing a
+        /// MessageHud: a dedicated server has none, and MessageHud.instance is null there.
+        /// </summary>
+        internal static void MessageAll(MessageHud.MessageType type, string text) =>
+            ZRoutedRpc.instance?.InvokeRoutedRPC(ZRoutedRpc.Everybody, "ShowMessage", (int)type, text);
+
         internal static void Register()
         {
             if (ZRoutedRpc.instance == null || ReferenceEquals(_registeredOn, ZRoutedRpc.instance)) return;

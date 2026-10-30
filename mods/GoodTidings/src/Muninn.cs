@@ -26,7 +26,7 @@ namespace GoodTidings
             ZDO zdo = go.GetComponent<ZNetView>().GetZDO();
             zdo.Set(MuninnVisitor.LeaveAtKey, ZNet.instance.GetTime().Ticks + TimeSpan.FromMinutes(Plugin.MuninnMinutes.Value).Ticks);
             zdo.Set(MuninnVisitor.HomeKey, basePoint);
-            MessageHud.instance.MessageAll(MessageHud.MessageType.Center, "$goodtidings_muninn_arrives");
+            Net.MessageAll(MessageHud.MessageType.Center, "$goodtidings_muninn_arrives");
             Plugin.Log.LogInfo($"Muninn lands at {at}, by the base at {basePoint}");
             return true;
         }

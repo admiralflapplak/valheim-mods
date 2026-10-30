@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using HarmonyLib;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace GoodTidings
 {
@@ -35,14 +36,24 @@ namespace GoodTidings
             return false;
         }
 
-        /// <summary>Where players are standing at a base, by the game's own measure (the one raids that need a base use).</summary>
+        /// <summary>
+        /// Where players are standing at a base, by the game's own measure and from the same data its raids use
+        /// (RandEventSystem.RefreshPlayerEventData): each connected player's game sends the server its "baseValue", and the server knows
+        /// where each player is (their reference position). Works the same on a dedicated server (no player of its own) and for a host
+        /// (their own data too).
+        /// </summary>
         private static List<Vector3> BasePoints()
         {
             var points = new List<Vector3>();
-            foreach (Player p in Player.GetAllPlayers())
-                if (p != null && !p.IsDead() && p.GetBaseValue() >= 3) points.Add(p.transform.position);
-            // TODO: on a dedicated server Player.GetAllPlayers is empty; read ZNet's peers' positions and base values
-            // (RandEventSystem.RefreshPlayerEventData does it from each peer's ZDO).
+            ZNet net = ZNet.instance;
+            if (net == null) return points;
+            void Add(Dictionary<string, string> data, Vector3 at)
+            {
+                if (data != null && data.TryGetValue("baseValue", out string v) && int.TryParse(v, out int value) && value >= 3) points.Add(at);
+            }
+            if (SystemInfo.graphicsDeviceType != GraphicsDeviceType.Null) Add(net.m_serverSyncedPlayerData, net.GetReferencePosition());   // (the host)
+            foreach (ZNetPeer peer in net.GetPeers())
+                if (peer.IsReady()) Add(peer.m_serverSyncedPlayerData, peer.m_refPos);
             return points;
         }
     }
