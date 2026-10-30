@@ -15,7 +15,7 @@ namespace GoodTidings
     {
         public const string Guid = "nick.GoodTidings";
         public const string Name = "GoodTidings";
-        public const string Version = "0.14.0";
+        public const string Version = "0.15.2";
 
         internal static Plugin Instance;
         internal static ManualLogSource Log;
@@ -45,7 +45,7 @@ namespace GoodTidings
 
         // 06 - Skald
         internal static ConfigEntry<bool> SkaldEnabled;
-        internal static ConfigEntry<float> SkaldMinutes, SkaldSkillGain, SkaldListenSeconds;
+        internal static ConfigEntry<float> SkaldSkillGain, SkaldListenSeconds;
         internal static ConfigEntry<int> SkaldComfort;
         internal static ConfigEntry<float> SkaldVolume, SkaldMusicDuck;
 
@@ -105,7 +105,6 @@ namespace GoodTidings
 
             SkaldEnabled = Synced.Bind("06 - Skald", "Enabled", true,
                 "A long-dead skald can rise at the most comfortable spot in the base and play: comfort near him is higher, and listening to him raises every skill a little, once a visit.");
-            SkaldMinutes = Synced.Bind("06 - Skald", "Stay Minutes", 6f, "How long he plays.", new AcceptableValueRange<float>(1f, 30f));
             SkaldSkillGain = Synced.Bind("06 - Skald", "Skill Gain", 5f,
                 "Each skill rises by this percent of its level (at least half a level) for a player who listens (a death takes 25%).",
                 new AcceptableValueRange<float>(0f, 25f));

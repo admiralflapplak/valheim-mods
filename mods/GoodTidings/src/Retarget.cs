@@ -97,16 +97,18 @@ namespace GoodTidings
         private HumanPose _pose;
         private float _time;
         internal float Speed = 1f;
+        private bool _loop = true;
         /// <summary>Called each frame once the pose is set (to hold things in the posed hands).</summary>
         internal System.Action Posed;
 
         /// <summary>Starts <paramref name="clip"/> on the body that has <paramref name="animator"/> (a humanoid); null if it can't.</summary>
-        internal static MixamoPlayer Play(Animator animator, string clip)
+        internal static MixamoPlayer Play(Animator animator, string clip, bool loop = true)
         {
             MixamoClip c = MixamoClip.Get(clip);
             if (c == null || animator == null || animator.avatar == null || !animator.avatar.isHuman) return null;
             var player = animator.gameObject.AddComponent<MixamoPlayer>();
             if (!player.Setup(c, animator)) { Destroy(player); return null; }
+            player._loop = loop;
             return player;
         }
 
@@ -170,7 +172,7 @@ namespace GoodTidings
         private static HumanPose Copy(HumanPose p) =>
             new HumanPose { bodyPosition = p.bodyPosition, bodyRotation = p.bodyRotation, muscles = (float[])p.muscles?.Clone() };
 
-        private static HumanPose Blend(HumanPose a, HumanPose b, float w)
+        internal static HumanPose Blend(HumanPose a, HumanPose b, float w)
         {
             var r = new HumanPose
             {
@@ -197,7 +199,7 @@ namespace GoodTidings
                 if (_fade >= _fadeTime) Destroy(this);
                 return;
             }
-            _time = (_time + Time.deltaTime * Speed) % _clip.Length;
+            _time = _loop ? (_time + Time.deltaTime * Speed) % _clip.Length : Mathf.Min(_time + Time.deltaTime * Speed, _clip.Length - 1f / _clip.Fps);
             float f = _time * _clip.Fps;
             int a = Mathf.FloorToInt(f) % _clip.Rot.Length, b = (a + 1) % _clip.Rot.Length;
             float t = f - Mathf.Floor(f);

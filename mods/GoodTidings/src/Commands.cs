@@ -101,7 +101,7 @@ namespace GoodTidings
                             SkaldBones.Wear(mesh, i.m_dropPrefab.name, made);
                         Animator anim = body.GetComponentInChildren<Animator>();
                         if (anim) anim.cullingMode = AnimatorCullingMode.AlwaysAnimate;
-                        GameObject lute = SkaldLook.Lute(mesh.gameObject.layer);
+                        GameObject lute = SkaldLook.Lyre(mesh.gameObject.layer);
                         if (play)
                         {
                             MixamoPlayer player = MixamoPlayer.Play(anim, "skald_play");
@@ -113,6 +113,10 @@ namespace GoodTidings
                         {
                             SkaldLook.OnBack(lute, body.transform);
                             Backs.Add((lute, body.transform));
+                            // (where it is, to check the back point: its parent, sizes, and height over his feet)
+                            Transform hips = Utils.FindChild(body.transform, "Hips");
+                            t.AddString($"Lyre under {lute.transform.parent?.name} (its parent {lute.transform.parent?.parent?.name}), point scale {lute.transform.parent?.lossyScale}, " +
+                                        $"lyre at {lute.transform.position - at.position} from his feet, hips at {(hips ? hips.position - at.position : Vector3.zero)}, lyre scale {lute.transform.lossyScale}");
                         }
                         t.AddString(play ? "The skald plays in front of you (his song too). 'goodtidings lute forward side up tilt' (metres from his hips, tilt in degrees) moves the lute in his hands."
                                          : "The skald stands in front of you, the lute on his back. 'goodtidings luteback x y z turnX turnY turnZ' moves it.");

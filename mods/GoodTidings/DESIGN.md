@@ -150,6 +150,16 @@ A positive visit, its reward skill (and comfort). Decided with the user 2026-10-
   Song Volume (each player's). The game's music is lowered near him (Music Near Skald, each player's, 20%: lowest within 10 m, full
   at 25 m) through MusicVolume.UpdateProximityVolumes, which the game fades to.
 - Outfit (the user's): Celebratory Cap, Bronze Plate Tunic, Bronze Plate Leggings (SkaldVisitor.Outfit).
+- 0.15.x (set with the user): his lyre is the user's own Meshy model (reference/Meshy_AI_Dragonhead_Lyre zip; tools/convert_lyre.py:
+  Unity axes, origin at the soundbox, a fingerboard added behind the strings, texture 1024 px; assets/skald_lyre.bin/.png, built as
+  a mesh at run time; LoadImage called by name: its module targets a newer .NET). Lyre size 0.9; on his back at -0.013/-0.028/-0.131 m
+  turned 84/17/26 (the back-shield point has a scale of 95: offsets are divided by it). The stages, in his ZDO and moved on by his
+  owner: rising (3.5 s) -> wandering (20 s of strolls within 4 m, each checked clear both ways by body-wide sweeps, a look-ahead each
+  step; then back to his spot and a steady turn to face the open room: OpenWay, 16 rays, leaning toward where the player stood) ->
+  playing (his three songs once each, shuffled: their lengths are in the code, a dedicated server loads no audio) -> bowing (the
+  user's Mixamo "Quick Informal Bow", played once) -> sinking. Changes blend (PoseBlend, MixamoPlayer.BlendFrom/FadeOut); the lyre
+  glides on and off his back. Lines over his head with Haldor's sounds (sfx_haldor_greet/yea/laugh): risen, begin, between songs, bow.
+  Listeners also get the game's "No skill drain" (SEMan.s_statusEffectSoftDeath). Stay Minutes is gone.
 - The visit (Skald.cs): saved object goodtidings_skald (empty, a trigger to look at, as Muninn's). He takes the most comfortable spot
   within 20 m of the base (the game's own SE_Rested.CalculateComfortLevel with Cover's shelter check, a 2 m grid, floors found by a ray
   down from just above the base's height, room to stand; equals: the nearest), facing where the player stood. Rises with the

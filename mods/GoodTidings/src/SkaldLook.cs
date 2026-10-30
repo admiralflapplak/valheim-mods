@@ -19,7 +19,7 @@ namespace GoodTidings
         // ---- its fit, set by eye in the settings (F1, "98 - Skald Lute"): held, from his hips in metres along his facing, to his right
         // and up, and turned round its neck; on his back, offset and turned on the back-shield point; the wood grain's size
 
-        private static ConfigEntry<float> _forward, _side, _up, _tilt, _fretForward, _fretSide, _fretUp, _backX, _backY, _backZ, _turnX, _turnY, _turnZ, _grain;
+        private static ConfigEntry<float> _size, _forward, _side, _up, _tilt, _fretForward, _fretSide, _fretUp, _backX, _backY, _backZ, _turnX, _turnY, _turnZ, _grain;
         internal static float HoldForward { get => _forward?.Value ?? 0.123f; set { if (_forward != null) _forward.Value = value; } }
         internal static float HoldSide { get => _side?.Value ?? 0.08f; set { if (_side != null) _side.Value = value; } }
         internal static float HoldUp { get => _up?.Value ?? 0.3f; set { if (_up != null) _up.Value = value; } }
@@ -28,12 +28,12 @@ namespace GoodTidings
         internal static Vector3 FretOffset => new Vector3(_fretForward?.Value ?? 0f, _fretSide?.Value ?? 0.053f, _fretUp?.Value ?? 0.03f);
         internal static Vector3 BackOffset
         {
-            get => new Vector3(_backX?.Value ?? 0f, _backY?.Value ?? 0f, _backZ?.Value ?? -0.05f);
+            get => new Vector3(_backX?.Value ?? -0.013f, _backY?.Value ?? -0.028f, _backZ?.Value ?? -0.131f);
             set { if (_backX == null) return; _backX.Value = value.x; _backY.Value = value.y; _backZ.Value = value.z; }
         }
         internal static Vector3 BackTurn
         {
-            get => new Vector3(_turnX?.Value ?? 0f, _turnY?.Value ?? 0f, _turnZ?.Value ?? 35f);
+            get => new Vector3(_turnX?.Value ?? 83.99f, _turnY?.Value ?? 17.243f, _turnZ?.Value ?? 26.075f);
             set { if (_turnX == null) return; _turnX.Value = value.x; _turnY.Value = value.y; _turnZ.Value = value.z; }
         }
         /// <summary>A lute's back placement changed: put back on again (the held one follows each frame by itself).</summary>
@@ -50,6 +50,7 @@ namespace GoodTidings
                 if (back) e.SettingChanged += (_, __) => BackChanged?.Invoke();
                 return e;
             }
+            _size = F("Lyre size", 0.9f, 0.3f, 1.5f, "How big the lyre is (1: as the model was made, 0.95 m tall).");
             _forward = F("Held forward", 0.123f, -0.5f, 0.8f, "How far in front of his hips the lute's body is (metres).");
             _side = F("Held side", 0.08f, -0.5f, 0.5f, "How far to his right (metres; left below 0).");
             _up = F("Held up", 0.3f, -0.5f, 1f, "How far above his hips (metres).");
@@ -57,14 +58,15 @@ namespace GoodTidings
             _fretForward = F("Neck point forward", 0f, -0.5f, 0.5f, "Where the neck points, from his fretting (left) hand: forward (metres; back below 0).");
             _fretSide = F("Neck point side", 0.053f, -0.5f, 0.5f, "Where the neck points, from his fretting hand: to his right (metres; left below 0).");
             _fretUp = F("Neck point up", 0.03f, -0.5f, 0.5f, "Where the neck points, from his fretting hand: up (metres; down below 0).");
-            _backX = F("Back X", 0f, -0.5f, 0.5f, "On his back: sideways on the back point (metres).", true);
-            _backY = F("Back Y", 0f, -0.5f, 0.5f, "On his back: up or down (metres).", true);
-            _backZ = F("Back Z", -0.05f, -0.5f, 0.5f, "On his back: out from or into his back (metres).", true);
-            _turnX = F("Back turn X", 0f, -180f, 180f, "On his back: turned (degrees).", true);
-            _turnY = F("Back turn Y", 0f, -180f, 180f, "On his back: turned (degrees).", true);
-            _turnZ = F("Back turn Z", 35f, -180f, 180f, "On his back: turned (degrees).", true);
+            _backX = F("Back X", -0.013f, -0.5f, 0.5f, "On his back: sideways on the back point (metres).", true);
+            _backY = F("Back Y", -0.028f, -0.5f, 0.5f, "On his back: up or down (metres).", true);
+            _backZ = F("Back Z", -0.131f, -0.5f, 0.5f, "On his back: out from or into his back (metres).", true);
+            _turnX = F("Back turn X", 83.99f, -180f, 180f, "On his back: turned (degrees).", true);
+            _turnY = F("Back turn Y", 17.243f, -180f, 180f, "On his back: turned (degrees).", true);
+            _turnZ = F("Back turn Z", 26.075f, -180f, 180f, "On his back: turned (degrees).", true);
             _grain = F("Wood grain scale", 4f, 0.25f, 20f, "How big the wood's grain is on the lute (bigger: coarser).");
             _grain.SettingChanged += (_, __) => Grain();
+            _size.SettingChanged += (_, __) => { foreach (Transform m in Models) if (m) m.localScale = Vector3.one * Size; };
         }
 
         private static readonly List<Material> Tints = new List<Material>();
@@ -75,6 +77,78 @@ namespace GoodTidings
             float g = Mathf.Max(0.01f, _grain?.Value ?? 4f);
             foreach (Material m in Tints)
                 if (m) m.mainTextureScale = Vector2.one / g;
+        }
+
+        internal static float Size => _size?.Value ?? 0.9f;
+
+        // ---- the lyre: the user's model (Meshy), turned into assets/skald_lyre.bin and .png by tools/convert_lyre.py (which adds its
+        // fingerboard); its body at its origin, its neck up (+y), its strings toward +z, as the lute's
+
+        private static Mesh _lyreMesh;
+        private static Material _lyreMaterial;
+
+        /// <summary>The lyre (the code-built lute if the model can't be read).</summary>
+        internal static GameObject Lyre(int layer)
+        {
+            if (_lyreMesh == null && !LoadLyre()) return Lute(layer);
+            var lyre = new GameObject("goodtidings_lyre") { layer = layer };
+            var model = new GameObject("goodtidings_lyre_model") { layer = layer };
+            model.transform.SetParent(lyre.transform, false);
+            model.transform.localScale = Vector3.one * Size;
+            model.AddComponent<MeshFilter>().sharedMesh = _lyreMesh;
+            model.AddComponent<MeshRenderer>().sharedMaterial = _lyreMaterial;
+            Models.RemoveAll(m => !m);
+            Models.Add(model.transform);
+            return lyre;
+        }
+
+        private static readonly List<Transform> Models = new List<Transform>();
+
+        private static bool LoadLyre()
+        {
+            try
+            {
+                var asm = typeof(SkaldLook).Assembly;
+                using (Stream s = asm.GetManifestResourceStream("GoodTidings.assets.skald_lyre.bin"))
+                using (var r = new BinaryReader(s))
+                {
+                    if (new string(r.ReadChars(4)) != "LYR1") throw new InvalidDataException("not a lyre");
+                    int n = r.ReadInt32();
+                    var pos = new Vector3[n]; var nor = new Vector3[n]; var uv = new Vector2[n];
+                    for (int i = 0; i < n; i++)
+                    {
+                        pos[i] = new Vector3(r.ReadSingle(), r.ReadSingle(), r.ReadSingle());
+                        nor[i] = new Vector3(r.ReadSingle(), r.ReadSingle(), r.ReadSingle());
+                        uv[i] = new Vector2(r.ReadSingle(), r.ReadSingle());
+                    }
+                    var tris = new int[r.ReadInt32()];
+                    for (int i = 0; i < tris.Length; i++) tris[i] = r.ReadInt32();
+                    _lyreMesh = new Mesh { name = "goodtidings_lyre" };
+                    if (n > 65000) _lyreMesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+                    _lyreMesh.vertices = pos; _lyreMesh.normals = nor; _lyreMesh.uv = uv; _lyreMesh.triangles = tris;
+                    _lyreMesh.RecalculateBounds();
+                    _lyreMesh.RecalculateTangents();
+                }
+                var tex = new Texture2D(2, 2, TextureFormat.RGBA32, true) { name = "goodtidings_lyre" };
+                using (Stream s = asm.GetManifestResourceStream("GoodTidings.assets.skald_lyre.png"))
+                using (var m = new MemoryStream())
+                {
+                    s.CopyTo(m);
+                    // (ImageConversion.LoadImage, called by name: its module is built for a newer .NET than this project compiles against)
+                    System.Type conversion = System.Type.GetType("UnityEngine.ImageConversion, UnityEngine.ImageConversionModule");
+                    conversion?.GetMethod("LoadImage", new[] { typeof(Texture2D), typeof(byte[]) })?.Invoke(null, new object[] { tex, m.ToArray() });
+                }
+                _lyreMaterial = new Material(Wood()) { name = "goodtidings_lyre", mainTexture = tex, color = Color.white, mainTextureScale = Vector2.one };
+                if (_lyreMaterial.HasProperty("_BumpMap")) _lyreMaterial.SetTexture("_BumpMap", null);
+                if (_lyreMaterial.HasProperty("_MetallicGlossMap")) _lyreMaterial.SetTexture("_MetallicGlossMap", null);
+                return true;
+            }
+            catch (System.Exception e)
+            {
+                Plugin.Log.LogWarning($"The skald's lyre couldn't be read ({e.Message}): he plays the old lute");
+                _lyreMesh = null;
+                return false;
+            }
         }
 
         /// <summary>A lute, its body at its origin, its neck up (+y), its strings toward +z.</summary>
@@ -131,16 +205,51 @@ namespace GoodTidings
             return _wood = new Material(Shader.Find("Standard"));
         }
 
-        /// <summary>The lute on his back (the player's back-shield point).</summary>
-        internal static void OnBack(GameObject lute, Transform body)
+        /// <summary>The lute on his back (the player's back-shield point); with <paramref name="glide"/>, moved there over a moment.</summary>
+        internal static void OnBack(GameObject lute, Transform body, bool glide = false)
         {
+            Vector3 fromPos = lute.transform.position;
+            Quaternion fromRot = lute.transform.rotation;
             Transform point = Utils.FindChild(body, "BackShield_attach") ?? Utils.FindChild(body, "Spine2");
             lute.transform.SetParent(point, false);
-            lute.transform.localPosition = BackOffset;
-            lute.transform.localRotation = Quaternion.Euler(BackTurn);
-            // (the point is inside the body's rig, which has a scale of its own: the lute keeps its own size)
+            // (the point is inside the body's rig, which has a scale of its own, 95: the lute keeps its own size, and its offset is in
+            // metres; in the point's units it put the lyre 3 m under his feet)
             Vector3 s = point.lossyScale;
-            lute.transform.localScale = new Vector3(1f / Mathf.Max(s.x, 1e-4f), 1f / Mathf.Max(s.y, 1e-4f), 1f / Mathf.Max(s.z, 1e-4f));
+            Vector3 inverse = new Vector3(1f / Mathf.Max(s.x, 1e-4f), 1f / Mathf.Max(s.y, 1e-4f), 1f / Mathf.Max(s.z, 1e-4f));
+            lute.transform.localPosition = Vector3.Scale(BackOffset, inverse);
+            lute.transform.localRotation = Quaternion.Euler(BackTurn);
+            lute.transform.localScale = inverse;
+            if (glide) Glide.Start(lute.transform, fromPos, fromRot);
+        }
+
+        /// <summary>Moves a thing from where it was (in the world) to its place under its parent, over a moment.</summary>
+        internal sealed class Glide : MonoBehaviour
+        {
+            private Vector3 _fromPos, _toPos;
+            private Quaternion _fromRot, _toRot;
+            private float _time;
+
+            internal static void Start(Transform t, Vector3 worldPos, Quaternion worldRot)
+            {
+                foreach (Glide old in t.GetComponents<Glide>()) Destroy(old);
+                var g = t.gameObject.AddComponent<Glide>();
+                g._toPos = t.localPosition;
+                g._toRot = t.localRotation;
+                Transform parent = t.parent;
+                g._fromPos = parent ? parent.InverseTransformPoint(worldPos) : worldPos;
+                g._fromRot = parent ? Quaternion.Inverse(parent.rotation) * worldRot : worldRot;
+                t.localPosition = g._fromPos;
+                t.localRotation = g._fromRot;
+            }
+
+            private void LateUpdate()
+            {
+                _time += Time.deltaTime;
+                float w = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(_time / 0.8f));
+                transform.localPosition = Vector3.Lerp(_fromPos, _toPos, w);
+                transform.localRotation = Quaternion.Slerp(_fromRot, _toRot, w);
+                if (w >= 1f) Destroy(this);
+            }
         }
 
         /// <summary>
@@ -178,6 +287,7 @@ namespace GoodTidings
                     // off his back: back under him, at its own size, gliding from where it was into his hands
                     _glideFrom = (_lute.transform.position, _lute.transform.rotation);
                     _glide = 0f;
+                    foreach (Glide g in _lute.GetComponents<Glide>()) Object.Destroy(g);
                     _lute.transform.SetParent(_root, false);
                     _lute.transform.localScale = Vector3.one;
                 }
@@ -276,11 +386,18 @@ namespace GoodTidings
         internal static float Volume => Mathf.Clamp01((Plugin.SkaldVolume?.Value ?? 80f) / 100f);
 
         private static readonly List<AudioClip> Songs = new List<AudioClip>();
+
+        /// <summary>
+        /// His songs' lengths in seconds (assets/skald_song1-3.ogg), known on every game, a dedicated server's too (it loads no audio):
+        /// he plays each once, shuffled, then bows.
+        /// </summary>
+        internal static readonly float[] SongLengths = { 120f, 110f, 120f };
+        internal static float AllSongs => SongLengths.Sum();
         private static bool _loaded, _loading;
 
         /// <summary>
         /// Plays his songs from <paramref name="on"/> (a 3D sound, the game's sound-effects volume): shuffled by <paramref name="seed"/>,
-        /// the first begun at <paramref name="began"/> (server time, ticks), round again after the last.
+        /// the first begun at <paramref name="began"/> (server time, ticks), each once.
         /// </summary>
         internal static AudioSource Play(GameObject on, int seed, long began)
         {
@@ -327,7 +444,8 @@ namespace GoodTidings
                 float total = _order.Sum(i => Songs[i].length);
                 if (total <= 0f) return;
                 double elapsed = (ZNet.instance.GetTime().Ticks - Began) / (double)System.TimeSpan.TicksPerSecond;
-                float t = (float)(((elapsed % total) + total) % total);
+                if (elapsed >= total || elapsed < 0) { if (Source.isPlaying) Source.Stop(); return; }   // (once through: then he bows)
+                float t = (float)elapsed;
                 int n = 0;
                 while (n < _order.Length - 1 && t >= Songs[_order[n]].length) { t -= Songs[_order[n]].length; n++; }
                 if (n == _playing && Source.isPlaying) return;

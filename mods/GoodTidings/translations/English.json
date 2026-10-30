@@ -225,5 +225,17 @@
   "goodtidings_skald_hover": "Stay awhile and listen",
   "goodtidings_skald_arrives": "A long-dead skald rises at your hearth. Gather round and listen.",
   "goodtidings_skald_leaves": "The skald's song ends. He sinks back to his rest.",
-  "goodtidings_skald_inspired": "The old song stirs your memory: your skills rise."
+  "goodtidings_skald_inspired": "The old song stirs your memory: your skills rise.",
+  "goodtidings_skald_risen1": "Ahh. A hearth, and folk around it. Good.",
+  "goodtidings_skald_risen2": "Who wakes old bones? No matter. I have songs.",
+  "goodtidings_skald_risen3": "Mind me, just stretching. It's been a few hundred winters.",
+  "goodtidings_skald_begin1": "Gather round! Hear now the songs of the north.",
+  "goodtidings_skald_begin2": "Sit, friends. Let the old songs do their work.",
+  "goodtidings_skald_begin3": "This one's older than your grandsire's grandsire.",
+  "goodtidings_skald_between1": "Another, then!",
+  "goodtidings_skald_between2": "My father taught me this one. Before the worms did.",
+  "goodtidings_skald_between3": "Ha! You liked that. One more.",
+  "goodtidings_skald_bow1": "Thank you, thank you! Skål!",
+  "goodtidings_skald_bow2": "Until the next fire, friends.",
+  "goodtidings_skald_bow3": "Remember the songs. That's all a skald asks."
 }

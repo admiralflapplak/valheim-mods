@@ -14,6 +14,8 @@
   <ItemGroup>
     <EmbeddedResource Include="assets/*.json" LogicalName="GoodTidings.assets.%(Filename).json" />
     <EmbeddedResource Include="assets/*.ogg" LogicalName="GoodTidings.assets.%(Filename).ogg" />
+    <EmbeddedResource Include="assets/*.bin" LogicalName="GoodTidings.assets.%(Filename).bin" />
+    <EmbeddedResource Include="assets/*.png" LogicalName="GoodTidings.assets.%(Filename).png" />
   </ItemGroup>
 
   <!-- Unity modules Good Tidings needs beyond the references in ../Directory.Build.props -->
