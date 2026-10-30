@@ -15,7 +15,7 @@ namespace GoodTidings
     {
         public const string Guid = "nick.GoodTidings";
         public const string Name = "GoodTidings";
-        public const string Version = "0.15.2";
+        public const string Version = "0.15.5";
 
         internal static Plugin Instance;
         internal static ManualLogSource Log;
@@ -45,7 +45,7 @@ namespace GoodTidings
 
         // 06 - Skald
         internal static ConfigEntry<bool> SkaldEnabled;
-        internal static ConfigEntry<float> SkaldSkillGain, SkaldListenSeconds;
+        internal static ConfigEntry<float> SkaldSkillGain, SkaldListenSeconds, SkaldNoDrainMinutes;
         internal static ConfigEntry<int> SkaldComfort;
         internal static ConfigEntry<float> SkaldVolume, SkaldMusicDuck;
 
@@ -110,6 +110,8 @@ namespace GoodTidings
                 new AcceptableValueRange<float>(0f, 25f));
             SkaldListenSeconds = Synced.Bind("06 - Skald", "Listen Seconds", 30f, "How long a player must stay near him for the skill-ups.",
                 new AcceptableValueRange<float>(5f, 300f));
+            SkaldNoDrainMinutes = Synced.Bind("06 - Skald", "No Skill Drain Minutes", 30f,
+                "How long a listener's next death drains no skills (\"Remembered in Song\").", new AcceptableValueRange<float>(0f, 240f));
             SkaldComfort = Synced.Bind("06 - Skald", "Comfort", 2, "How much comfort he adds near him while he plays.", new AcceptableValueRange<int>(0, 5));
             SkaldVolume = Config.Bind("06 - Skald", "Song Volume", 80f,
                 new ConfigDescription("How loud his song is for you (your own setting; the game's sound effects volume applies too).",
@@ -160,6 +162,7 @@ namespace GoodTidings
             SkaldPrefab.Unregister();
             Tempered.Unload();
             DvergerBand.Unload();
+            Remembered.Unload();
             RiddleWindow.Close();
             GameUi.Destroy();
             StockFile.Unwatch();

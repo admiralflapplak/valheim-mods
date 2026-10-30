@@ -801,6 +801,18 @@ namespace GoodTidings
                 }
                 case "visit":
                     if (!ZNet.instance.IsServer() && !global::Console.instance.IsCheatsEnabled()) { t.AddString("Host or devcommands only."); return; }
+                    if (a.Length > 3 && a[2] == "skald" && a[3] == "demo")
+                    {
+                        // a short skald visit 4 m in front of this player, facing them: every change of animation in about 25 seconds
+                        if (p == null) { t.AddString("Not in a world."); return; }
+                        Transform cam = GameCamera.instance ? GameCamera.instance.transform : p.transform;
+                        Vector3 fwd = Vector3.ProjectOnPlane(cam.forward, Vector3.up).normalized;
+                        Vector3 at = p.transform.position + fwd * 4f;
+                        if (ZoneSystem.instance.GetSolidHeight(at, out float h)) at.y = h;
+                        SkaldVisit.Demo(at, -fwd);
+                        t.AddString("A short skald visit in front of you: rising, 6 s strolling, 5 s playing, bowing, sinking.");
+                        return;
+                    }
                     if (a.Length > 3 && a[2] == "trader" && a[3] == "here")
                     {
                         // the trader rides in to where this player stands, base or not

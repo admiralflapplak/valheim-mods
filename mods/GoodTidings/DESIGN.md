@@ -159,7 +159,11 @@ A positive visit, its reward skill (and comfort). Decided with the user 2026-10-
   playing (his three songs once each, shuffled: their lengths are in the code, a dedicated server loads no audio) -> bowing (the
   user's Mixamo "Quick Informal Bow", played once) -> sinking. Changes blend (PoseBlend, MixamoPlayer.BlendFrom/FadeOut); the lyre
   glides on and off his back. Lines over his head with Haldor's sounds (sfx_haldor_greet/yea/laugh): risen, begin, between songs, bow.
-  Listeners also get the game's "No skill drain" (SEMan.s_statusEffectSoftDeath). Stay Minutes is gone.
+  Listeners also get "Remembered in Song" (0.15.3, Remembered in Skald.cs): our own status with the game's no-skill-drain icon, No
+  Skill Drain Minutes 30; a death while it's on skips Skills.OnDeath. (The game's own SoftDeath can't be given: each frame it resets its
+  time from the player's last death, so it ended at once.) Stay Minutes is gone.
+  The body's animator updates every frame (0.15.4): on the physics clock the blends read their own last output back on skipped frames
+  and he shook between animations. `goodtidings visit skald demo`: a short visit in front of the player (6 s strolling, 5 s playing).
 - The visit (Skald.cs): saved object goodtidings_skald (empty, a trigger to look at, as Muninn's). He takes the most comfortable spot
   within 20 m of the base (the game's own SE_Rested.CalculateComfortLevel with Cover's shelter check, a 2 m grid, floors found by a ray
   down from just above the base's height, room to stand; equals: the nearest), facing where the player stood. Rises with the

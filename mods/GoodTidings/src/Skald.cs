@@ -27,16 +27,32 @@ namespace GoodTidings
             if (SkaldVisitor.Count > 0) { Plugin.Debug("The skald is already here"); return false; }
             GameObject prefab = ZNetScene.instance.GetPrefab(SkaldPrefab.Name);
             if (prefab == null || !FindSpot(basePoint, out Vector3 at, out int comfort)) { Plugin.Debug($"No room for the skald near {basePoint}"); return false; }
-            GameObject go = UnityEngine.Object.Instantiate(prefab, at, Quaternion.LookRotation(SkaldVisitor.OpenWay(at, basePoint)));
+            Spawn(prefab, at, Quaternion.LookRotation(SkaldVisitor.OpenWay(at, basePoint)), basePoint, demo: false);
+            Net.MessageAll(MessageHud.MessageType.Center, "$goodtidings_skald_arrives");
+            Plugin.Log.LogInfo($"The skald rises at {at} (comfort {comfort}), by the base at {basePoint}");
+            return true;
+        }
+
+        /// <summary>
+        /// For testing: a skald at <paramref name="at"/> facing <paramref name="face"/>, his visit short (a few seconds of strolling and
+        /// playing) to see each change of animation.
+        /// </summary>
+        internal static void Demo(Vector3 at, Vector3 face)
+        {
+            GameObject prefab = ZNetScene.instance.GetPrefab(SkaldPrefab.Name);
+            if (prefab) Spawn(prefab, at, Quaternion.LookRotation(face), at + face * 4f, demo: true);
+        }
+
+        private static void Spawn(GameObject prefab, Vector3 at, Quaternion facing, Vector3 basePoint, bool demo)
+        {
+            GameObject go = UnityEngine.Object.Instantiate(prefab, at, facing);
             ZDO zdo = go.GetComponent<ZNetView>().GetZDO();
             long now = ZNet.instance.GetTime().Ticks;
             zdo.Set(SkaldVisitor.ArrivedKey, now);
             zdo.Set(SkaldVisitor.StageAtKey, now);
             zdo.Set(SkaldVisitor.SpotKey, at);
             zdo.Set(SkaldVisitor.HomeKey, basePoint);
-            Net.MessageAll(MessageHud.MessageType.Center, "$goodtidings_skald_arrives");
-            Plugin.Log.LogInfo($"The skald rises at {at} (comfort {comfort}), by the base at {basePoint}");
-            return true;
+            zdo.Set(SkaldVisitor.DemoKey, demo);
         }
 
         private static int _solid;
@@ -142,7 +158,7 @@ namespace GoodTidings
     internal sealed class SkaldVisitor : MonoBehaviour, Hoverable
     {
         internal const string ArrivedKey = "GoodTidings.Arrived", LeaveAtKey = "GoodTidings.LeaveAt", HomeKey = "GoodTidings.Home",
-            StageKey = "GoodTidings.Stage", StageAtKey = "GoodTidings.StageAt", SpotKey = "GoodTidings.Spot", PlayAtKey = "GoodTidings.PlayAt";
+            StageKey = "GoodTidings.Stage", DemoKey = "GoodTidings.Demo", StageAtKey = "GoodTidings.StageAt", SpotKey = "GoodTidings.Spot", PlayAtKey = "GoodTidings.PlayAt";
         internal const int Rising = 0, Wandering = 1, Playing = 2, Bowing = 3, Sinking = 4;
         internal static readonly string[] Outfit = { "HelmetCelebration", "ArmorBronzeChest", "ArmorBronzeLegs" };   // (the user's pick)
         private const float RiseTime = 3.5f, SinkTime = 3.5f, Blending = 0.8f, WanderTime = 20f, WanderRange = 4f, WalkSpeed = 1.1f;
@@ -203,7 +219,15 @@ namespace GoodTidings
             _made.AddRange(SkaldBones.Build(at, mesh, _body.transform));
             foreach (string item in Outfit) SkaldBones.Wear(mesh, item, _made);
             _animator = _body.GetComponentInChildren<Animator>();
-            if (_animator) _animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+            if (_animator)
+            {
+                _animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+                // every frame: on the physics clock (the player's) it skipped frames, and the blends between animations, reading the
+                // pose back, blended their own last output again on those frames (he shook as one animation became the next)
+                if (_animator.updateMode != AnimatorUpdateMode.Normal) Plugin.Debug($"The skald's animator was {_animator.updateMode}: now every frame");
+                _animator.updateMode = AnimatorUpdateMode.Normal;
+                _animator.applyRootMotion = false;
+            }
             _lyre = SkaldLook.Lyre(mesh.gameObject.layer);
             _lyre.transform.SetParent(at, false);
             _holder = new SkaldLook.Holder(_lyre, at, _body.transform, MixamoClip.Get("skald_play")?.Length ?? 6f);
@@ -364,7 +388,7 @@ namespace GoodTidings
                 case Wandering:
                 {
                     // a few strolls round his spot, then back to it to play (facing where the player stood)
-                    bool done = inStage > WanderTime;
+                    bool done = inStage > (zdo.GetBool(DemoKey) ? 6f : WanderTime);
                     if (done) _target = spot;
                     else if (_target == Vector3.zero || (Utils.DistanceXZ(transform.position, _target) < 0.2f && (_pause -= Time.deltaTime) < 0f))
                     {
@@ -389,7 +413,7 @@ namespace GoodTidings
                 }
                 case Playing:
                     // his three songs, each once (their lengths known here, a dedicated server's too), then the bow
-                    if (now >= zdo.GetLong(PlayAtKey, now) + TimeSpan.FromSeconds(SkaldLook.AllSongs + 1f).Ticks)
+                    if (now >= zdo.GetLong(PlayAtKey, now) + TimeSpan.FromSeconds(zdo.GetBool(DemoKey) ? 5f : SkaldLook.AllSongs + 1f).Ticks)
                     {
                         SetStage(zdo, Bowing);
                         Net.MessageAll(MessageHud.MessageType.Center, "$goodtidings_skald_leaves");
@@ -511,8 +535,8 @@ namespace GoodTidings
             }
             p.Message(MessageHud.MessageType.Center, "$goodtidings_skald_inspired");
             p.m_skillLevelupEffects.Create(p.GetHeadPoint(), p.transform.rotation, p.transform);   // (the game's own skill-up flash and sound)
-            // and the game's own "no skill drain" (as after a death): the songs remembered through the next one
-            p.GetSEMan().AddStatusEffect(SEMan.s_statusEffectSoftDeath, resetTime: true);
+            // and "Remembered in Song": the next death drains no skills (Remembered)
+            Remembered.Give(p);
             Plugin.Log.LogInfo($"The skald's song: {raised} skills raised by {Plugin.SkaldSkillGain.Value}% of their level");
         }
 
@@ -549,6 +573,55 @@ namespace GoodTidings
         }
 
         private void OnDestroy() => _handler?.Dispose();
+    }
+
+    /// <summary>
+    /// "Remembered in Song", the skald's second gift to those who listened: for a while (No Skill Drain Minutes) a death drains no skills.
+    /// A status effect of our own with the game's "no skill drain" icon: the game's own one can't be given (each frame it resets its
+    /// time from the player's last death, so given without one it ended at once). It works where the game lowers skills on a death.
+    /// </summary>
+    internal static class Remembered
+    {
+        internal const string Name = "GoodTidings_Remembered";
+        private static SE_Stats _effect;
+
+        internal static void Give(Player p)
+        {
+            if (_effect == null)
+            {
+                _effect = ScriptableObject.CreateInstance<SE_Stats>();
+                _effect.name = Name;
+                _effect.m_name = "$goodtidings_remembered";
+                _effect.m_tooltip = "$goodtidings_remembered_tip";
+                _effect.m_icon = ObjectDB.instance?.GetStatusEffect(SEMan.s_statusEffectSoftDeath)?.m_icon;
+            }
+            _effect.m_ttl = Plugin.SkaldNoDrainMinutes.Value * 60f;
+            p.GetSEMan().AddStatusEffect(_effect, resetTime: true);
+        }
+
+        internal static bool On(Player p) => p != null && p.GetSEMan().HaveStatusEffect(Name.GetStableHashCode());
+
+        internal static void Unload()
+        {
+            if (_effect) UnityEngine.Object.Destroy(_effect);
+            _effect = null;
+        }
+    }
+
+    /// <summary>A death while Remembered in Song: no skills drained (the game's skills reset by world setting still applies).</summary>
+    [HarmonyPatch(typeof(Skills), nameof(Skills.OnDeath))]
+    internal static class Skills_OnDeath
+    {
+        private static readonly AccessTools.FieldRef<Skills, Player> Owner = AccessTools.FieldRefAccess<Skills, Player>("m_player");
+
+        private static bool Prefix(Skills __instance)
+        {
+            Player p = Owner(__instance);
+            if (!Remembered.On(p)) return true;
+            p.Message(MessageHud.MessageType.TopLeft, "$goodtidings_remembered_saved");
+            Plugin.Log.LogInfo("A death while Remembered in Song: no skills drained");
+            return false;
+        }
     }
 
     /// <summary>+Skald Comfort near a playing skald (the game counts comfort here for the Rested status and its length).</summary>

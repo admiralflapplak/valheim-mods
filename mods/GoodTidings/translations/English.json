@@ -237,5 +237,8 @@
   "goodtidings_skald_between3": "Ha! You liked that. One more.",
   "goodtidings_skald_bow1": "Thank you, thank you! Skål!",
   "goodtidings_skald_bow2": "Until the next fire, friends.",
-  "goodtidings_skald_bow3": "Remember the songs. That's all a skald asks."
+  "goodtidings_skald_bow3": "Remember the songs. That's all a skald asks.",
+  "goodtidings_remembered": "Remembered in Song",
+  "goodtidings_remembered_tip": "The skald's song holds your deeds: your next death drains no skills.",
+  "goodtidings_remembered_saved": "Remembered in song: your skills are not lost."
 }
