@@ -99,5 +99,35 @@ Earlier plan: generated "do you remember" riddles from the player's own discover
 lore riddles (each world remembers which were asked); harder as more are answered. Right: a reward from the current land. Wrong: he
 takes flight with a cry and the land's beasts answer it (ravens and wolves hunt together; carrion birds follow battle).
 
+## The Wounded Dvergr (0.9.1-0.11.x, set and tested with the user 2026-10-30)
+
+A neutral visit, with a reward that isn't items (the user wanted each visit's good to be its own kind: Dagny trade, Bountiful time,
+Muninn knowledge, the Dvergr craft). Our own saved object goodtidings_dverger (Dverger copy, DvergerAI instead of MonsterAI, NpcTalk and
+drops removed, untouchable like Dagny). Map: "?" and the yellow circle, as Muninn.
+- Arrives 35-45 m out, staggers in (player's "Encumbered walk") and goes down on one knee 10-18 m from the base ("Kneel Start", then
+  "Kneel Loop": the user chose a pose with motion over KneelDeath).
+- E helps him up. He goes to the burning fire nearest him within 60 m (fires found through the game's warmth areas, EffectArea Heat,
+  only on while burning: torches don't count): a free bed within 6 m of it (lies, "Laying Sleeping"), else a seat (chair "Player_Sit_Chair",
+  throne "Sit_Throne_Idle"), else the ground beside it ("Sitting idle"). A bed or seat counts only with a free floor spot beside it that
+  his pathfinding reaches (no reaching it through a wall); after a minute short of it he goes to the ground by the fire instead. Doors
+  in his way are opened when he stops getting closer. With no fire he sits where he is, too cold to eat, and goes once one is lit.
+- Walking uses the player's "Walk New"/"IdleTweaked" (the Dverger's own walk holds a crossbow), mixed by speed (DvergerMotion).
+  Borrowed clips are copies without events (the death clip's "Die" event killed him).
+- Resting he counts as attached (Character.IsAttached patch), no gravity, his collider a trigger, his look direction the way he lies
+  (standing still the game turned him to his last look direction against the hold: he shook).
+- Fed from the hotbar (anything with food value; Meals 3; the player's eating sound). Healed: rests 8 s, walks to the nearest player,
+  works at their gear ("Workbench" animation with the workbench's crafting sounds, 4.5 s), then everyone within 30 m gets all gear
+  repaired and "Dvergr-tempered" (Tempered.cs: our SE_Stats, hammer icon, Tempered Minutes 30; wear at Tempered Wear 50%, through
+  Game.m_durabilityRate around the game's wear methods and a refund on armour).
+- Not fed in Stay Minutes (10): he limps off cursing; 45 s later his kin come (DvergerBand.cs): 2 rogues, a mage from the Mountains on
+  (fire or ice from the Mistlands), another rogue from the Ashlands on, 26-32 m out, aggravated; health and damage scaled to the newest
+  land (0.25 Meadows ... 1.0 Mistlands ... 1.6 Deep North); they drop only coins (10 Meadows ... 85 Deep North, +-25%); a red raid
+  circle while any are about; gone after 8 minutes.
+- Looks (WoundedLook): the Ashlands outfit without hood and cape, grey at brightness 1.05 (user's pick), red beard.
+- Testing: `goodtidings visit dverger`, `goodtidings dverger leave` (time up now), `goodtidings dverger fires`, `look wounded`,
+  `look woundedcolours`.
+
+Next visit idea (user leaning, wants to think first): a positive one, the skald's evening (skill rather than goods).
+
 **Open questions**
 - Which Dverger, and the trader's name.

@@ -15,7 +15,7 @@ namespace GoodTidings
     {
         public const string Guid = "nick.GoodTidings";
         public const string Name = "GoodTidings";
-        public const string Version = "0.9.0";
+        public const string Version = "0.11.4";
 
         internal static Plugin Instance;
         internal static ManualLogSource Log;
@@ -37,6 +37,11 @@ namespace GoodTidings
         // 04 - Muninn's Riddle
         internal static ConfigEntry<bool> MuninnEnabled;
         internal static ConfigEntry<float> MuninnMinutes, MuninnLoreChance;
+
+        // 05 - Wounded Dvergr
+        internal static ConfigEntry<bool> DvergerEnabled;
+        internal static ConfigEntry<float> DvergerMinutes, TemperedMinutes, TemperedWear;
+        internal static ConfigEntry<int> DvergerMeals;
 
         // 09 - Testing
         internal static ConfigEntry<bool> DebugLogging;
@@ -82,6 +87,16 @@ namespace GoodTidings
                 "The percent chance he asks one of the old riddles (from the Eddas and Valheim's story, none repeated until all are asked) instead of one made from what the player remembers. A right answer always brings the land's rare.",
                 new AcceptableValueRange<float>(0f, 100f));
 
+            DvergerEnabled = Synced.Bind("05 - Wounded Dvergr", "Enabled", true,
+                "A wounded Dvergr can be found near the base: help him up, and he rests by a fire; feed him in time and he mends and tempers everyone's gear, leave him and his kin come for the base.");
+            DvergerMinutes = Synced.Bind("05 - Wounded Dvergr", "Stay Minutes", 10f,
+                "How long there is to help and feed him before he limps off.", new AcceptableValueRange<float>(3f, 30f));
+            DvergerMeals = Synced.Bind("05 - Wounded Dvergr", "Meals", 3, "How many meals he needs.", new AcceptableValueRange<int>(1, 10));
+            TemperedMinutes = Synced.Bind("05 - Wounded Dvergr", "Tempered Minutes", 30f,
+                "How long gear stays tempered after he's healed.", new AcceptableValueRange<float>(1f, 180f));
+            TemperedWear = Synced.Bind("05 - Wounded Dvergr", "Tempered Wear", 50f,
+                "The percent of the usual wear tempered gear takes.", new AcceptableValueRange<float>(0f, 100f));
+
             DebugLogging = Config.Bind("09 - Testing", "Debug Logging", false,
                 "Log why a visit did or didn't happen.");
 
@@ -95,7 +110,7 @@ namespace GoodTidings
             Config.Save();
 
             _harmony = Harmony.CreateAndPatchAll(typeof(Plugin).Assembly, Guid);
-            if (ZNetScene.instance) { TraderPrefab.Register(ZNetScene.instance); MuninnPrefab.Register(ZNetScene.instance); }   // (after a reload: the scene is already up)
+            if (ZNetScene.instance) { TraderPrefab.Register(ZNetScene.instance); MuninnPrefab.Register(ZNetScene.instance); DvergerPrefab.Register(ZNetScene.instance); }   // (after a reload: the scene is already up)
             Commands.Register();
             MapPins.CleanUp();
             Net.Register();   // (after a reload: the world is already up)
@@ -107,6 +122,7 @@ namespace GoodTidings
             Synced?.Update();
             RiddleWindow.Tick();
             StockFile.Tick();
+            DvergerBand.Tick();
         }
 
         private void OnDestroy()
@@ -118,6 +134,9 @@ namespace GoodTidings
             MapPins.CleanUp();
             TraderPrefab.Unregister();
             MuninnPrefab.Unregister();
+            DvergerPrefab.Unregister();
+            Tempered.Unload();
+            DvergerBand.Unload();
             RiddleWindow.Close();
             GameUi.Destroy();
             StockFile.Unwatch();

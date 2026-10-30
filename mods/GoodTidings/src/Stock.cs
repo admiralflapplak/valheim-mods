@@ -171,6 +171,15 @@ namespace GoodTidings
             return -1;
         }
 
+        /// <summary>The newest land the world has opened (its boss beaten): 0 Meadows ... 7 Deep North.</summary>
+        internal static int NewestLand()
+        {
+            int n = 0;
+            for (int i = 0; i < BuiltIn.Length; i++)
+                if (BuiltIn[i].Key == "" || ZoneSystem.instance && ZoneSystem.instance.GetGlobalKey(BuiltIn[i].Key)) n = i;
+            return n;
+        }
+
         private const int RandomSlots = 10;
         internal const int MaxBuys = 3, MaxRareBuys = 1;
         internal const float Discount = 0.3f;

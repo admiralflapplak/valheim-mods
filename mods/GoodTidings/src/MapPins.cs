@@ -13,7 +13,7 @@ namespace GoodTidings
         private static readonly System.Collections.Generic.Dictionary<float, Sprite> Areas = new System.Collections.Generic.Dictionary<float, Sprite>();
 
         /// <summary>The circle's colour, as a hue: blue for a good visit, yellow for a neutral one (red is the game's, for raids).</summary>
-        internal const float Good = 0.58f, Neutral = 0.14f;
+        internal const float Good = 0.58f, Neutral = 0.14f, Raid = 0f;   // (Raid: the game's red, as our own copy so CleanUp knows it)
         private Minimap.PinData _area, _icon;
         private float _moved;
 

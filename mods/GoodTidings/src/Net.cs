@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using HarmonyLib;
+using UnityEngine;
 
 namespace GoodTidings
 {
@@ -11,7 +12,7 @@ namespace GoodTidings
     internal static class Net
     {
         internal const string Bountiful = "GoodTidings_Bountiful";
-        private static readonly string[] All = { Bountiful };
+        private static readonly string[] All = { Bountiful, Tempered.Rpc };
         private static ZRoutedRpc _registeredOn;
 
         /// <summary>
@@ -28,6 +29,7 @@ namespace GoodTidings
             try
             {
                 ZRoutedRpc.instance.Register<ZPackage>(Bountiful, BountifulSeason.OnRpc);
+                ZRoutedRpc.instance.Register<Vector3>(Tempered.Rpc, Tempered.OnTemper);
             }
             catch (Exception e) { Plugin.Log.LogWarning($"Couldn't set up networking ({e.Message})."); }
         }

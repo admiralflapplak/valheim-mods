@@ -118,6 +118,12 @@ namespace GoodTidings
         }
     }
 
+    internal static class Visitors
+    {
+        /// <summary>Our visitors that nothing can hurt or fight: Dagny and Atlas, the wounded Dvergr.</summary>
+        internal static bool Untouchable(Character c) => TraderVisitor.Is(c) || DvergerVisitor.Is(c);
+    }
+
     /// <summary>
     /// The trader can't be hurt, and nothing takes her for an enemy (or she anyone): no fights, no reactions to hits. Every way in is
     /// closed: a hit (Damage, and its RPC on the owner), damage applied straight to health (poison, fire and smoke do: a beehive's bees
@@ -126,19 +132,19 @@ namespace GoodTidings
     [HarmonyPatch(typeof(Character), nameof(Character.Damage))]
     internal static class Character_Damage
     {
-        private static bool Prefix(Character __instance) => !TraderVisitor.Is(__instance);
+        private static bool Prefix(Character __instance) => !Visitors.Untouchable(__instance);
     }
 
     [HarmonyPatch(typeof(Character), "RPC_Damage")]
     internal static class Character_RPC_Damage
     {
-        private static bool Prefix(Character __instance) => !TraderVisitor.Is(__instance);
+        private static bool Prefix(Character __instance) => !Visitors.Untouchable(__instance);
     }
 
     [HarmonyPatch(typeof(Character), nameof(Character.ApplyDamage))]
     internal static class Character_ApplyDamage
     {
-        private static bool Prefix(Character __instance) => !TraderVisitor.Is(__instance);
+        private static bool Prefix(Character __instance) => !Visitors.Untouchable(__instance);
     }
 
     [HarmonyPatch(typeof(SEMan), nameof(SEMan.AddStatusEffect), typeof(StatusEffect), typeof(bool), typeof(int), typeof(float), typeof(short))]
@@ -148,7 +154,7 @@ namespace GoodTidings
 
         private static bool Prefix(SEMan __instance, ref StatusEffect __result)
         {
-            if (!TraderVisitor.Is(Owner(__instance))) return true;
+            if (!Visitors.Untouchable(Owner(__instance))) return true;
             __result = null;
             return false;
         }
@@ -161,7 +167,7 @@ namespace GoodTidings
 
         private static bool Prefix(SEMan __instance, ref StatusEffect __result)
         {
-            if (!TraderVisitor.Is(Owner(__instance))) return true;
+            if (!Visitors.Untouchable(Owner(__instance))) return true;
             __result = null;
             return false;
         }
@@ -172,7 +178,7 @@ namespace GoodTidings
     {
         private static void Postfix(Character a, Character b, ref bool __result)
         {
-            if (__result && (TraderVisitor.Is(a) || TraderVisitor.Is(b))) __result = false;
+            if (__result && (Visitors.Untouchable(a) || Visitors.Untouchable(b))) __result = false;
         }
     }
 
@@ -180,7 +186,7 @@ namespace GoodTidings
     [HarmonyPatch(typeof(EnemyHud), "ShowHud")]
     internal static class EnemyHud_ShowHud
     {
-        private static bool Prefix(Character c) => !TraderVisitor.Is(c);
+        private static bool Prefix(Character c) => !Visitors.Untouchable(c);
     }
 
     /// <summary>Her name and "[E] Trade" when the player looks at her.</summary>
@@ -189,7 +195,8 @@ namespace GoodTidings
     {
         private static void Postfix(Character __instance, ref string __result)
         {
-            if (TraderVisitor.Is(__instance))
+            if (DvergerVisitor.Is(__instance)) __result = __instance.GetComponent<DvergerVisitor>().HoverText();
+            else if (TraderVisitor.Is(__instance))
                 __result = Localization.instance.Localize(TraderVisitor.AtHead(Player.m_localPlayer)
                     ? "$goodtidings_atlas\n[<color=yellow><b>$KEY_Use</b></color>] $goodtidings_pet"
                     : "$goodtidings_dagny\n[<color=yellow><b>$KEY_Use</b></color>] $goodtidings_trade");
