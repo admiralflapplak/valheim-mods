@@ -50,9 +50,10 @@ namespace GoodTidings
         private static Riddle Build(string text, string right, IEnumerable<string> wrongs, System.Random rnd)
         {
             if (!Named(right)) return null;
-            var w = wrongs.Where(x => x != right && Named(x)).Distinct().OrderBy(_ => rnd.Next()).Take(2).ToList();
+            // as many wrong answers as the world's wisdom asks for (Lore.Choices), at least two
+            var w = wrongs.Where(x => x != right && Named(x)).Distinct().OrderBy(_ => rnd.Next()).Take(Lore.Choices() - 1).ToList();
             if (w.Count < 2) return null;
-            var answers = new List<string> { right, w[0], w[1] }.OrderBy(_ => rnd.Next()).ToList();
+            var answers = new List<string> { right }.Concat(w).OrderBy(_ => rnd.Next()).ToList();
             return new Riddle { Text = text, Answers = answers.ToArray(), Correct = answers.IndexOf(right) };
         }
 

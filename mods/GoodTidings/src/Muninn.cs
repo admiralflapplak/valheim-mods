@@ -154,7 +154,11 @@ namespace GoodTidings
             zdo.Set(AnswererKey, who ?? "");
             zdo.Set(LeaveAtKey, ZNet.instance.GetTime().Ticks + TimeSpan.FromSeconds(5).Ticks);   // (a parting line, then off)
             Vector3 home = zdo.GetVec3(HomeKey, transform.position);
-            if (right) MuninnOutcome.Reward(transform.position + transform.forward * 1.2f + Vector3.up * 0.6f, zdo.GetInt(LoreKey, -1) > 0);
+            if (right)
+            {
+                MuninnOutcome.Reward(transform.position + transform.forward * 1.2f + Vector3.up * 0.6f, zdo.GetInt(LoreKey, -1) > 0);
+                Lore.AddWisdom();   // (after the reward: this answer's reward is for the wisdom it was asked at)
+            }
             else MuninnOutcome.CallTheBeasts(home);
             Plugin.Log.LogInfo($"Muninn's riddle answered {(right ? "rightly" : "wrongly")} by {who}");
         }

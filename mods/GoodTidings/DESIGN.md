@@ -84,7 +84,9 @@ The window (RiddleWindow.cs, GameUi template) shows the riddle and three answers
 22-30 m. Old riddles (0.8.0, Lore.cs): 26 hand-written, from the Eddas and Valheim's story; the server picks one when he lands
 ("Old Riddle Chance", 35%), the same for everyone; a global key per riddle remembers which were asked in the world, none repeats
 until all have been (then they start over); the window says "an old riddle"; a right answer always brings the land's rare.
-Still to come: harder riddles as more are answered.
+Harder as the world learns (0.8.1): the world's wisdom = riddles answered rightly (global keys goodtidings_wisdom_1..10); made riddles
+offer 3 answers, 4 from 5 right, 5 from 10 (never more wrong answers than the player has discovered); the reward gains one good per 5
+right answers (at most two). Old riddles keep their 3 hand-written answers.
 Earlier plan: generated "do you remember" riddles from the player's own discoveries (endless, contextual, fair); rare hand-written
 lore riddles (each world remembers which were asked); harder as more are answered. Right: a reward from the current land. Wrong: he
 takes flight with a cry and the land's beasts answer it (ravens and wolves hunt together; carrion birds follow battle).

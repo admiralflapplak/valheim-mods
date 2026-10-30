@@ -11,6 +11,31 @@ namespace GoodTidings
     /// </summary>
     internal static class Lore
     {
+        // ---- the world's wisdom: how many of Muninn's riddles have been answered rightly in this world (a global key for each, up to 10:
+        // past that nothing changes), shared by everyone and saved with the world
+
+        private const string WisdomKey = "goodtidings_wisdom_";
+        internal const int WisdomMax = 10;
+
+        internal static int Wisdom()
+        {
+            ZoneSystem zones = ZoneSystem.instance;
+            return zones == null ? 0 : Enumerable.Range(1, WisdomMax).Count(n => zones.GetGlobalKey(WisdomKey + n));
+        }
+
+        /// <summary>One more riddle answered rightly (the game sends a global key to the server from any game).</summary>
+        internal static void AddWisdom()
+        {
+            int w = Wisdom();
+            if (w < WisdomMax) ZoneSystem.instance.SetGlobalKey(WisdomKey + (w + 1));
+        }
+
+        /// <summary>How many answers a made riddle offers: 3, 4 from five right answers, 5 from ten (harder, as a wrong one calls the beasts).</summary>
+        internal static int Choices() => Wisdom() >= 10 ? 5 : Wisdom() >= 5 ? 4 : 3;
+
+        /// <summary>The reward's extra goods: one for every five right answers, at most two.</summary>
+        internal static int ExtraReward() => System.Math.Min(2, Wisdom() / 5);
+
         internal const int Count = 26;
         private const string AskedKey = "goodtidings_lore_";
 

@@ -419,6 +419,7 @@ namespace GoodTidings
                 }
                 case "riddles":
                 {
+                    t.AddString($"The world's wisdom: {Lore.Wisdom()} right answers ({Lore.Choices()} answers to a riddle, {Lore.ExtraReward()} extra reward).");
                     // a few riddles from this player's discoveries, the right answer marked
                     var rnd = new System.Random();
                     for (int k = 0; k < 8; k++)
