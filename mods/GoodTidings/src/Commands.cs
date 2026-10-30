@@ -62,11 +62,14 @@ namespace GoodTidings
         internal static void Register()
         {
             new Terminal.ConsoleCommand(Command, "Good Tidings: " + Usage, args => Run(args.Context, args.Args));
+            SkaldLook.BackChanged -= RefitBacks;
+            SkaldLook.BackChanged += RefitBacks;
         }
 
         internal static void Unregister()
         {
             TerminalCommands().Remove(Command);
+            SkaldLook.BackChanged -= RefitBacks;
             ClearLooks();
             Cuts.Clear();
             SaddleBag.Clear();
@@ -83,6 +86,120 @@ namespace GoodTidings
                     ClearLooks();
                     if (a.Length > 2 && a[2] == "clear") { t.AddString("Cleared."); return; }
                     if (p == null) { t.AddString("Not in a world."); return; }
+                    if (a.Length > 2 && (a[2] == "skaldplay" || a[2] == "skaldback"))
+                    {
+                        // the skald in what this player wears: playing the lute with his song, or standing with it on his back
+                        bool play = a[2] == "skaldplay";
+                        Transform at = Place(p, 0, 1, 4f);
+                        GameObject body = DvergerLook.BodyOf("Player", "Visual", at);
+                        SkinnedMeshRenderer mesh = body ? body.GetComponentsInChildren<SkinnedMeshRenderer>(true).FirstOrDefault(r => r.name == "body") : null;
+                        if (mesh == null) { t.AddString("No player body."); return; }
+                        var made = new List<Object>();
+                        SkaldBones.Build(at, mesh, body.transform);
+                        foreach (var i in p.GetInventory().GetEquippedItems().Where(i => i.m_dropPrefab != null && (i.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Helmet
+                                     || i.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Chest || i.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Legs)))
+                            SkaldBones.Wear(mesh, i.m_dropPrefab.name, made);
+                        Animator anim = body.GetComponentInChildren<Animator>();
+                        if (anim) anim.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+                        GameObject lute = SkaldLook.Lute(mesh.gameObject.layer);
+                        if (play)
+                        {
+                            MixamoPlayer player = MixamoPlayer.Play(anim, "skald_play");
+                            var holder = new SkaldLook.Holder(lute, at, body.transform, MixamoClip.Get("skald_play")?.Length ?? 6f);
+                            if (player) player.Posed = holder.Place;
+                            SkaldLook.Play(at.gameObject);
+                        }
+                        else
+                        {
+                            SkaldLook.OnBack(lute, body.transform);
+                            Backs.Add((lute, body.transform));
+                        }
+                        t.AddString(play ? "The skald plays in front of you (his song too). 'goodtidings lute forward side up tilt' (metres from his hips, tilt in degrees) moves the lute in his hands."
+                                         : "The skald stands in front of you, the lute on his back. 'goodtidings luteback x y z turnX turnY turnZ' moves it.");
+                        return;
+                    }
+                    if (a.Length > 2 && (a[2] == "skaldoutfits" || a[2] == "skaldhats" || a[2] == "skaldwear"))
+                    {
+                        // the skald's bones in a row of outfits (or of Hildir's hats, over rags and a linen cape; or "skaldwear a,b | c,d": these), all playing
+                        if (a.Length > 3 && a[3] == "me")
+                        {
+                            // what this player wears now (not what's in their hands, no cape)
+                            var worn = p.GetInventory().GetEquippedItems().Where(i => i.m_dropPrefab != null && (
+                                i.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Helmet || i.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Chest
+                                || i.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Legs)).Select(i => i.m_dropPrefab.name).ToArray();
+                            a = new[] { a[0], a[1], "skaldwear", string.Join(",", worn) };
+                        }
+                        string[][] outfits = a[2] == "skaldwear"
+                            ? string.Join(" ", a.Skip(3)).Split('|').Select(o => o.Split(new[] { ',', '+', ' ' }, System.StringSplitOptions.RemoveEmptyEntries)).ToArray()
+                            : a[2] == "skaldhats"
+                            ? Enumerable.Range(1, 10).Select(n => new[] { "ArmorRagsChest", "ArmorRagsLegs", "CapeLinen", "HelmetHat" + n }).ToArray()
+                            : new[]
+                            {
+                                new string[0],
+                                new[] { "ArmorRagsChest", "ArmorRagsLegs", "CapeLinen" },
+                                new[] { "ArmorMageChest", "ArmorMageLegs", "HelmetMage" },
+                                new[] { "ArmorLeatherChest", "ArmorLeatherLegs", "CapeDeerHide", "HelmetLeather" },
+                                new[] { "ArmorRagsChest", "ArmorRagsLegs", "CapeFeather", "HelmetBerserkerHood" },
+                                new[] { "ArmorMageChest_Ashlands", "ArmorMageLegs_Ashlands", "HelmetMage_Ashlands" },
+                                new[] { "ArmorTrollLeatherChest", "ArmorTrollLeatherLegs", "CapeWolf", "HelmetDNMediumHood" },
+                            };
+                        var made = new List<Object>();
+                        for (int k = 0; k < outfits.Length; k++)
+                        {
+                            Transform at = Place(p, k, outfits.Length, 5f, 1.4f);
+                            GameObject body = DvergerLook.BodyOf("Player", "Visual", at);
+                            SkinnedMeshRenderer mesh = body ? body.GetComponentsInChildren<SkinnedMeshRenderer>(true).FirstOrDefault(r => r.name == "body") : null;
+                            if (mesh == null) continue;
+                            SkaldBones.Build(at, mesh, body.transform);
+                            foreach (string item in outfits[k]) SkaldBones.Wear(mesh, item, made);
+                            Animator anim = body.GetComponentInChildren<Animator>();
+                            if (anim) anim.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+                            MixamoPlayer.Play(anim, "skald_play");
+                        }
+                        t.AddString("Left to right: " + string.Join(" | ", outfits.Select(o => o.Length == 0 ? "bare" : string.Join(" + ", o))));
+                        return;
+                    }
+                    if (a.Length > 2 && a[2] == "skaldviking")
+                    {
+                        // a player's body turned to bones (DummyMe's skeleton, the user's settings), playing the guitar
+                        Transform at = Place(p, 0, 1, 4f);
+                        GameObject body = DvergerLook.BodyOf("Player", "Visual", at);
+                        SkinnedMeshRenderer mesh = body ? body.GetComponentsInChildren<SkinnedMeshRenderer>(true).FirstOrDefault(r => r.name == "body") : null;
+                        if (mesh == null) { t.AddString("No player body."); return; }
+                        int made = SkaldBones.Build(at, mesh, body.transform).Count;
+                        Animator anim = body.GetComponentInChildren<Animator>();
+                        if (anim) anim.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+                        bool playing = MixamoPlayer.Play(anim, "skald_play");
+                        t.AddString($"The skald's bones in front of you ({made} parts made), playing: {playing}.");
+                        return;
+                    }
+                    if (a.Length > 2 && a[2] == "skaldbones")
+                    {
+                        // the guitar-playing animation on the game's skeletons (their rig is humanoid), one of each look
+                        string[] kinds = { "Skeleton", "Skeleton_Meadows", "Skeleton_Mountains", "Skeleton_Swamps", "Skeleton_DeepNorth", "Skeleton_Poison", "Skeleton_Hildir" };
+                        var shown = new List<string>();
+                        for (int k = 0; k < kinds.Length; k++)
+                        {
+                            GameObject body = DvergerLook.BodyOf(kinds[k], "Visual", Place(p, k, kinds.Length, 5f, 1.6f));
+                            Animator anim = body ? body.GetComponentInChildren<Animator>() : null;
+                            shown.Add(anim && MixamoPlayer.Play(anim, "skald_play") ? kinds[k] : kinds[k] + " (no)");
+                        }
+                        t.AddString("Skeletons in front of you, left to right: " + string.Join(", ", shown) + ".");
+                        return;
+                    }
+                    if (a.Length > 2 && a[2] == "skald")
+                    {
+                        // the guitar-playing animation (Mixamo, as data) on a Dverger and on a player's body
+                        GameObject dverger = DvergerLook.Body(Place(p, 0, 2, 4f, 2.2f));
+                        WoundedLook.Dress(dverger);
+                        DvergerLook.Hair(dverger, "DvergerHairMale_Redbeard");
+                        GameObject viking = DvergerLook.BodyOf("Player", "Visual", Place(p, 1, 2, 4f, 2.2f));
+                        int playing = 0;
+                        foreach (GameObject body in new[] { dverger, viking })
+                            if (body && MixamoPlayer.Play(body.GetComponentInChildren<Animator>(), "skald_play")) playing++;
+                        t.AddString($"Playing on {playing} of 2, left to right: a Dverger, a player's body.");
+                        return;
+                    }
                     if (a.Length > 2 && a[2] == "woundedcolours")
                     {
                         // his clothes in greys from dark to white, kneeling
@@ -489,6 +606,25 @@ namespace GoodTidings
                     t.AddString(n > 0 ? "His time is up." : "No wounded Dvergr loaded here.");
                     return;
                 }
+                case "lute":
+                case "luteback":
+                {
+                    // the lute's fit, live: in his hands (forward, side, up in metres from his hips; tilt in degrees) or on his back
+                    float F(int i, float d) => a.Length > i && float.TryParse(a[i], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float v) ? v : d;
+                    if (sub == "lute")
+                    {
+                        SkaldLook.HoldForward = F(2, SkaldLook.HoldForward); SkaldLook.HoldSide = F(3, SkaldLook.HoldSide);
+                        SkaldLook.HoldUp = F(4, SkaldLook.HoldUp); SkaldLook.HoldTilt = F(5, SkaldLook.HoldTilt);
+                        t.AddString($"Lute in his hands: forward {SkaldLook.HoldForward}, side {SkaldLook.HoldSide}, up {SkaldLook.HoldUp}, tilt {SkaldLook.HoldTilt}.");
+                    }
+                    else
+                    {
+                        SkaldLook.BackOffset = new Vector3(F(2, SkaldLook.BackOffset.x), F(3, SkaldLook.BackOffset.y), F(4, SkaldLook.BackOffset.z));
+                        SkaldLook.BackTurn = new Vector3(F(5, SkaldLook.BackTurn.x), F(6, SkaldLook.BackTurn.y), F(7, SkaldLook.BackTurn.z));
+                        t.AddString($"Lute on his back: offset {SkaldLook.BackOffset}, turn {SkaldLook.BackTurn}.");
+                    }
+                    return;
+                }
                 case "riddles":
                 {
                     t.AddString($"The world's wisdom: {Lore.Wisdom()} right answers ({Lore.Choices()} answers to a riddle, {Lore.ExtraReward()} extra reward).");
@@ -713,6 +849,13 @@ namespace GoodTidings
         }
 
         private static readonly List<PlayableGraph> Graphs = new List<PlayableGraph>();
+        private static readonly List<(GameObject lute, Transform body)> Backs = new List<(GameObject, Transform)>();
+
+        /// <summary>The previews' lutes on backs, put on again as their placement is changed (settings or `luteback`).</summary>
+        private static void RefitBacks()
+        {
+            foreach (var (lute, body) in Backs) if (lute && body) SkaldLook.OnBack(lute, body);
+        }
 
         private static void ShowHildir(Player p)
         {
@@ -792,6 +935,7 @@ namespace GoodTidings
             foreach (PlayableGraph g in Graphs) if (g.IsValid()) g.Destroy();
             Graphs.Clear();
             foreach (GameObject go in Shown) if (go) Object.Destroy(go);
+            Backs.Clear();
             Shown.Clear();
             Goods.Forget();
         }

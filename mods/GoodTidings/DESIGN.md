@@ -127,7 +127,29 @@ drops removed, untouchable like Dagny). Map: "?" and the yellow circle, as Munin
 - Testing: `goodtidings visit dverger`, `goodtidings dverger leave` (time up now), `goodtidings dverger fires`, `look wounded`,
   `look woundedcolours`.
 
-Next visit idea (user leaning, wants to think first): a positive one, the skald's evening (skill rather than goods).
+## The Skald (0.11.5-, in progress: his look is done, the visit itself is next)
+
+A positive visit, its reward skill (and comfort). Decided with the user 2026-10-30:
+- He's a friendly skeleton: a player body made into bones with DummyMe's SkeletonBody (copied as SkaldBones.cs, the user's DummyMe
+  values built in: Plain, skull 0.81 at -2.982/5.527/0.405 cm, eyes 1 cm, shoulders 1.1), so player clothes fit him (SkaldBones.Wear:
+  attach_skin meshes on the same bones; hats on Helmet_attach, not the head bone, or they float above, grown). Capes don't work on
+  him (cloth): none. Outfit not chosen yet (`look skaldwear me` copies what the player wears).
+- Plays a Mixamo animation ("Guitar Playing", reference/, standing): Blender 5.0 headless turns the FBX into data (assets/skald_play.json:
+  rest T-pose and each frame's bone turns, already in Unity's axes: x' = -x, y' = z, z' = -y); Retarget.cs rebuilds the skeleton
+  invisibly, makes it a humanoid Avatar (AvatarBuilder) and copies each frame onto his body with HumanPoseHandler. No Unity editor needed
+  (Valheim is Unity 2022.3.62f1; bundles from the user's Unity 6 wouldn't load).
+- His lute (SkaldLook.cs): built from primitives in a wooden item's material (the club's; building pieces' shader showed white),
+  grain scaled 4x. Held: fixed to his lower spine at the "Held" settings from his hips (the user's values are the defaults: forward
+  0.123, side 0.08, up 0.3, tilt 44.563), the neck aimed at his fretting hand's average spot (learnt over the first loop) moved by
+  "Neck point" (side 0.053, up 0.03). Smoothing toward the live hand floated; fixed is right. On his back (BackShield_attach) while
+  he rises; that fit isn't tuned yet. Settings F1 "98 - Skald Lute" (local, testing).
+- His song: reference/ModellMelodi.mp3 as mono Ogg Vorbis (assets/skald_song.ogg, embedded, written to BepInEx/cache, loaded with
+  UnityWebRequestMultimedia), a 3D looping sound through the game's sfx mixer group. Licence to check before release.
+- The visit (to build): he rises from the ground (skeleton rise effect) at the most comfortable spot in the base, lute on his back, then
+  plays for the visit; +2 comfort near him; anyone near him for 30 s gets +5% of each skill's level, once per visit; sinks at the end.
+- Testing: `look skald`, `skaldbones`, `skaldviking`, `skaldoutfits`, `skaldhats`, `skaldwear items | items`, `skaldwear me`,
+  `skaldplay`, `skaldback`; `lute`, `luteback`.
+
 
 **Open questions**
 - Which Dverger, and the trader's name.
