@@ -15,7 +15,7 @@ namespace GoodTidings
     {
         public const string Guid = "nick.GoodTidings";
         public const string Name = "GoodTidings";
-        public const string Version = "0.8.1";
+        public const string Version = "0.9.0";
 
         internal static Plugin Instance;
         internal static ManualLogSource Log;
@@ -87,6 +87,10 @@ namespace GoodTidings
 
             Goods.Bind(Config);
 
+            // Dagny's stock file (the server's applies to everyone), read again when it's saved
+            Synced.AddText(StockFile.SyncKey, StockFile.OwnText, StockFile.Use);
+            StockFile.Watch();
+
             Config.SaveOnConfigSet = true;
             Config.Save();
 
@@ -102,6 +106,7 @@ namespace GoodTidings
         {
             Synced?.Update();
             RiddleWindow.Tick();
+            StockFile.Tick();
         }
 
         private void OnDestroy()
@@ -115,6 +120,7 @@ namespace GoodTidings
             MuninnPrefab.Unregister();
             RiddleWindow.Close();
             GameUi.Destroy();
+            StockFile.Unwatch();
             Synced?.Dispose();
             Translations.Unload();
         }

@@ -14,7 +14,7 @@ namespace GoodTidings
     internal static class Commands
     {
         private const string Command = "goodtidings";
-        private const string Usage = "goodtidings look [trader [hood size]|ride [up back [up2 back2]]|loxcolours|loxcolour h s v|ridecolours|birds|ravens|hugin|munin|beard|hildir|face|hood [sizes]|colours|clear] | goodtidings goods [off] | goodtidings bones | goodtidings mesh <item> | goodtidings tex grid <n>|cut <suit> x0 y0 x1 y1|clear | goodtidings anims | goodtidings pose [rest|<clip> [0-1]] | goodtidings visit [trader [here]]";
+        private const string Usage = "goodtidings look [trader [hood size]|ride [up back [up2 back2]]|loxcolours|loxcolour h s v|ridecolours|birds|ravens|hugin|munin|beard|hildir|face|hood [sizes]|colours|clear] | goodtidings goods [off] | goodtidings bones | goodtidings mesh <item> | goodtidings tex grid <n>|cut <suit> x0 y0 x1 y1|clear | goodtidings anims | goodtidings pose [rest|<clip> [0-1]] | goodtidings visit [trader [here]] | goodtidings found";
 
         private static readonly AccessTools.FieldRef<Dictionary<string, Terminal.ConsoleCommand>> TerminalCommands =
             AccessTools.StaticFieldRefAccess<Dictionary<string, Terminal.ConsoleCommand>>(AccessTools.Field(typeof(Terminal), "commands"));
@@ -415,6 +415,20 @@ namespace GoodTidings
                     foreach (Sprite sp in Resources.FindObjectsOfTypeAll<Sprite>())
                         if (sp.name.ToLowerInvariant().Contains("question") || sp.name.ToLowerInvariant().Contains("unknown") || sp.name.StartsWith("mapicon"))
                             t.AddString($"sprite {sp.name} {sp.rect.width}x{sp.rect.height}");
+                    return;
+                }
+                case "found":
+                {
+                    // Dagny's stock as found again now: other mods' items, the stock file's adds and removes
+                    Stock.Rebuild();
+                    var found = Stock.FoundNow();
+                    t.AddString($"Stock file: {StockFile.FilePath}{(Plugin.Synced.TextFromServer(StockFile.SyncKey) ? " (the server's applies)" : "")}; " +
+                                $"{StockFile.Adds.Count} added, {StockFile.Removed.Count} removed, finding other mods' items {(StockFile.FindOtherMods ? "on" : "off")}.");
+                    t.AddString("Always: " + string.Join(", ", Stock.AlwaysNames()));
+                    t.AddString(found.Count == 0 ? "No other mods' items found." : $"{found.Count} other mods' items found:");
+                    foreach (StockDiscovery.Found f in found)
+                        t.AddString($"  {f.Item} ({Localization.instance.Localize(ObjectDB.instance.GetItemPrefab(f.Item)?.GetComponent<ItemDrop>()?.m_itemData.m_shared.m_name ?? "?")}): " +
+                                    $"{f.Slot} of the {Stock.LandNames[f.Land]}, {f.Stack} for {f.Price}, {f.From}");
                     return;
                 }
                 case "riddles":

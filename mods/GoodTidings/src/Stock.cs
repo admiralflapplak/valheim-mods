@@ -12,30 +12,31 @@ namespace GoodTidings
     /// - 15 the newest land's rare.
     /// Each visit rolls once from a seed kept on her, so every player sees the same goods, and the world's keys decide what's open (she
     /// never sells ahead of its progress). Ordinary lines can be bought 3 times a visit, the rare once, counted on her for everyone.
-    /// First prices; to become a file the server decides.
+    /// The built-in lists are below; the stock file (StockFile) adds and removes, and other mods' items are found (StockDiscovery).
     /// </summary>
     internal static class Stock
     {
-        private struct Good
+        internal struct Good
         {
             public string Prefab;
             public int Stack, Price;
             public Good(string prefab, int stack, int price) { Prefab = prefab; Stack = stack; Price = price; }
         }
 
-        private sealed class Land
+        internal sealed class Land
         {
             public string Name, Key;
             public Good[] Goods, Meads = new Good[0], Rares = new Good[0];
+            internal Land Copy() => new Land { Name = Name, Key = Key, Goods = Goods, Meads = Meads, Rares = Rares };
         }
 
-        private static readonly Good[] Always =
+        private static readonly Good[] BuiltInAlways =
         {
             new Good("FishingRod", 1, 350), new Good("FishingBait", 20, 10), new Good("BarrelRings", 3, 100),
         };
 
         // in the order the world opens them
-        private static readonly Land[] Lands =
+        private static readonly Land[] BuiltIn =
         {
             new Land { Name = "Meadows", Key = "",
                 Goods = new[] { new Good("Raspberry", 10, 15), new Good("Honey", 5, 25), new Good("DeerHide", 5, 25) },
@@ -78,6 +79,97 @@ namespace GoodTidings
                                 new Good("Ice", 10, 100), new Good("Lingonberry", 10, 150) },
                 Rares = new[] { new Good("FrostCore", 1, 600), new Good("OrbFrostFire", 1, 500) } },
         };
+
+        internal static readonly string[] LandNames = BuiltIn.Select(l => l.Name).ToArray();
+        internal static readonly string[] LandKeys = BuiltIn.Select(l => l.Key).ToArray();
+
+        // ---- the lists in use: the built-in ones, changed by the stock file and with other mods' items found; made again for each world
+        // (the items other mods add are only all there once one is loaded) and when the file changes
+
+        private static Land[] _lands;
+        private static Good[] _always;
+        private static ZNetScene _builtFor;
+        internal static List<StockDiscovery.Found> Found = new List<StockDiscovery.Found>();
+
+        private static Land[] Lands { get { Ensure(); return _lands; } }
+        private static Good[] Always { get { Ensure(); return _always; } }
+
+        /// <summary>The found items, the lists made first if they need to be.</summary>
+        internal static List<StockDiscovery.Found> FoundNow() { Ensure(); return Found; }
+
+        internal static IEnumerable<string> AlwaysNames() => Always.Select(g => $"{g.Prefab} {g.Stack} for {g.Price}");
+
+        /// <summary>The stock file changed: the lists are made again when next needed.</summary>
+        internal static void Rebuild() => _builtFor = null;
+
+        private static void Ensure()
+        {
+            if (_lands != null && _builtFor == ZNetScene.instance && _builtFor != null) return;
+            _builtFor = ZNetScene.instance;
+            var removed = StockFile.Removed;
+            Good[] Keep(IEnumerable<Good> goods) => goods.Where(g => !removed.Contains(g.Prefab)).ToArray();
+            Land[] lands = BuiltIn.Select(l => l.Copy()).ToArray();
+            var always = BuiltInAlways.ToList();
+
+            foreach (StockFile.Add a in StockFile.Adds)
+            {
+                var g = new Good(a.Item, a.Stack, a.Price);
+                Land l = lands[a.Land];
+                switch (a.Slot)
+                {
+                    case "always": always.Add(g); break;
+                    case "meads": l.Meads = l.Meads.Append(g).ToArray(); break;
+                    case "rares": l.Rares = l.Rares.Append(g).ToArray(); break;
+                    default: l.Goods = l.Goods.Append(g).ToArray(); break;
+                }
+            }
+
+            var found = new List<StockDiscovery.Found>();
+            if (StockFile.FindOtherMods && _builtFor != null)
+            {
+                var listed = new HashSet<string>(lands.SelectMany(l => l.Goods.Concat(l.Meads).Concat(l.Rares)).Concat(always).Select(g => g.Prefab));
+                try
+                {
+                    found = StockDiscovery.Find(Usual, KnownLand).Where(f => !listed.Contains(f.Item) && !removed.Contains(f.Item)).ToList();
+                }
+                catch (System.Exception e) { Plugin.Log.LogWarning($"Finding other mods' items for Dagny failed: {e}"); }
+                foreach (StockDiscovery.Found f in found)
+                {
+                    Land l = lands[f.Land];
+                    var g = new Good(f.Item, f.Stack, f.Price);
+                    if (f.Slot == "meads") l.Meads = l.Meads.Append(g).ToArray();
+                    else l.Goods = l.Goods.Append(g).ToArray();
+                }
+                if (found.Count > 0) Plugin.Log.LogInfo($"Dagny found {found.Count} items from other mods for her stock (`goodtidings found` lists them)");
+            }
+
+            foreach (Land l in lands) { l.Goods = Keep(l.Goods); l.Meads = Keep(l.Meads); l.Rares = Keep(l.Rares); }
+            _always = Keep(always);
+            _lands = lands;
+            Found = found;
+        }
+
+        /// <summary>A built-in land's usual stack and price for its goods or meads (the middle of its list; a land without meads uses the
+        /// nearest earlier one's).</summary>
+        private static (int stack, int price) Usual(int land, string slot)
+        {
+            for (int i = land; i >= 0; i--)
+            {
+                Good[] list = slot == "meads" ? BuiltIn[i].Meads : BuiltIn[i].Goods;
+                if (list.Length == 0) continue;
+                int Middle(IEnumerable<int> xs) { var o = xs.OrderBy(x => x).ToList(); return o[o.Count / 2]; }
+                return (Middle(list.Select(g => g.Stack)), Middle(list.Select(g => g.Price)));
+            }
+            return (3, 60);
+        }
+
+        /// <summary>The built-in land that has an item (-1: none).</summary>
+        private static int KnownLand(string prefab)
+        {
+            for (int i = 0; i < BuiltIn.Length; i++)
+                if (BuiltIn[i].Goods.Concat(BuiltIn[i].Meads).Concat(BuiltIn[i].Rares).Any(g => g.Prefab == prefab)) return i;
+            return -1;
+        }
 
         private const int RandomSlots = 10;
         internal const int MaxBuys = 3, MaxRareBuys = 1;

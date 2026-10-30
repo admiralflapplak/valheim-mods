@@ -57,6 +57,14 @@ random item she can sell now, up to three a visit, saved on her ZDO. The goods a
   Troll Endurance and Anti-Sting in the Swamp).
 - Ordinary lines 3 buys a visit, the rare 1, shared (her ZDO "Sold", counted by her owner via RPC). Atlas's discounts only on lines in
   this visit's stock that aren't sold out.
+- The stock file (0.9.0, `src/StockFile.cs`): `BepInEx/config/nick.GoodTidings.stock.json`, written with help the first time. `add`
+  (item, slot goods/meads/rares/always, land number or name, stack, price), `remove` (prefab names, built-in or found too),
+  `findOtherMods`. The server's file applies to everyone (ServerSettings text "Stock"); a saved edit applies at once (watched).
+- Other mods' items (0.9.0, `src/StockDiscovery.cs`, Wanted's way): the game's own items are noted at ObjectDB.Awake before mods add
+  theirs (after a hot reload: "$item_" names count as the game's). Anything else that is gathered (vegetation pickables, rocks, trees) or
+  dropped by a spawn-list creature becomes goods of the earliest land it comes from (a "defeated_X" spawn key raises it); a fermenter's
+  product whose base is made of placed things becomes a mead of its latest ingredient's land. Priced as the middle of that land's
+  built-in goods or meads. Weapons, armour and tools are never found. `goodtidings found` lists them (WeaponOils: its 12 oils).
 
 ## Bountiful Season (0.5.x, set with the user 2026-10-28)
 
@@ -93,4 +101,3 @@ takes flight with a cry and the land's beasts answer it (ravens and wolves hunt 
 
 **Open questions**
 - Which Dverger, and the trader's name.
-- The exact stock and prices for each boss stage.
