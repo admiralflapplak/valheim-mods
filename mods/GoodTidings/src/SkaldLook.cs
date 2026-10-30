@@ -138,6 +138,9 @@ namespace GoodTidings
             lute.transform.SetParent(point, false);
             lute.transform.localPosition = BackOffset;
             lute.transform.localRotation = Quaternion.Euler(BackTurn);
+            // (the point is inside the body's rig, which has a scale of its own: the lute keeps its own size)
+            Vector3 s = point.lossyScale;
+            lute.transform.localScale = new Vector3(1f / Mathf.Max(s.x, 1e-4f), 1f / Mathf.Max(s.y, 1e-4f), 1f / Mathf.Max(s.z, 1e-4f));
         }
 
         /// <summary>
@@ -170,6 +173,14 @@ namespace GoodTidings
             internal void Place()
             {
                 if (_lute == null || _spine == null || _hips == null || _left == null) return;
+                if (_lute.transform.parent != _root)
+                {
+                    // off his back: back under him, at its own size, gliding from where it was into his hands
+                    _glideFrom = (_lute.transform.position, _lute.transform.rotation);
+                    _glide = 0f;
+                    _lute.transform.SetParent(_root, false);
+                    _lute.transform.localScale = Vector3.one;
+                }
                 if (_started < 0f) _started = Time.time;
                 // where it sits, in the spine's own space (set again when the settings change)
                 var fit = (HoldForward, HoldSide, HoldUp, HoldTilt);
@@ -193,11 +204,74 @@ namespace GoodTidings
                 Vector3 aim = _neck + _spine.InverseTransformVector(_root.forward * fret.x + _root.right * fret.y + _root.up * fret.z);
                 Vector3 neck = _spine.TransformDirection(aim).normalized;
                 Vector3 face = Vector3.ProjectOnPlane(_spine.TransformDirection(_face), neck).normalized;
-                _lute.transform.SetPositionAndRotation(_spine.TransformPoint(_anchor), Quaternion.AngleAxis(HoldTilt, neck) * Quaternion.LookRotation(face, neck));
+                Vector3 pos = _spine.TransformPoint(_anchor);
+                Quaternion rot = Quaternion.AngleAxis(HoldTilt, neck) * Quaternion.LookRotation(face, neck);
+                if (_glide >= 0f)
+                {
+                    _glide += Time.deltaTime;
+                    float w = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(_glide / GlideTime));
+                    pos = Vector3.Lerp(_glideFrom.pos, pos, w);
+                    rot = Quaternion.Slerp(_glideFrom.rot, rot, w);
+                    if (_glide >= GlideTime) _glide = -1f;
+                }
+                _lute.transform.SetPositionAndRotation(pos, rot);
             }
+
+            private const float GlideTime = 0.8f;
+            private float _glide = -1f;
+            private (Vector3 pos, Quaternion rot) _glideFrom;
+        }
+
+        /// <summary>
+        /// While he plays: soft golden motes drifting up round him, as if from the strings (the game's glow sprite, a particle system of
+        /// our own), and a little warm light.
+        /// </summary>
+        internal static ParticleSystem Motes(Transform skald)
+        {
+            var go = new GameObject("goodtidings_skald_motes");
+            go.transform.SetParent(skald, false);
+            go.transform.localPosition = new Vector3(0f, 1.1f, 0.15f);
+            var ps = go.AddComponent<ParticleSystem>();
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            var main = ps.main;
+            main.loop = true;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(2.5f, 4f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(0.05f, 0.2f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.03f, 0.08f);
+            main.startColor = new ParticleSystem.MinMaxGradient(new Color(1f, 0.82f, 0.4f), new Color(1f, 0.95f, 0.7f));
+            main.gravityModifier = -0.04f;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.maxParticles = 80;
+            var emission = ps.emission;
+            emission.rateOverTime = 8f;
+            var shape = ps.shape;
+            shape.shapeType = ParticleSystemShapeType.Sphere;
+            shape.radius = 0.45f;
+            var noise = ps.noise;
+            noise.enabled = true;
+            noise.strength = 0.25f;
+            noise.frequency = 0.5f;
+            var fade = ps.colorOverLifetime;
+            fade.enabled = true;
+            var g = new Gradient();
+            g.SetKeys(new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+                      new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(1f, 0.25f), new GradientAlphaKey(0.8f, 0.7f), new GradientAlphaKey(0f, 1f) });
+            fade.color = g;
+            var renderer = go.GetComponent<ParticleSystemRenderer>();
+            renderer.sharedMaterial = ZNetScene.instance?.GetPrefab("vfx_prespawn")?.GetComponentInChildren<ParticleSystemRenderer>(true)?.sharedMaterial;
+            var light = new GameObject("goodtidings_skald_light").AddComponent<Light>();
+            light.transform.SetParent(go.transform, false);
+            light.type = LightType.Point;
+            light.color = new Color(1f, 0.8f, 0.5f);
+            light.intensity = 0.8f;
+            light.range = 3.5f;
+            return ps;
         }
 
         // ---- the song (assets/skald_song.ogg, in the DLL): written out once and loaded as the game's audio would be
+
+        /// <summary>The song's volume for this player (Song Volume).</summary>
+        internal static float Volume => Mathf.Clamp01((Plugin.SkaldVolume?.Value ?? 80f) / 100f);
 
         private static AudioClip _song;
         private static bool _loading;
@@ -210,7 +284,7 @@ namespace GoodTidings
             source.rolloffMode = AudioRolloffMode.Linear;
             source.minDistance = 3f;
             source.maxDistance = 35f;
-            source.volume = 0.8f;
+            source.volume = Volume;
             source.loop = true;
             source.dopplerLevel = 0f;
             source.outputAudioMixerGroup = MixerGroup();

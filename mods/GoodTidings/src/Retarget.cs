@@ -138,9 +138,65 @@ namespace GoodTidings
             return true;
         }
 
+        // ---- blending in from another pose, and out into whatever the body's animator plays next (smooth changes, not a snap)
+
+        private HumanPose _blendFrom, _last, _under;
+        private float _blendIn = -1f, _blendInTime, _fade = -1f, _fadeTime;
+
+        /// <summary>Starts from <paramref name="from"/> (the pose the body is in now) and blends into the animation over <paramref name="seconds"/>.</summary>
+        internal void BlendFrom(HumanPose from, float seconds)
+        {
+            _blendFrom = Copy(from);
+            _blendIn = 0f;
+            _blendInTime = Mathf.Max(0.01f, seconds);
+        }
+
+        /// <summary>Blends from the animation into what the body's animator plays now over <paramref name="seconds"/>, then goes.</summary>
+        internal void FadeOut(float seconds)
+        {
+            _fade = 0f;
+            _fadeTime = Mathf.Max(0.01f, seconds);
+            Posed = null;
+        }
+
+        /// <summary>The pose a body's animator has it in now.</summary>
+        internal static HumanPose PoseOf(Animator animator)
+        {
+            var pose = new HumanPose();
+            using (var h = new HumanPoseHandler(animator.avatar, animator.transform)) h.GetHumanPose(ref pose);
+            return pose;
+        }
+
+        private static HumanPose Copy(HumanPose p) =>
+            new HumanPose { bodyPosition = p.bodyPosition, bodyRotation = p.bodyRotation, muscles = (float[])p.muscles?.Clone() };
+
+        private static HumanPose Blend(HumanPose a, HumanPose b, float w)
+        {
+            var r = new HumanPose
+            {
+                bodyPosition = Vector3.Lerp(a.bodyPosition, b.bodyPosition, w),
+                bodyRotation = Quaternion.Slerp(a.bodyRotation, b.bodyRotation, w),
+                muscles = (float[])b.muscles.Clone(),
+            };
+            if (a.muscles != null)
+                for (int i = 0; i < r.muscles.Length && i < a.muscles.Length; i++) r.muscles[i] = Mathf.Lerp(a.muscles[i], b.muscles[i], w);
+            return r;
+        }
+
+        private static float Ease(float t) => Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t));
+
         private void LateUpdate()
         {
             if (_clip == null || _from == null) return;
+            if (_fade >= 0f)
+            {
+                _fade += Time.deltaTime;
+                _to.GetHumanPose(ref _under);
+                HumanPose mixed = Blend(_last, _under, Ease(_fade / _fadeTime));
+                _to.SetHumanPose(ref mixed);
+                if (_fade >= _fadeTime) Destroy(this);
+                return;
+            }
             _time = (_time + Time.deltaTime * Speed) % _clip.Length;
             float f = _time * _clip.Fps;
             int a = Mathf.FloorToInt(f) % _clip.Rot.Length, b = (a + 1) % _clip.Rot.Length;
@@ -149,7 +205,15 @@ namespace GoodTidings
                 _bones[i].localRotation = Quaternion.Slerp(_clip.Rot[a][i], _clip.Rot[b][i], t);
             _bones[0].localPosition = Vector3.Lerp(_clip.Hips[a], _clip.Hips[b], t);
             _from.GetHumanPose(ref _pose);
-            _to.SetHumanPose(ref _pose);
+            HumanPose shown = _pose;
+            if (_blendIn >= 0f)
+            {
+                _blendIn += Time.deltaTime;
+                shown = Blend(_blendFrom, _pose, Ease(_blendIn / _blendInTime));
+                if (_blendIn >= _blendInTime) _blendIn = -1f;
+            }
+            _to.SetHumanPose(ref shown);
+            _last = Copy(shown);
             Posed?.Invoke();
         }
 

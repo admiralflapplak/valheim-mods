@@ -15,7 +15,7 @@ namespace GoodTidings
     {
         public const string Guid = "nick.GoodTidings";
         public const string Name = "GoodTidings";
-        public const string Version = "0.12.6";
+        public const string Version = "0.13.5";
 
         internal static Plugin Instance;
         internal static ManualLogSource Log;
@@ -42,6 +42,12 @@ namespace GoodTidings
         internal static ConfigEntry<bool> DvergerEnabled;
         internal static ConfigEntry<float> DvergerMinutes, TemperedMinutes, TemperedWear;
         internal static ConfigEntry<int> DvergerMeals;
+
+        // 06 - Skald
+        internal static ConfigEntry<bool> SkaldEnabled;
+        internal static ConfigEntry<float> SkaldMinutes, SkaldSkillGain, SkaldListenSeconds;
+        internal static ConfigEntry<int> SkaldComfort;
+        internal static ConfigEntry<float> SkaldVolume;
 
         // 09 - Testing
         internal static ConfigEntry<bool> DebugLogging;
@@ -97,6 +103,19 @@ namespace GoodTidings
             TemperedWear = Synced.Bind("05 - Wounded Dvergr", "Tempered Wear", 50f,
                 "The percent of the usual wear tempered gear takes.", new AcceptableValueRange<float>(0f, 100f));
 
+            SkaldEnabled = Synced.Bind("06 - Skald", "Enabled", true,
+                "A long-dead skald can rise at the most comfortable spot in the base and play: comfort near him is higher, and listening to him raises every skill a little, once a visit.");
+            SkaldMinutes = Synced.Bind("06 - Skald", "Stay Minutes", 6f, "How long he plays.", new AcceptableValueRange<float>(1f, 30f));
+            SkaldSkillGain = Synced.Bind("06 - Skald", "Skill Gain", 5f,
+                "Each skill rises by this percent of its level (at least half a level) for a player who listens (a death takes 25%).",
+                new AcceptableValueRange<float>(0f, 25f));
+            SkaldListenSeconds = Synced.Bind("06 - Skald", "Listen Seconds", 30f, "How long a player must stay near him for the skill-ups.",
+                new AcceptableValueRange<float>(5f, 300f));
+            SkaldComfort = Synced.Bind("06 - Skald", "Comfort", 2, "How much comfort he adds near him while he plays.", new AcceptableValueRange<int>(0, 5));
+            SkaldVolume = Config.Bind("06 - Skald", "Song Volume", 80f,
+                new ConfigDescription("How loud his song is for you (your own setting; the game's sound effects volume applies too).",
+                    new AcceptableValueRange<float>(0f, 100f)));
+
             DebugLogging = Config.Bind("09 - Testing", "Debug Logging", false,
                 "Log why a visit did or didn't happen.");
 
@@ -111,7 +130,7 @@ namespace GoodTidings
             Config.Save();
 
             _harmony = Harmony.CreateAndPatchAll(typeof(Plugin).Assembly, Guid);
-            if (ZNetScene.instance) { TraderPrefab.Register(ZNetScene.instance); MuninnPrefab.Register(ZNetScene.instance); DvergerPrefab.Register(ZNetScene.instance); }   // (after a reload: the scene is already up)
+            if (ZNetScene.instance) { TraderPrefab.Register(ZNetScene.instance); MuninnPrefab.Register(ZNetScene.instance); DvergerPrefab.Register(ZNetScene.instance); SkaldPrefab.Register(ZNetScene.instance); }   // (after a reload: the scene is already up)
             Commands.Register();
             MapPins.CleanUp();
             Net.Register();   // (after a reload: the world is already up)
@@ -136,6 +155,7 @@ namespace GoodTidings
             TraderPrefab.Unregister();
             MuninnPrefab.Unregister();
             DvergerPrefab.Unregister();
+            SkaldPrefab.Unregister();
             Tempered.Unload();
             DvergerBand.Unload();
             RiddleWindow.Close();

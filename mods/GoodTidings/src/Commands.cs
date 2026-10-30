@@ -14,7 +14,7 @@ namespace GoodTidings
     internal static class Commands
     {
         private const string Command = "goodtidings";
-        private const string Usage = "goodtidings look [trader [hood size]|ride [up back [up2 back2]]|loxcolours|loxcolour h s v|ridecolours|birds|ravens|hugin|munin|beard|hildir|face|hood [sizes]|colours|clear] | goodtidings goods [off] | goodtidings bones | goodtidings mesh <item> | goodtidings tex grid <n>|cut <suit> x0 y0 x1 y1|clear | goodtidings anims | goodtidings pose [rest|<clip> [0-1]] | goodtidings visit [trader [here]] | goodtidings found | goodtidings visit dverger | goodtidings dverger leave|fires";
+        private const string Usage = "goodtidings look [trader [hood size]|ride [up back [up2 back2]]|loxcolours|loxcolour h s v|ridecolours|birds|ravens|hugin|munin|beard|hildir|face|hood [sizes]|colours|clear] | goodtidings goods [off] | goodtidings bones | goodtidings mesh <item> | goodtidings tex grid <n>|cut <suit> x0 y0 x1 y1|clear | goodtidings anims | goodtidings pose [rest|<clip> [0-1]] | goodtidings visit [trader [here]] | goodtidings found | goodtidings visit dverger|skald | goodtidings dverger leave|fires";
 
         private static readonly AccessTools.FieldRef<Dictionary<string, Terminal.ConsoleCommand>> TerminalCommands =
             AccessTools.StaticFieldRefAccess<Dictionary<string, Terminal.ConsoleCommand>>(AccessTools.Field(typeof(Terminal), "commands"));
@@ -816,6 +816,7 @@ namespace GoodTidings
                     if (p != null && p.GetBaseValue() < 3) t.AddString($"Not at a base here (base value {p.GetBaseValue()}, visits need 3): go home first.");
                     else if (TraderVisitor.Count > 0 && (only == null || only == "trader")) t.AddString("Dagny is still here: one at a time.");
                     else if (MuninnVisitor.Count > 0 && (only == null || only == "muninn")) t.AddString("Muninn is still here (he leaves a few seconds after an answer): try again in a moment.");
+                    else if (SkaldVisitor.Count > 0 && (only == null || only == "skald")) t.AddString("The skald is still playing here.");
                     else if (DvergerVisitor.Count > 0 && (only == null || only == "dverger")) t.AddString("The wounded Dvergr is still here: 'goodtidings dverger leave' ends his time.");
                     else if (BountifulSeason.Running && (only == null || only == "bountiful")) t.AddString("A bountiful season is already going on.");
                     else if (only != null && !Visits.All.First(v => v.Id == only).Enabled) t.AddString($"{only} is switched off in the settings.");

@@ -162,10 +162,9 @@ namespace GoodTidings
         /// <summary>The boss-summoning particles over a piece, slowed, kept going for the season.</summary>
         private static GameObject Glow(Vector3 at, float seconds)
         {
-            GameObject prefab = ZNetScene.instance.GetPrefab("vfx_prespawn");
-            if (prefab == null) return null;
-            GameObject g = UnityEngine.Object.Instantiate(prefab, at, Quaternion.identity);
-            foreach (TimedDestruction d in g.GetComponentsInChildren<TimedDestruction>()) UnityEngine.Object.Destroy(d);
+            // (on this game only: the prefab is networked, and every player's game makes its own glow)
+            GameObject g = LocalFx.Spawn("vfx_prespawn", at, Quaternion.identity, life: 0f);
+            if (g == null) return null;
             foreach (ParticleSystem ps in g.GetComponentsInChildren<ParticleSystem>())
             {
                 var main = ps.main;

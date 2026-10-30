@@ -220,5 +220,10 @@
   "goodtidings_dverger_firefound1": "A fire! Bless you. Help me over there.",
   "goodtidings_dverger_firefound2": "Warmth, at last. I'm coming, I'm coming.",
   "goodtidings_dverger_done1": "Mended and tempered. It'll serve you a while yet.",
-  "goodtidings_dverger_done2": "There. Better than new. Farewell, friend."
+  "goodtidings_dverger_done2": "There. Better than new. Farewell, friend.",
+  "goodtidings_skald": "Skald",
+  "goodtidings_skald_hover": "Stay awhile and listen",
+  "goodtidings_skald_arrives": "A long-dead skald rises at your hearth. Gather round and listen.",
+  "goodtidings_skald_leaves": "The skald's song ends. He sinks back to his rest.",
+  "goodtidings_skald_inspired": "The old song stirs your memory: your skills rise."
 }

@@ -127,7 +127,7 @@ drops removed, untouchable like Dagny). Map: "?" and the yellow circle, as Munin
 - Testing: `goodtidings visit dverger`, `goodtidings dverger leave` (time up now), `goodtidings dverger fires`, `look wounded`,
   `look woundedcolours`.
 
-## The Skald (0.11.5-, in progress: his look is done, the visit itself is next)
+## The Skald (0.11.5-0.13.5, set and tested with the user 2026-10-30)
 
 A positive visit, its reward skill (and comfort). Decided with the user 2026-10-30:
 - He's a friendly skeleton: a player body made into bones with DummyMe's SkeletonBody (copied as SkaldBones.cs, the user's DummyMe
@@ -145,10 +145,20 @@ A positive visit, its reward skill (and comfort). Decided with the user 2026-10-
   he rises; that fit isn't tuned yet. Settings F1 "98 - Skald Lute" (local, testing).
 - His song: reference/ModellMelodi.mp3 as mono Ogg Vorbis (assets/skald_song.ogg, embedded, written to BepInEx/cache, loaded with
   UnityWebRequestMultimedia), a 3D looping sound through the game's sfx mixer group. Licence to check before release.
-- The visit (to build): he rises from the ground (skeleton rise effect) at the most comfortable spot in the base, lute on his back, then
-  plays for the visit; +2 comfort near him; anyone near him for 30 s gets +5% of each skill's level, once per visit; sinks at the end.
+- Outfit (the user's): Celebratory Cap, Bronze Plate Tunic, Bronze Plate Leggings (SkaldVisitor.Outfit).
+- The visit (Skald.cs): saved object goodtidings_skald (empty, a trigger to look at, as Muninn's). He takes the most comfortable spot
+  within 20 m of the base (the game's own SE_Rested.CalculateComfortLevel with Cover's shelter check, a 2 m grid, floors found by a ray
+  down from just above the base's height, room to stand; equals: the nearest), facing where the player stood. Rises with the
+  skeletons' "Skeleton Rise" (events stripped) and the summoned-skeleton ground effect and rise sound, lute on his back; plays
+  (Stay Minutes 6); sinks with the rise backwards. Changes blend (MixamoPlayer.BlendFrom / FadeOut on HumanPose muscles, 0.8 s);
+  the lute glides from his back to his hands. While playing: golden motes and a warm light; +Comfort 2 within 10 m
+  (SE_Rested.CalculateComfortLevel postfix); a player within 12 m for Listen Seconds 30 gets every skill +5% of its level (at least
+  0.5), once a visit (remembered in Player.m_customData), with the game's skill level-up effect. Map: blue circle and "?".
+  Song Volume is each player's own setting.
+- LocalFx: the game's effect prefabs are networked; made as they are on every game they'd duplicate for everyone. LocalFx makes them
+  with ZNetView.m_forceDisableInit and strips the network parts (this fixed Bountiful Season's glow, which had the same bug).
 - Testing: `look skald`, `skaldbones`, `skaldviking`, `skaldoutfits`, `skaldhats`, `skaldwear items | items`, `skaldwear me`,
-  `skaldplay`, `skaldback`; `lute`, `luteback`.
+  `skaldplay`, `skaldback`; `lute`, `luteback`; `goodtidings visit skald`.
 
 
 **Open questions**
