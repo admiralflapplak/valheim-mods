@@ -108,16 +108,5 @@ namespace GoodTidings
             }
         }
 
-        /// <summary>Plays another character's animation clip on a look, looping (human rigs share animations). Destroy the graph when done.</summary>
-        internal static bool Play(GameObject body, string fromPrefab, string clipName, out PlayableGraph graph)
-        {
-            graph = default;
-            Animator from = ZNetScene.instance.GetPrefab(fromPrefab)?.GetComponentInChildren<Animator>(true);
-            AnimationClip clip = from?.runtimeAnimatorController?.animationClips.FirstOrDefault(c => c.name == clipName);
-            Animator anim = body.GetComponent<Animator>();
-            if (clip == null || anim == null) return false;
-            AnimationPlayableUtilities.PlayClip(anim, clip, out graph);
-            return true;
-        }
     }
 }

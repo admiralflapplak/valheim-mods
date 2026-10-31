@@ -93,16 +93,6 @@ namespace GoodTidings
             Made.Clear();
         }
 
-        /// <summary>Saves a copy of a texture as a PNG in Claude Tools' shots folder; returns the path.</summary>
-        internal static string Save(Texture source, string name)
-        {
-            Texture2D copy = Readable(source);
-            string path = System.IO.Path.Combine(BepInEx.Paths.BepInExRootPath, "claude", "shots", name + ".png");
-            System.IO.File.WriteAllBytes(path, ImageConversion.EncodeToPNG(copy));
-            Object.Destroy(copy);
-            return path;
-        }
-
         /// <summary>A copy of a texture we can read and change (the game's own are locked: drawn through the GPU).</summary>
         internal static Texture2D Readable(Texture source)
         {

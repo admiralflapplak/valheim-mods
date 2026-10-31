@@ -193,3 +193,10 @@ A positive visit, its reward skill (and comfort). Decided with the user 2026-10-
 
 **Open questions**
 - Which Dverger, and the trader's name.
+
+## Release prep (0.17.0, 2026-10-31)
+
+The testing tools are gone: the console command keeps only `goodtidings visit [kind]` (host or devcommands) and `goodtidings found`;
+the F1 fitting sliders ("90 - Goods Placement", "98 - Skald Lute") are now fixed values in Goods.cs and SkaldLook.cs (the user's).
+The test commands named in the sections above no longer exist (git history has them, up to 0.16.4).
+A restart mid-visit was tried with the skald: he carried on from the world clock (his songs) and left after the third.

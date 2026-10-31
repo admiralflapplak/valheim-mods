@@ -15,7 +15,7 @@ namespace GoodTidings
     {
         public const string Guid = "nick.GoodTidings";
         public const string Name = "GoodTidings";
-        public const string Version = "0.16.4";
+        public const string Version = "0.17.0";
 
         internal static Plugin Instance;
         internal static ManualLogSource Log;
@@ -126,8 +126,6 @@ namespace GoodTidings
             DebugLogging = Config.Bind("09 - Testing", "Debug Logging", false,
                 "Log why a visit did or didn't happen.");
 
-            Goods.Bind(Config);
-            SkaldLook.Bind(Config);
 
             // Dagny's stock file (the server's applies to everyone), read again when it's saved
             Synced.AddText(StockFile.SyncKey, StockFile.OwnText, StockFile.Use);

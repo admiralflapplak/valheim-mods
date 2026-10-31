@@ -2,7 +2,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using BepInEx.Configuration;
 using UnityEngine;
 using UnityEngine.Audio;
 using UnityEngine.Networking;
@@ -16,70 +15,13 @@ namespace GoodTidings
     /// </summary>
     internal static class SkaldLook
     {
-        // ---- its fit, set by eye in the settings (F1, "98 - Skald Lute"): held, from his hips in metres along his facing, to his right
-        // and up, and turned round its neck; on his back, offset and turned on the back-shield point; the wood grain's size
+        // ---- its fit, set by eye with the user (F1 sliders, 2026-10-30/31): held, from his hips in metres along his facing, to his right
+        // and up, turned round its neck, its neck aimed past his fretting hand; on his back, offset and turned on the back-shield point
 
-        private static ConfigEntry<float> _size, _forward, _side, _up, _tilt, _fretForward, _fretSide, _fretUp, _backX, _backY, _backZ, _turnX, _turnY, _turnZ, _grain;
-        internal static float HoldForward { get => _forward?.Value ?? 0.123f; set { if (_forward != null) _forward.Value = value; } }
-        internal static float HoldSide { get => _side?.Value ?? 0.08f; set { if (_side != null) _side.Value = value; } }
-        internal static float HoldUp { get => _up?.Value ?? 0.3f; set { if (_up != null) _up.Value = value; } }
-        internal static float HoldTilt { get => _tilt?.Value ?? 44.563f; set { if (_tilt != null) _tilt.Value = value; } }
+        internal const float HoldForward = 0.123f, HoldSide = 0.08f, HoldUp = 0.3f, HoldTilt = 44.563f, Size = 0.9f, Grain = 4f;
         /// <summary>Where the neck points, from his fretting hand: forward, right, up (metres).</summary>
-        internal static Vector3 FretOffset => new Vector3(_fretForward?.Value ?? 0f, _fretSide?.Value ?? 0.053f, _fretUp?.Value ?? 0.03f);
-        internal static Vector3 BackOffset
-        {
-            get => new Vector3(_backX?.Value ?? -0.013f, _backY?.Value ?? -0.028f, _backZ?.Value ?? -0.131f);
-            set { if (_backX == null) return; _backX.Value = value.x; _backY.Value = value.y; _backZ.Value = value.z; }
-        }
-        internal static Vector3 BackTurn
-        {
-            get => new Vector3(_turnX?.Value ?? 83.99f, _turnY?.Value ?? 17.243f, _turnZ?.Value ?? 26.075f);
-            set { if (_turnX == null) return; _turnX.Value = value.x; _turnY.Value = value.y; _turnZ.Value = value.z; }
-        }
-        /// <summary>A lute's back placement changed: put back on again (the held one follows each frame by itself).</summary>
-        internal static event System.Action BackChanged;
-
-        internal static void Bind(ConfigFile config)
-        {
-            const string section = "98 - Skald Lute";
-            int order = 100;
-            ConfigEntry<float> F(string key, float value, float min, float max, string what, bool back = false)
-            {
-                var e = config.Bind(section, key, value, new ConfigDescription(what, new AcceptableValueRange<float>(min, max),
-                    new ConfigurationManagerAttributes { Order = order-- }));
-                if (back) e.SettingChanged += (_, __) => BackChanged?.Invoke();
-                return e;
-            }
-            _size = F("Lyre size", 0.9f, 0.3f, 1.5f, "How big the lyre is (1: as the model was made, 0.95 m tall).");
-            _forward = F("Held forward", 0.123f, -0.5f, 0.8f, "How far in front of his hips the lute's body is (metres).");
-            _side = F("Held side", 0.08f, -0.5f, 0.5f, "How far to his right (metres; left below 0).");
-            _up = F("Held up", 0.3f, -0.5f, 1f, "How far above his hips (metres).");
-            _tilt = F("Held tilt", 44.563f, -180f, 180f, "Turns the lute round its own neck (degrees).");
-            _fretForward = F("Neck point forward", 0f, -0.5f, 0.5f, "Where the neck points, from his fretting (left) hand: forward (metres; back below 0).");
-            _fretSide = F("Neck point side", 0.053f, -0.5f, 0.5f, "Where the neck points, from his fretting hand: to his right (metres; left below 0).");
-            _fretUp = F("Neck point up", 0.03f, -0.5f, 0.5f, "Where the neck points, from his fretting hand: up (metres; down below 0).");
-            _backX = F("Back X", -0.013f, -0.5f, 0.5f, "On his back: sideways on the back point (metres).", true);
-            _backY = F("Back Y", -0.028f, -0.5f, 0.5f, "On his back: up or down (metres).", true);
-            _backZ = F("Back Z", -0.131f, -0.5f, 0.5f, "On his back: out from or into his back (metres).", true);
-            _turnX = F("Back turn X", 83.99f, -180f, 180f, "On his back: turned (degrees).", true);
-            _turnY = F("Back turn Y", 17.243f, -180f, 180f, "On his back: turned (degrees).", true);
-            _turnZ = F("Back turn Z", 26.075f, -180f, 180f, "On his back: turned (degrees).", true);
-            _grain = F("Wood grain scale", 4f, 0.25f, 20f, "How big the wood's grain is on the lute (bigger: coarser).");
-            _grain.SettingChanged += (_, __) => Grain();
-            _size.SettingChanged += (_, __) => { foreach (Transform m in Models) if (m) m.localScale = Vector3.one * Size; };
-        }
-
-        private static readonly List<Material> Tints = new List<Material>();
-
-        /// <summary>The wood grain's size on every lute material (the texture tiled less: bigger grain).</summary>
-        private static void Grain()
-        {
-            float g = Mathf.Max(0.01f, _grain?.Value ?? 4f);
-            foreach (Material m in Tints)
-                if (m) m.mainTextureScale = Vector2.one / g;
-        }
-
-        internal static float Size => _size?.Value ?? 0.9f;
+        internal static readonly Vector3 FretOffset = new Vector3(0f, 0.053f, 0.03f);
+        internal static readonly Vector3 BackOffset = new Vector3(-0.013f, -0.028f, -0.131f), BackTurn = new Vector3(83.99f, 17.243f, 26.075f);
 
         // ---- the lyre: the user's model (Meshy), turned into assets/skald_lyre.bin and .png by tools/convert_lyre.py (which adds its
         // fingerboard); its body at its origin, its neck up (+y), its strings toward +z, as the lute's
@@ -97,12 +39,8 @@ namespace GoodTidings
             model.transform.localScale = Vector3.one * Size;
             model.AddComponent<MeshFilter>().sharedMesh = _lyreMesh;
             model.AddComponent<MeshRenderer>().sharedMaterial = _lyreMaterial;
-            Models.RemoveAll(m => !m);
-            Models.Add(model.transform);
             return lyre;
         }
-
-        private static readonly List<Transform> Models = new List<Transform>();
 
         private static bool LoadLyre()
         {
@@ -159,10 +97,7 @@ namespace GoodTidings
             {
                 var m = new Material(wood) { name = "goodtidings_lute_" + c };
                 m.color = c;
-                float g = Mathf.Max(0.01f, _grain?.Value ?? 4f);
-                m.mainTextureScale = Vector2.one / g;
-                Tints.RemoveAll(x => !x);
-                Tints.Add(m);
+                m.mainTextureScale = Vector2.one / Grain;
                 return m;
             }
             Material back = Tinted(new Color(0.55f, 0.36f, 0.22f)), top = Tinted(new Color(0.92f, 0.78f, 0.55f)),

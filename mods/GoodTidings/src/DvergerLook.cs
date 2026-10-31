@@ -19,19 +19,6 @@ namespace GoodTidings
         /// <summary>The bare body, under <paramref name="parent"/>, with nothing that needs a creature (animation events, level colours).</summary>
         internal static GameObject Body(Transform parent) => Body(parent, "Dverger", "Visual");
 
-        /// <summary>Hildir's body without her dress and her long plait (its bones, Hair1-3, shrunk away), to dress in Dverger clothes.</summary>
-        internal static GameObject HildirBody(Transform parent)
-        {
-            GameObject body = Body(parent, "Hildir", "Hildir");
-            Transform skirt = body.transform.Find("Skirt");
-            if (skirt) Object.Destroy(skirt.gameObject);
-            SkinnedMeshRenderer mesh = BodyMesh(body);
-            Transform head = mesh.bones.First(b => b.name == "head");
-            Transform point = Point(head);
-            mesh.bones = mesh.bones.Select(b => b.name.StartsWith("Hair") ? point : b).ToArray();
-            return body;
-        }
-
         /// <summary>
         /// A Lox's look with its saddle on (its Visual, without creature parts), under <paramref name="parent"/>. Its fur and skin can be
         /// recoloured with the creature shader's own controls (as the game tints creatures by level): <paramref name="hsv"/> is the shift
@@ -192,9 +179,6 @@ namespace GoodTidings
             h.SetActive(true);
             return h;
         }
-
-        /// <summary>The bone names under the head (head included), to tell the hat or hood from the rest.</summary>
-        internal static string BoneNames(GameObject body) => string.Join(", ", BodyMesh(body).bones.Select(b => b.name));
 
         private static SkinnedMeshRenderer BodyMesh(GameObject body) =>
             body.GetComponentsInChildren<SkinnedMeshRenderer>(true).First(r => r.name == "dvergr");

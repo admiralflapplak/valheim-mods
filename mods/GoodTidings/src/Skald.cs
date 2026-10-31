@@ -27,23 +27,13 @@ namespace GoodTidings
             if (SkaldVisitor.Count > 0) { Plugin.Debug("The skald is already here"); return false; }
             GameObject prefab = ZNetScene.instance.GetPrefab(SkaldPrefab.Name);
             if (prefab == null || !FindSpot(basePoint, out Vector3 at, out int comfort)) { Plugin.Debug($"No room for the skald near {basePoint}"); return false; }
-            Spawn(prefab, at, Quaternion.LookRotation(SkaldVisitor.OpenWay(at, basePoint)), basePoint, demo: false);
+            Spawn(prefab, at, Quaternion.LookRotation(SkaldVisitor.OpenWay(at, basePoint)), basePoint);
             Net.MessageAll(MessageHud.MessageType.Center, "$goodtidings_skald_arrives");
             Plugin.Log.LogInfo($"The skald rises at {at} (comfort {comfort}), by the base at {basePoint}");
             return true;
         }
 
-        /// <summary>
-        /// For testing: a skald at <paramref name="at"/> facing <paramref name="face"/>, his visit short (a few seconds of strolling and
-        /// playing) to see each change of animation.
-        /// </summary>
-        internal static void Demo(Vector3 at, Vector3 face)
-        {
-            GameObject prefab = ZNetScene.instance.GetPrefab(SkaldPrefab.Name);
-            if (prefab) Spawn(prefab, at, Quaternion.LookRotation(face), at + face * 4f, demo: true);
-        }
-
-        private static void Spawn(GameObject prefab, Vector3 at, Quaternion facing, Vector3 basePoint, bool demo)
+        private static void Spawn(GameObject prefab, Vector3 at, Quaternion facing, Vector3 basePoint)
         {
             GameObject go = UnityEngine.Object.Instantiate(prefab, at, facing);
             ZDO zdo = go.GetComponent<ZNetView>().GetZDO();
@@ -52,7 +42,6 @@ namespace GoodTidings
             zdo.Set(SkaldVisitor.StageAtKey, now);
             zdo.Set(SkaldVisitor.SpotKey, at);
             zdo.Set(SkaldVisitor.HomeKey, basePoint);
-            zdo.Set(SkaldVisitor.DemoKey, demo);
         }
 
         private static int _solid;
@@ -158,7 +147,7 @@ namespace GoodTidings
     internal sealed class SkaldVisitor : MonoBehaviour, Hoverable
     {
         internal const string ArrivedKey = "GoodTidings.Arrived", LeaveAtKey = "GoodTidings.LeaveAt", HomeKey = "GoodTidings.Home",
-            StageKey = "GoodTidings.Stage", DemoKey = "GoodTidings.Demo", StageAtKey = "GoodTidings.StageAt", SpotKey = "GoodTidings.Spot", PlayAtKey = "GoodTidings.PlayAt";
+            StageKey = "GoodTidings.Stage", StageAtKey = "GoodTidings.StageAt", SpotKey = "GoodTidings.Spot", PlayAtKey = "GoodTidings.PlayAt";
         internal const int Rising = 0, Wandering = 1, Playing = 2, Bowing = 3, Sinking = 4;
         internal static readonly string[] Outfit = { "HelmetCelebration", "ArmorBronzeChest", "ArmorBronzeLegs" };   // (the user's pick)
         private const float RiseTime = 3.5f, SinkTime = 3.5f, Blending = 0.8f, WanderTime = 20f, WanderRange = 4f, WalkSpeed = 1.1f;
@@ -388,7 +377,7 @@ namespace GoodTidings
                 case Wandering:
                 {
                     // a few strolls round his spot, then back to it to play (facing where the player stood)
-                    bool done = inStage > (zdo.GetBool(DemoKey) ? 6f : WanderTime);
+                    bool done = inStage > WanderTime;
                     if (done) _target = spot;
                     else if (_target == Vector3.zero || (Utils.DistanceXZ(transform.position, _target) < 0.2f && (_pause -= Time.deltaTime) < 0f))
                     {
@@ -413,7 +402,7 @@ namespace GoodTidings
                 }
                 case Playing:
                     // his three songs, each once (their lengths known here, a dedicated server's too), then the bow
-                    if (now >= zdo.GetLong(PlayAtKey, now) + TimeSpan.FromSeconds(zdo.GetBool(DemoKey) ? 5f : SkaldLook.AllSongs + 1f).Ticks)
+                    if (now >= zdo.GetLong(PlayAtKey, now) + TimeSpan.FromSeconds(SkaldLook.AllSongs + 1f).Ticks)
                     {
                         SetStage(zdo, Bowing);
                         Net.MessageAll(MessageHud.MessageType.Center, "$goodtidings_skald_leaves");

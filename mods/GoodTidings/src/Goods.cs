@@ -1,14 +1,12 @@
 using System.Collections.Generic;
-using BepInEx.Configuration;
 using UnityEngine;
 
 namespace GoodTidings
 {
     /// <summary>
     /// The trader's goods on the Lox, from the game's own props. Where each sits is measured from the seat (metres right, up, back along
-    /// the Lox), with its turn (degrees: yaw, pitch, roll) and size; mirrored ones are also put on the left side. For now each is a
-    /// setting in "90 - Goods Placement" (this player's own, not the server's), so the placement can be tuned live in F1: a change moves the
-    /// goods already shown, without building them again. The values chosen become the defaults below.
+    /// the Lox), with its turn (degrees: yaw, pitch, roll) and size; mirrored ones are also put on the left side. Placed by the user with
+    /// F1 sliders (2026-10-28): the values below.
     /// </summary>
     internal static class Goods
     {
@@ -19,8 +17,6 @@ namespace GoodTidings
             public bool Mirrored;
             /// <summary>Made facing +x (outward on the right): on the left it is turned round to face out there too, then turned as set.</summary>
             public bool FacesOut;
-            public ConfigEntry<bool> On;
-            public ConfigEntry<float> CRight, CUp, CBack, CYaw, CPitch, CRoll, CSize;
         }
 
         // (placed by the user in F1, 2026-10-28)
@@ -41,28 +37,6 @@ namespace GoodTidings
         private sealed class Placed { public Def Def; public int Side; public Follow Follow; public Transform Model; }
         private static readonly List<Placed> Shown = new List<Placed>();
         internal static bool Enabled = true;
-
-        internal static void Bind(ConfigFile config)
-        {
-            const string section = "90 - Goods Placement";
-            int order = 1000;
-            ConfigEntry<float> F(Def d, string name, float value, float min, float max, string what) =>
-                config.Bind(section, $"{d.Key} {name}", value, new ConfigDescription($"{d.Key} ({d.Note}): {what}",
-                    new AcceptableValueRange<float>(min, max), new ConfigurationManagerAttributes { Order = order-- }));
-            foreach (Def d in Defs)
-            {
-                d.On = config.Bind(section, $"{d.Key} Shown", true, new ConfigDescription($"{d.Key} ({d.Note}) on the Lox.", null,
-                    new ConfigurationManagerAttributes { Order = order-- }));
-                d.CRight = F(d, "Right", d.Right, -2.5f, 2.5f, "metres to the right of the seat (mirrored ones: out to each side).");
-                d.CUp = F(d, "Up", d.Up, -2f, 3f, "metres above the seat.");
-                d.CBack = F(d, "Back", d.Back, -3f, 4f, "metres behind the seat, along the Lox.");
-                d.CYaw = F(d, "Yaw", d.Yaw, -180f, 180f, "turn round, degrees.");
-                d.CPitch = F(d, "Pitch", d.Pitch, -180f, 180f, "tip forward or back, degrees.");
-                d.CRoll = F(d, "Roll", d.Roll, -180f, 180f, "lean to the side, degrees.");
-                d.CSize = F(d, "Size", d.Size, 0.05f, 3f, "size (1: the game's own).");
-            }
-            config.SettingChanged += (_, e) => { if (e.ChangedSetting.Definition.Section == section) Apply(); };
-        }
 
         /// <summary>Puts every good on a Lox (its look) at its seat; adds what it makes to <paramref name="made"/>.</summary>
         internal static void Load(Transform lox, Transform seat, List<GameObject> made, Transform under = null)
@@ -105,22 +79,14 @@ namespace GoodTidings
         private static void Place(Placed p)
         {
             Def d = p.Def;
-            p.Follow.Right = p.Side * d.CRight.Value;
-            p.Follow.Up = d.CUp.Value;
-            p.Follow.Back = d.CBack.Value;
-            p.Model.localScale = Vector3.one * d.CSize.Value;
+            p.Follow.Right = p.Side * d.Right;
+            p.Follow.Up = d.Up;
+            p.Follow.Back = d.Back;
+            p.Model.localScale = Vector3.one * d.Size;
             p.Model.localRotation = d.FacesOut
-                ? Quaternion.Euler(0f, p.Side < 0 ? 180f : 0f, 0f) * Quaternion.Euler(d.CPitch.Value, d.CYaw.Value, d.CRoll.Value)
-                : Quaternion.Euler(d.CPitch.Value, p.Side * d.CYaw.Value, p.Side * d.CRoll.Value);
-            p.Follow.gameObject.SetActive(d.On.Value);
+                ? Quaternion.Euler(0f, p.Side < 0 ? 180f : 0f, 0f) * Quaternion.Euler(d.Pitch, d.Yaw, d.Roll)
+                : Quaternion.Euler(d.Pitch, p.Side * d.Yaw, p.Side * d.Roll);
         }
 
-        private static void Apply()
-        {
-            Shown.RemoveAll(p => p.Follow == null || p.Model == null);
-            foreach (Placed p in Shown) Place(p);
-        }
-
-        internal static void Forget() => Shown.Clear();
     }
 }
