@@ -1,2 +1,2 @@
-1.0.1
+1.0.3
 - First release: a share of raids become visits instead. Dagny the wandering trader and her Lox Atlas (goods matched to your world, other mods' items found by themselves), a Bountiful Season (everything at the base works and grows faster), Muninn's Riddle (a map mark of what the raven saw, or the land's beasts), the Wounded Dvergr (feed him by a fire and he tempers your gear, or his kin come) and the Skald (comfort, skill-ups and no skill drain for listening). Nine languages.
