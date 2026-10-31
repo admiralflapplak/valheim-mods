@@ -92,6 +92,7 @@ namespace GoodTidings
 
         private MixamoClip _clip;
         private GameObject _source;
+        private Avatar _avatar;
         private Transform[] _bones;
         private HumanPoseHandler _from, _to;
         private HumanPose _pose;
@@ -135,6 +136,10 @@ namespace GoodTidings
             };
             Avatar avatar = AvatarBuilder.BuildHumanAvatar(_source, description);
             if (avatar == null || !avatar.isValid || !avatar.isHuman) { Plugin.Log.LogWarning("The animation's skeleton isn't a valid humanoid"); return false; }
+            // kept, and never unloaded with the game's unused assets: only the pose handler (native) used it, so the game's clean-up of
+            // unused assets freed it under the handler and the next pose read crashed the game
+            avatar.hideFlags = HideFlags.DontUnloadUnusedAsset;
+            _avatar = avatar;
             _from = new HumanPoseHandler(avatar, _source.transform);
             _to = new HumanPoseHandler(animator.avatar, animator.transform);
             return true;
@@ -224,6 +229,7 @@ namespace GoodTidings
             _from?.Dispose();
             _to?.Dispose();
             if (_source) Destroy(_source);
+            if (_avatar) Destroy(_avatar);
         }
     }
 }
