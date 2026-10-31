@@ -259,6 +259,16 @@ namespace GoodTidings
         }
 
         /// <summary>Muninn's reward: two of the newest land's goods or meads, and now and then (1 in 4; always with <paramref name="rare"/>) its rare.</summary>
+        /// <summary>One of the newest land's rares (null: it has none).</summary>
+        internal static (string prefab, int stack)? Rare(System.Random rnd)
+        {
+            var open = Lands.Where(l => l.Key == "" || ZoneSystem.instance.GetGlobalKey(l.Key)).ToList();
+            var rares = open[open.Count - 1].Rares.Where(g => Exists(g.Prefab)).ToList();
+            if (rares.Count == 0) return null;
+            Good g = rares[rnd.Next(rares.Count)];
+            return (g.Prefab, g.Stack);
+        }
+
         internal static List<(string prefab, int stack)> Reward(System.Random rnd, bool rare = false, int extra = 0)
         {
             var open = Lands.Where(l => l.Key == "" || ZoneSystem.instance.GetGlobalKey(l.Key)).ToList();

@@ -12,7 +12,7 @@ namespace GoodTidings
     internal static class Net
     {
         internal const string Bountiful = "GoodTidings_Bountiful";
-        private static readonly string[] All = { Bountiful, Tempered.Rpc };
+        private static readonly string[] All = { Bountiful, Tempered.Rpc, RavenSaw.AskRpc, RavenSaw.TellRpc };
         private static ZRoutedRpc _registeredOn;
 
         /// <summary>
@@ -30,6 +30,8 @@ namespace GoodTidings
             {
                 ZRoutedRpc.instance.Register<ZPackage>(Bountiful, BountifulSeason.OnRpc);
                 ZRoutedRpc.instance.Register<Vector3>(Tempered.Rpc, Tempered.OnTemper);
+                ZRoutedRpc.instance.Register<ZPackage>(RavenSaw.AskRpc, RavenSaw.OnAsk);
+                ZRoutedRpc.instance.Register<ZPackage>(RavenSaw.TellRpc, RavenSaw.OnTell);
             }
             catch (Exception e) { Plugin.Log.LogWarning($"Couldn't set up networking ({e.Message})."); }
         }

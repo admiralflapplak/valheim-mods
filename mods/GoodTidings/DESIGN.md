@@ -99,6 +99,18 @@ Earlier plan: generated "do you remember" riddles from the player's own discover
 lore riddles (each world remembers which were asked); harder as more are answered. Right: a reward from the current land. Wrong: he
 takes flight with a cry and the land's beasts answer it (ravens and wolves hunt together; carrion birds follow battle).
 
+## Muninn's reward: what the raven saw (0.16.x, set with the user 2026-10-31)
+
+Items were the trader's kind of reward, so a right answer now gives knowledge (RavenSaw.cs). The server (it alone knows every place
+and keeps the world's count of right answers in the world key "goodtidings_ravens N") sends the candidates; each player within 40 m of
+him marks the first one their own map hasn't explored (a saved pin, 150 m revealed): every right answer the nearest dungeon of this
+land or the next (burial chambers, sunken crypt, frost cave, fuling village, infested mine, charred fortress); every third a valuable
+one, the next boss's altar (Boss pin) or a trader (Haldor, Hildir, the Bog Witch from the Swamp on). Nothing left to show: a Battle or
+Protection Idol of the newest land (Upgrader{land}Weapon/Armor, the Forge of Potential's) and the land's rare, into the inventory. An
+old riddle answered rightly also gives "The Raven's Road" (Ravens Road Minutes 10: portals take metals, Humanoid.IsTeleportable).
+Wrong answers: the beasts as before, now marked like the Dvergr's kin (DvergerBand.Mark): a red circle on the base while they're
+about, gone after 8 minutes, their own drops. Testing: `goodtidings ravensaw [lore] [test] | gift`, `goodtidings places`, `idols`.
+
 ## The Wounded Dvergr (0.9.1-0.11.x, set and tested with the user 2026-10-30)
 
 A neutral visit, with a reward that isn't items (the user wanted each visit's good to be its own kind: Dagny trade, Bountiful time,

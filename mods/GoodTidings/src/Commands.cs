@@ -629,6 +629,33 @@ namespace GoodTidings
                     }
                     return;
                 }
+                case "ravensaw":
+                {
+                    // as a right answer to Muninn here (lore: an old riddle's, with the raven's road): the server picks, this map marks
+                    if (p == null) { t.AddString("Not in a world."); return; }
+                    if (a.Contains("gift")) { RavenSaw.Gift(p); t.AddString("Muninn's gift for when there's nothing left to show."); return; }
+                    RavenSaw.Ask(p.transform.position, a.Contains("lore"), test: a.Contains("test"));
+                    t.AddString("Asked the raven what he saw (see the message, and your map).");
+                    return;
+                }
+                case "idols":
+                {
+                    // the things only the Forge of Potential takes (its idols), and what else is marked an upgrader's
+                    var names = ObjectDB.instance.m_recipes.Where(r => r && r.m_resources != null).SelectMany(r => r.m_resources)
+                        .Where(q => q != null && q.m_upgraderResource && q.m_resItem).Select(q => q.m_resItem.name).Distinct().OrderBy(n => n);
+                    t.AddString(string.Join(", ", names.Select(n => $"{n} ({Localization.instance.Localize(ObjectDB.instance.GetItemPrefab(n)?.GetComponent<ItemDrop>()?.m_itemData.m_shared.m_name ?? "?")})")));
+                    return;
+                }
+                case "places":
+                {
+                    // the world's places (the server's list): each kind, how many, and the nearest's distance (goodtidings places [text])
+                    string filter = a.Length > 2 ? a[2].ToLowerInvariant() : "";
+                    var kinds = ZoneSystem.instance.m_locationInstances.Values.Where(l => l.m_location != null)
+                        .GroupBy(l => l.m_location.m_prefabName).Where(g => g.Key.ToLowerInvariant().Contains(filter))
+                        .Select(g => $"{g.Key} x{g.Count()} (nearest {g.Min(l => Vector3.Distance(l.m_position, p.transform.position)):0} m)").OrderBy(x => x);
+                    t.AddString(string.Join(", ", kinds));
+                    return;
+                }
                 case "riddles":
                 {
                     t.AddString($"The world's wisdom: {Lore.Wisdom()} right answers ({Lore.Choices()} answers to a riddle, {Lore.ExtraReward()} extra reward).");

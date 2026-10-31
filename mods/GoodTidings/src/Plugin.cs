@@ -15,7 +15,7 @@ namespace GoodTidings
     {
         public const string Guid = "nick.GoodTidings";
         public const string Name = "GoodTidings";
-        public const string Version = "0.15.5";
+        public const string Version = "0.16.4";
 
         internal static Plugin Instance;
         internal static ManualLogSource Log;
@@ -36,7 +36,7 @@ namespace GoodTidings
 
         // 04 - Muninn's Riddle
         internal static ConfigEntry<bool> MuninnEnabled;
-        internal static ConfigEntry<float> MuninnMinutes, MuninnLoreChance;
+        internal static ConfigEntry<float> MuninnMinutes, MuninnLoreChance, MuninnRoadMinutes;
 
         // 05 - Wounded Dvergr
         internal static ConfigEntry<bool> DvergerEnabled;
@@ -90,8 +90,11 @@ namespace GoodTidings
                 "Odin's raven of memory can land at the base with one riddle: a reward for the right answer, the land's beasts for a wrong one.");
             MuninnMinutes = Synced.Bind("04 - Muninn Riddle", "Stay Minutes", 5f, "How long he waits for an answer.", new AcceptableValueRange<float>(1f, 30f));
             MuninnLoreChance = Synced.Bind("04 - Muninn Riddle", "Old Riddle Chance", 35f,
-                "The percent chance he asks one of the old riddles (from the Eddas and Valheim's story, none repeated until all are asked) instead of one made from what the player remembers. A right answer always brings the land's rare.",
+                "The percent chance he asks one of the old riddles (from the Eddas and Valheim's story, none repeated until all are asked) instead of one made from what the player remembers. A right answer also opens the raven's road.",
                 new AcceptableValueRange<float>(0f, 100f));
+            MuninnRoadMinutes = Synced.Bind("04 - Muninn Riddle", "Ravens Road Minutes", 10f,
+                "After an old riddle answered rightly: how long portals take everything (metals and ores too) for those near him.",
+                new AcceptableValueRange<float>(0f, 60f));
 
             DvergerEnabled = Synced.Bind("05 - Wounded Dvergr", "Enabled", true,
                 "A wounded Dvergr can be found near the base: help him up, and he rests by a fire; feed him in time and he mends and tempers everyone's gear, leave him and his kin come for the base.");
@@ -163,6 +166,7 @@ namespace GoodTidings
             Tempered.Unload();
             DvergerBand.Unload();
             Remembered.Unload();
+            RavensRoad.Unload();
             RiddleWindow.Close();
             GameUi.Destroy();
             StockFile.Unwatch();

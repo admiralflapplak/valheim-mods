@@ -14,7 +14,7 @@ namespace GoodTidings
     internal static class DvergerBand
     {
         internal const string BandKey = "GoodTidings.Band", UntilKey = "GoodTidings.BandUntil", ScaleKey = "GoodTidings.BandScale",
-            HomeKey = "GoodTidings.BandHome", LandKey = "GoodTidings.BandLand";
+            HomeKey = "GoodTidings.BandHome", LandKey = "GoodTidings.BandLand", GoldKey = "GoodTidings.BandGold";
         // coins each drops, by land (a quarter either way)
         private static readonly int[] Gold = { 10, 15, 20, 30, 40, 55, 70, 85 };
         private const float BandMinutes = 8f;
@@ -38,17 +38,11 @@ namespace GoodTidings
                 Vector3 p = from + new Vector3(UnityEngine.Random.Range(-3f, 3f), 0f, UnityEngine.Random.Range(-3f, 3f));
                 if (ZoneSystem.instance.GetSolidHeight(p, out float h)) p.y = h + 0.5f;
                 GameObject go = UnityEngine.Object.Instantiate(prefab, p, Quaternion.LookRotation(Vector3.ProjectOnPlane(home - p, Vector3.up)));
-                ZDO zdo = go.GetComponent<ZNetView>().GetZDO();
-                zdo.Set(BandKey, true);
-                zdo.Set(UntilKey, until);
-                zdo.Set(ScaleKey, scale);
-                zdo.Set(HomeKey, home);
-                zdo.Set(LandKey, land);
+                Mark(go, home, BandMinutes, scale, land, gold: true);
                 Character c = go.GetComponent<Character>();
                 c.SetLevel(1);
                 c.SetMaxHealth(c.m_health * scale);
                 c.SetHealth(c.m_health * scale);
-                Band.Add(c);
                 BaseAI ai = go.GetComponent<BaseAI>();
                 if (ai)
                 {
@@ -59,6 +53,22 @@ namespace GoodTidings
             }
             Net.MessageAll(MessageHud.MessageType.Center, "$goodtidings_dverger_band");
             Plugin.Log.LogInfo($"The Dvergr's kin come for the base at {home}: {made} of them at {scale:0.##} strength");
+        }
+
+        /// <summary>
+        /// Marks a creature sent against the base (the Dvergr's kin, Muninn's beasts): a red circle on the base while any are about, gone
+        /// after <paramref name="minutes"/>, its blows at <paramref name="scale"/>; with <paramref name="gold"/> it drops only coins.
+        /// </summary>
+        internal static void Mark(GameObject go, Vector3 home, float minutes, float scale, int land, bool gold)
+        {
+            ZDO zdo = go.GetComponent<ZNetView>().GetZDO();
+            zdo.Set(BandKey, true);
+            zdo.Set(UntilKey, ZNet.instance.GetTime().Ticks + TimeSpan.FromMinutes(minutes).Ticks);
+            zdo.Set(ScaleKey, scale);
+            zdo.Set(HomeKey, home);
+            zdo.Set(LandKey, land);
+            zdo.Set(GoldKey, gold);
+            if (go.GetComponent<Character>() is Character c) Band.Add(c);
         }
 
         // ---- telling them apart (known on every game from their ZDO)
@@ -78,7 +88,7 @@ namespace GoodTidings
         {
             private static void Postfix(Character __instance)
             {
-                if (__instance.GetFaction() != Character.Faction.Dverger) return;
+                if (__instance is Player) return;
                 if (__instance.GetComponent<ZNetView>()?.GetZDO()?.GetBool(BandKey) == true) Band.Add(__instance);
             }
         }
@@ -107,7 +117,7 @@ namespace GoodTidings
             private static void Postfix(CharacterDrop __instance, List<KeyValuePair<GameObject, int>> __result)
             {
                 Character c = __instance.GetComponent<Character>();
-                if (!Is(c, out _)) return;
+                if (!Is(c, out _) || c.GetComponent<ZNetView>()?.GetZDO()?.GetBool(GoldKey) != true) return;   // (Muninn's beasts: their own drops)
                 __result.Clear();
                 int land = Mathf.Clamp(c.GetComponent<ZNetView>()?.GetZDO()?.GetInt(LandKey) ?? 0, 0, Gold.Length - 1);
                 GameObject coins = ObjectDB.instance?.GetItemPrefab("Coins");

@@ -5,8 +5,8 @@ using UnityEngine;
 namespace GoodTidings
 {
     /// <summary>
-    /// What a riddle brings, on Muninn's owner (the game that gives and spawns: items handed out by one game only).
-    /// Right: a bundle from the world's newest land (two of its goods, now and then its rare). Wrong: he takes flight with a cry and the
+    /// What a riddle brings, on Muninn's owner (the game that spawns). Right: what the raven saw (RavenSaw; items before 0.16, Reward
+    /// kept for testing). Wrong: he takes flight with a cry and the
     /// land's beasts answer it (ravens follow battle, and hunt with wolves): a few of the newest land's creatures, hunting the base.
     /// </summary>
     internal static class MuninnOutcome
@@ -44,6 +44,7 @@ namespace GoodTidings
                 GameObject c = Object.Instantiate(prefab, p, Quaternion.LookRotation(home - p));
                 BaseAI ai = c.GetComponent<BaseAI>();
                 if (ai) { ai.SetHuntPlayer(true); }
+                DvergerBand.Mark(c, home, 8f, 1f, land, gold: false);   // (the base's circle red while they're about; gone after 8 minutes)
             }
             Plugin.Log.LogInfo($"Muninn's cry: {count} {Beasts[land].creature} come for the base at {home}");
         }
