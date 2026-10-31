@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Paths, framework, shared references and deploying to BepInEx/scripts come from ../Directory.Build.props.
+       translations/English.json brings in Shared/Translations.cs and embeds every translations/*.json. -->
+  <PropertyGroup>
+    <AssemblyName>GoodTidings</AssemblyName>
+    <RootNamespace>GoodTidings</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="../Shared/ServerSettings.cs" Link="Shared/ServerSettings.cs" />
+  </ItemGroup>
+
+  <!-- Animations made outside the game (Mixamo, turned into data with Blender: DESIGN.md), read by Retarget.cs -->
+  <ItemGroup>
+    <EmbeddedResource Include="assets/*.json" LogicalName="GoodTidings.assets.%(Filename).json" />
+    <EmbeddedResource Include="assets/*.ogg" LogicalName="GoodTidings.assets.%(Filename).ogg" />
+    <EmbeddedResource Include="assets/*.bin" LogicalName="GoodTidings.assets.%(Filename).bin" />
+    <EmbeddedResource Include="assets/*.png" LogicalName="GoodTidings.assets.%(Filename).png" />
+  </ItemGroup>
+
+  <!-- Unity modules Good Tidings needs beyond the references in ../Directory.Build.props -->
+  <ItemGroup>
+    <Reference Include="UnityEngine.ImageConversionModule"><HintPath>$(ManagedDir)/UnityEngine.ImageConversionModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.ParticleSystemModule"><HintPath>$(ManagedDir)/UnityEngine.ParticleSystemModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.AudioModule"><HintPath>$(ManagedDir)/UnityEngine.AudioModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.UnityWebRequestModule"><HintPath>$(ManagedDir)/UnityEngine.UnityWebRequestModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.UnityWebRequestAudioModule"><HintPath>$(ManagedDir)/UnityEngine.UnityWebRequestAudioModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.AnimationModule"><HintPath>$(ManagedDir)/UnityEngine.AnimationModule.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+</Project>

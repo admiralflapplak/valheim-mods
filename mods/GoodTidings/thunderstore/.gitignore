@@ -1,0 +1,5 @@
+# Game renders the showcase is built from: the game's art, kept off the repository (as for the other mods)
+sources/
+__pycache__/
+# Icon drafts tried on the way
+drafts/
