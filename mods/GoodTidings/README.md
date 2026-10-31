@@ -4,6 +4,8 @@ Not every visitor wants your head. When the game would send a raid against your 
 interesting, arrives instead: a travelling trader, a season of plenty, Odin's raven with a riddle, a wounded Dvergr, a long-dead skald
 with a lyre. Each brings a different kind of reward, and the neutral ones can go either way.
 
+![The five visitors together: Dagny riding her Lox Atlas, the skeleton skald with his lyre, the wounded Dvergr on one knee and Muninn the white raven](thunderstore/screenshots/00-visitors.png)
+
 - **Visits take the place of raids.** By default 30% of the raids the game starts become a visit instead (Visit Chance), so raids get
   that much rarer. Visits come only when a player is at a base, as raids do, and no raid starts while a visitor is there.
 - **The map shows them** as a raid is shown: a circle on the base (blue for a good visit, yellow for a neutral one), and the visitor's
@@ -13,6 +15,10 @@ with a lyre. Each brings a different kind of reward, and the neutral ones can go
 
 ### Dagny and Atlas (good: trade)
 
+![Dagny on her golden Lox Atlas, come to trade at the base](thunderstore/screenshots/01-dagny.png)
+
+![Trading with Dagny: her goods matched to how far your world has come](thunderstore/screenshots/02-dagny-shop.png)
+
 A wandering trader rides in on her golden Lox, wanders round the base for a few minutes and trades with anyone who asks. Her goods
 follow how far your world has come, from the Meadows to the Deep North: fifteen lines a visit, mostly from your newest lands, with a
 fishing rod, bait and barrel hoops always, and one rare item of your newest land. Feed Atlas (drop food near him) and each meal knocks
@@ -20,10 +26,14 @@ fishing rod, bait and barrel hoops always, and one rare item of your newest land
 
 ### Bountiful Season (good: time)
 
+![A Bountiful Season: green motes over the smelter, kiln and saplings as they work and grow faster](thunderstore/screenshots/08-bountiful.png)
+
 A warm season settles over the base for a few minutes: everything in it works faster. Smelters, kilns, fermenters, cooking stations,
 beehives and the like work 8 times as fast, and growing plants 20 times.
 
 ### The Skald (good: skill)
+
+![The skald playing his lyre in a hall of the base](thunderstore/screenshots/03-skald.png)
 
 A long-dead skald, a friendly skeleton with his lyre on his back, rises out of the ground at the most comfortable spot in your base,
 strolls about a little, then plays his three songs. While he plays, the comfort around him is 2 higher. Stay near him for 30 seconds
@@ -31,6 +41,8 @@ and every skill rises by 5% of its level, and for a while your next death drains
 his songs are done he bows and sinks back to his rest.
 
 ### Muninn's Riddle (neutral: knowledge)
+
+![Muninn's riddle: three answers to choose from](thunderstore/screenshots/04-muninn-riddle.png)
 
 Odin's white raven of memory lands at the base with a riddle, made from what you yourself have found and made (or, now and then, one
 of 26 old riddles from the Eddas and Valheim's story). The first to answer decides:
@@ -43,7 +55,13 @@ of 26 old riddles from the Eddas and Valheim's story). The first to answer decid
 
 The more riddles the world answers rightly, the harder his riddles get.
 
+![The map after right answers: places Muninn saw, marked with the land around them](thunderstore/screenshots/07-raven-marks.png)
+
 ### The Wounded Dvergr (neutral: craft)
+
+![The wounded Dvergr down on one knee by a raspberry bush](thunderstore/screenshots/05-dvergr-wounded.png)
+
+![The Dvergr resting on a bed by the fire, waiting for his meals](thunderstore/screenshots/06-dvergr-resting.png)
 
 A hurt Dvergr staggers in and goes down on one knee near the base. Help him up and he goes to the nearest fire to rest: a bed by it,
 a seat, or the ground beside it (with no fire about, he waits for one to be lit). Feed him three meals from your hotbar before his time

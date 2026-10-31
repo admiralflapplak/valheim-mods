@@ -1,0 +1,35 @@
+# Thunderstore package for this mod, read by the Thunderstore CLI (tcli build, tcli publish). Made by Claude Tools' modkit package,
+# which keeps versionNumber and the dependencies up to date from the DLL; everything else is yours to edit.
+[config]
+schemaVersion = "0.0.1"
+
+[package]
+namespace = "Flap"
+name = "Good_Tidings"
+versionNumber = "1.0.0"
+description = "Friendly raids: a share of raid events (random events) become visitors instead. A wandering trader NPC, a bountiful season (faster smelting, crops), Muninn's raven riddles, a wounded Dvergr to feed, and a skeleton skald whose songs raise skills."
+websiteUrl = "https://github.com/admiralflapplak/valheim-mods"
+containsNsfwContent = false
+
+[package.dependencies]
+denikson-BepInExPack_Valheim = "5.4.2360"
+
+[build]
+icon = "./thunderstore/icon.png"
+readme = "./thunderstore-build/README.md"
+outdir = "./thunderstore-build"
+
+[[build.copy]]
+source = "./bin/Release/net48/GoodTidings.dll"
+target = "plugins/GoodTidings.dll"
+
+[[build.copy]]
+source = "./thunderstore-build/CHANGELOG.md"
+target = "CHANGELOG.md"
+
+[publish]
+repository = "https://thunderstore.io"
+communities = [ "valheim" ]
+
+[publish.categories]
+valheim = [ "mods", "npcs", "misc", "client-side", "server-side", "deep-north-update", "ai-generated" ]
