@@ -14,9 +14,11 @@ namespace Cogling
     /// </summary>
     internal sealed class CoglingAI : BaseAI
     {
-        private enum Mode { Resting, Strolling, GoingHome }
+        private enum Mode { Resting, Strolling, GoingHome, Working }
 
         private CoglingNavigator _nav;
+        private CoglingJob _job;
+        private float _nextJobLook;
         private Mode _mode = Mode.GoingHome;
         private float _nextStroll;
         private Vector3 _home;
@@ -46,12 +48,14 @@ namespace Cogling
             base.Awake();
             if (GetComponent<Character>() is Character c) CharacterAI(c) = this;
             _nav = new CoglingNavigator(this);
+            _job = new CoglingJob(this, _nav);
             _nextStroll = Time.time + Random.Range(5f, 15f);
         }
 
         private void OnDestroy()
         {
             BaseOnDestroy?.Invoke(this, null);   // (the game's own clean-up, which this method hides)
+            _job?.Abandon();                     // (what he carries stays saved on him: unloaded, he goes on later)
             _nav?.CloseDoors(force: true);
             ZNetView view = GetComponent<ZNetView>();
             if (view != null && view.IsValid()) foreach (string rpc in Rpcs) view.Unregister(rpc);
@@ -61,6 +65,14 @@ namespace Cogling
         {
             if (!base.UpdateAI(dt)) return false;   // (not ours to run: another player's game moves him)
             m_character.m_walkSpeed = Plugin.WalkSpeed.Value;
+            if (Plugin.Paused.Value)
+            {
+                // testing: he stands still and faces the nearest player (to look at a pose); what he was doing waits
+                StopMoving();
+                Player near = Player.GetClosestPlayer(transform.position, 30f);
+                if (near != null) LookAt(near.transform.position);
+                return true;
+            }
             _nav.CloseDoors(force: false);
 
             if (Time.time > _nextNetwork) { _network = Antenna.NetworkAt(transform.position); _nextNetwork = Time.time + 2f; }
@@ -69,8 +81,23 @@ namespace Cogling
             if (network.Count == 0) { StopMoving(); return true; }   // no antenna loaded near: he waits
             if (!_haveHome || !Antenna.InArea(network, _home) || Time.time > _nextHomeCheck) PickHome(network);
 
+            // work first: something carried from before, else an item on the floor (looked for every few seconds)
+            if (_mode != Mode.Working && Time.time > _nextJobLook)
+            {
+                _nextJobLook = Time.time + 3f;
+                if ((_job.Carrying && _job.Resume(network)) || (!_job.Carrying && _job.TryStart(network))) _mode = Mode.Working;
+            }
+
             switch (_mode)
             {
+                case Mode.Working:
+                    if (_job.Update(dt) == CoglingJob.State.Done)
+                    {
+                        _mode = Mode.GoingHome;
+                        _nav.SetTarget(_home);
+                        _nextJobLook = Time.time + 1f;
+                    }
+                    break;
                 case Mode.Resting:
                     StopMoving();
                     if (Time.time > _nextStroll && Plugin.StrollEvery.Value > 0f)
@@ -130,6 +157,7 @@ namespace Cogling
         /// <summary>Testing: walk to a spot (then home, as after a stroll). False if no way there was found at all.</summary>
         internal bool SendTo(Vector3 spot)
         {
+            if (_mode == Mode.Working) { _job.Abandon(); }
             if (!_nav.SetTarget(spot)) return false;
             _mode = Mode.Strolling;
             Log($"sent to {spot:F1}");
@@ -146,6 +174,15 @@ namespace Cogling
         {
             if (Plugin.LogAI.Value) Plugin.Log.LogInfo($"Cogling AI {GetComponent<ZNetView>()?.GetZDO()?.m_uid.ID}: {what}");
         }
+
+        /// <summary>Taken down or broken: what he carries falls where he stands.</summary>
+        protected override void OnDeath()
+        {
+            if (m_nview != null && m_nview.IsValid() && m_nview.IsOwner()) _job?.Drop();
+            base.OnDeath();
+        }
+
+        internal void Face(Vector3 point) => LookAt(point);
 
         // ---- BaseAI's helpers for the navigator (protected there)
         internal void Walk(Vector3 dir) => MoveTowards(dir, run: false);

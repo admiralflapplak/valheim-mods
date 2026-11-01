@@ -17,7 +17,29 @@ The feel: peaceful, not fast. A little helper with a personality, pottering abou
   chest already holding the most of it (Quick Stack Store matches by the item's name, `m_shared.m_name`, and skips empty chests; Smart
   Containers adds item groups by name patterns: a later idea). Never: graves, carts/ships, chests a player has open, chests the ward or
   a lock keeps from the antenna's owner (ContainerAccess template; valheim-pitfalls on chests: the owner gives, no duplication).
-- **Floor items**: picks up items lying in the working area and carries them to a chest holding that item (none: leaves them).
+- **Floor items**: picks up items lying in the working area and carries them to a chest holding that item (none: leaves them, and
+  remembers that for a while). Never touched (agreed with the user 2026-11-01):
+  - **eggs that are warming** (EggGrow.CanGrow, private: near a fire and under a roof). A **cold** egg is remembered from when he first
+    saw it cold; still cold after "Cold egg wait" (default 3 min), he collects it; moved somewhere warm meanwhile, he leaves it.
+    Toggle "Collect cold eggs" (default on).
+  - **freshly dropped** items: a timer from when an item appears (default 60 s) before he touches it;
+  - items resting on **furniture** (decorations on tables, shelves: the piece under it is in the Furniture category), and items
+    that are placed **pieces** (ItemDrop.IsPiece: feasts and the like);
+  - items **next to a player** (within ~2 m: about to be picked up);
+  - items **in water** or that he can't path to; items over a **weight** limit (the dragon egg);
+  - items in a **ward** this game's player can't use; drops **during a fight** (enemies near: waits, ties in with step 8);
+  - an item **another Cogling** has claimed (a reservation, so two never race).
+  Collected gladly: smelter / kiln output, loot after a fight.
+- **Where an item goes** (floor items and tidying both, one rulebook; decided with the user 2026-11-01, after reading Smart
+  Containers' cascade: same item, its item groups, name prefixes/postfixes, item type, fuzzy):
+  1. the chest already holding the most of that item;
+  2. a chest holding something of the **same group** (his own groups, "5 - Sorting": one setting per group, `name = Item, Item...`;
+     defaults: ores, ingots, wood, stone, mushrooms, berries, vegetables, raw meat, cooked meat, food, valuables; editable);
+  3. name patterns: Trophy* with trophies, *Seeds with seeds;
+  4. a chest holding the same **item type** (the game's ItemType: materials, consumables, ammo...);
+  5. else an **empty chest** (a new kind starts its own pile), else the chest with the most room.
+  No reliance on Smart Containers: a one-time "Copy groups from Smart Containers" toggle copies its [ItemGroup] entries from its
+  .cfg into ours when it's installed, then switches itself off.
 - **Carrying**: visibly, the item's own model in his hands, arms in a carry pose (set on the robot after the Dverger's pose is copied:
   CoglingBody can override any muscle).
 - **Repairing**: both damaged buildings in the area (as the hammer, free, with a hammering animation) while wandering, and worn
@@ -50,7 +72,15 @@ The feel: peaceful, not fast. A little helper with a personality, pottering abou
    UseDoor RPC unless keyed / never-closing / warded from this game's player, closed again once he's 2.5 m past and no player stands
    in it; stuck = under 0.5 m in 3 s: door, else a sidestep, gives up after 4). Rests 1.3 m in front of the nearest antenna of his
    network; testing: strolls ("Stroll every" 25 s), `cogling goto` / `cogling home`, "Log what he does". Walk speed 1.4 (server).
-4. Floor items: pick up, carry visibly, put in a matching chest (the first complete job, smallest chest risk).
+4. Floor items: pick up, carry visibly, put in a matching chest (the first complete job, smallest chest risk). 0.8.x, working in
+   the user's base (seen: test wood to the wood chest, 16 coal scooped in one trip, a boar trophy to the trophy chest, a leather
+   scrap): CoglingJob (item -> chest), Carried (what he carries saved in his ZDO as a one-slot inventory, so nothing is lost; dropped
+   if he's taken down), Chests (own list via Container.Awake; Wanted's board excluded in ContainerAccess.SpecialPrefabs), FloorItems
+   (the rules; `cogling items` explains each item), Sorting (the cascade). Picks up the game's way (RequestOwn, taken once owned),
+   scoops the same items within 1.2 m up to a stack, picks up from within 1.6 m when the pathfinder can't get closer, leaves
+   unreachable items 5 min (bars fallen inside the smelter's base). Chest: taken over and reloaded, lid opened with SetInUse.
+   Carry pose (muscles, "Carry:" sliders in 9 - Testing) and the item's own model between his hands; a bend to pick up; all read
+   from his ZDO so every player sees them. Note: a hot reload resets the "first seen" times (60 s wait again).
 5. Tidying chests (consolidating stacks), the multiplayer-safe way.
 6. Repairing buildings, then gear in chests.
 7. Personality: babble, rename, hover text.
@@ -86,7 +116,12 @@ The feel: peaceful, not fast. A little helper with a personality, pottering abou
 
 - CoglingAnimations.cs: the hidden Dverger body's animator plays another creature's controller (humanoid clips retarget onto the
   Dverger avatar; all six offered are humanoid: DvergerMage, Dverger, Goblin, GoblinShaman, GoblinBrute, Player). The user's choice
-  for walking and idle: **Fuling** (goblin_animator) with Stance **Atgeir** (defaults since 0.6.3). Jobs (carrying, hammering) will
+  for walking: **Fuling** (goblin_animator), Stance **Unarmed** (0.9.6; Atgeir before). Standing still: his own idle
+  (reference/Idle.fbx -> assets/idle.anim by tools/convert_anim.py, CoglingClip/ClipPlayer on a hidden copy of his skeleton,
+  blended in by speed, feet put back on the ground: the clip's hips floated him). Carrying: arms and shoulders from the idle even
+  walking (the Fuling walk swung them apart), then the carry muscles on top; the user's values are the defaults (0.9.6): arms up
+  0.193, forward -0.425 (on his rig -1 is forward), elbows 0.799, item out 0.126, height 0.045, item size 0.6 of his height, turn
+  82.6 degrees. Item held between his hands. Jobs (carrying, hammering) will
   need their own poses or clips later.
 
 ## Lessons (0.2.x)

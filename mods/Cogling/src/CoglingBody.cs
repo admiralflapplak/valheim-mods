@@ -78,6 +78,15 @@ namespace Cogling
             foreach (Renderer r in dvergerRenderers) r.enabled = false;
 
             _root = Build(transform, out Transform[] bones);   // (already Plugin.Height tall: CoglingModel scales the model as it loads)
+            _leftHand = bones.FirstOrDefault(b => b.name.EndsWith("LeftHand"));
+            _rightHand = bones.FirstOrDefault(b => b.name.EndsWith("RightHand"));
+            _chest = bones.FirstOrDefault(b => b.name.EndsWith("Spine2"));
+            _hips = bones[0];
+            _leftFoot = bones.FirstOrDefault(b => b.name.EndsWith("LeftFoot"));
+            _rightFoot = bones.FirstOrDefault(b => b.name.EndsWith("RightFoot"));
+            int lf = System.Array.FindIndex(CoglingModel.BoneNames, n => n.EndsWith("LeftFoot")), rf = System.Array.FindIndex(CoglingModel.BoneNames, n => n.EndsWith("RightFoot"));
+            _footRest = lf >= 0 && rf >= 0 ? Mathf.Min(CoglingModel.RestPos[lf].y, CoglingModel.RestPos[rf].y) : 0f;
+            _view = GetComponentInParent<ZNetView>();
 
             var mesh = new GameObject("cogling_mesh") { layer = gameObject.layer };
             mesh.transform.SetParent(_root, false);
@@ -97,9 +106,15 @@ namespace Cogling
             if (_avatar == null) return;
             _from = new HumanPoseHandler(_animator.avatar, _animator.transform);
             _to = new HumanPoseHandler(_avatar, _root);
+            CoglingClip idle = CoglingClip.Get("idle");
+            if (idle != null) _idle = new ClipPlayer(idle, _avatar);
+            _idleStart = Random.Range(0f, 10f);   // (two Coglings side by side don't idle in step)
+            _lastPos = transform.position;
         }
 
         /// <summary>The robot's skeleton in its rest pose, under <paramref name="parent"/>; bones in the model's order.</summary>
+        internal static Transform BuildSkeleton(Transform parent, out Transform[] bones) => Build(parent, out bones);
+
         private static Transform Build(Transform parent, out Transform[] bones)
         {
             var root = new GameObject("cogling_body") { layer = parent != null ? parent.gameObject.layer : 0 }.transform;
@@ -240,13 +255,190 @@ namespace Cogling
             if (_from == null || _to == null) return;
             // (both roots unscaled: with the creature's root scaled, the robot was drawn far from its body)
             _from.GetHumanPose(ref _pose);
+            Idle();
+            Work();
             _to.SetHumanPose(ref _pose);
+            Ground();
+            Hold();
         }
+
+        // ---- standing still: his own idle (reference/Idle.fbx), eased in when he stops and out when he walks (the Fuling walk)
+
+        private ClipPlayer _idle;
+        private HumanPose _idlePose;
+        private float _idleWeight, _idleStart, _speed;
+        private Vector3 _lastPos;
+
+        private void Idle()
+        {
+            float dt = Mathf.Max(0.0001f, Time.deltaTime);
+            Vector3 moved = transform.position - _lastPos;
+            moved.y = 0f;
+            _lastPos = transform.position;
+            _speed = Mathf.Lerp(_speed, moved.magnitude / dt, 1f - Mathf.Exp(-dt * 8f));   // (smoothed: the same on every player's game)
+            _idleWeight = Mathf.MoveTowards(_idleWeight, _speed < 0.25f ? 1f : 0f, dt * 2.5f);
+            if (_idle == null || !Plugin.UseIdle.Value || _pose.muscles == null) return;
+            if (_idleWeight <= 0f && _carry <= 0f) return;
+            _idle.Pose(Time.time + _idleStart, ref _idlePose);
+            if (_idlePose.muscles == null) return;
+            float w = Mathf.SmoothStep(0f, 1f, _idleWeight);
+            if (w > 0f)
+            {
+                _pose.bodyPosition = Vector3.Lerp(_pose.bodyPosition, _idlePose.bodyPosition, w);
+                _pose.bodyRotation = Quaternion.Slerp(_pose.bodyRotation, _idlePose.bodyRotation, w);
+                for (int i = 0; i < _pose.muscles.Length && i < _idlePose.muscles.Length; i++) _pose.muscles[i] = Mathf.Lerp(_pose.muscles[i], _idlePose.muscles[i], w);
+            }
+            // carrying, his arms and shoulders are the idle's whether he walks or not (the Fuling walk swings them apart), and the
+            // carry pose goes on top (Work)
+            if (_carry > 0f)
+                foreach (int i in ArmMuscles())
+                    if (i < _pose.muscles.Length && i < _idlePose.muscles.Length) _pose.muscles[i] = Mathf.Lerp(_pose.muscles[i], _idlePose.muscles[i], _carry);
+        }
+
+        private static int[] _armMuscles;
+
+        private static int[] ArmMuscles()
+        {
+            if (_armMuscles != null) return _armMuscles;
+            var list = new List<int>();
+            string[] names = HumanTrait.MuscleName;
+            for (int i = 0; i < names.Length; i++)
+                if (names[i].Contains("Shoulder") || names[i].Contains(" Arm ") || names[i].Contains("Forearm") || names[i].Contains("Hand")) list.Add(i);
+            return _armMuscles = list.ToArray();
+        }
+
+        private Transform _hips, _leftFoot, _rightFoot;
+        private float _footRest;   // how high his ankles are above the ground standing in his model (the soles are below them)
+
+        /// <summary>
+        /// His feet on the ground in the idle: the clip's hips were placed for Mixamo's own standing pose, and copied onto his body they
+        /// left him floating. The lower ankle is brought to its standing height above the ground (his body's origin), as the idle eases in.
+        /// </summary>
+        private void Ground()
+        {
+            if (_idleWeight <= 0f || _hips == null || _leftFoot == null || _rightFoot == null || !Plugin.UseIdle.Value) return;
+            float ankle = Mathf.Min(_leftFoot.position.y, _rightFoot.position.y);
+            float off = (transform.position.y + _footRest) - ankle;
+            _hips.position += Vector3.up * off * Mathf.SmoothStep(0f, 1f, _idleWeight);
+        }
+
+        // ---- working: the carry pose, bending down, and the carried item in his hands, from his saved state (every player sees them)
+
+        private Transform _leftHand, _rightHand, _chest;
+        private ZNetView _view;
+        private string _heldName = "";
+        private GameObject _held;
+        private Vector3 _heldCentre;
+        private float _heldBiggest;
+        private float _carry, _bend, _nextRead;
+        private int _act;
+        private static int[] _muscles;   // the muscles the work poses move (Unity's humanoid muscle indices)
+        private const int ArmUpL = 0, ArmFrontL = 1, ElbowL = 2, ArmUpR = 3, ArmFrontR = 4, ElbowR = 5, Spine = 6, Chest = 7;
+
+        private static int[] Muscles()
+        {
+            if (_muscles != null) return _muscles;
+            string[] names = HumanTrait.MuscleName;
+            int Find(string n) => System.Array.IndexOf(names, n);
+            return _muscles = new[]
+            {
+                Find("Left Arm Down-Up"), Find("Left Arm Front-Back"), Find("Left Forearm Stretch"),
+                Find("Right Arm Down-Up"), Find("Right Arm Front-Back"), Find("Right Forearm Stretch"),
+                Find("Spine Front-Back"), Find("Chest Front-Back"),
+            };
+        }
+
+        private void Work()
+        {
+            if (Time.time > _nextRead)
+            {
+                _nextRead = Time.time + 0.2f;
+                string name = "";
+                if (_view != null && _view.IsValid())
+                {
+                    ZDO zdo = _view.GetZDO();
+                    _act = zdo.GetInt(Carried.ActKey);
+                    name = zdo.GetString(Carried.PrefabKey);
+                }
+                if (Plugin.CarryPreview.Value && string.IsNullOrEmpty(name)) name = "Wood";   // (testing: the carry pose on every Cogling)
+                if (name != _heldName) { _heldName = name; ShowHeld(name); }
+            }
+            float dt = Time.deltaTime;
+            _carry = Mathf.MoveTowards(_carry, _held != null || _act == Carried.ActDeposit ? 1f : 0f, dt * 3f);
+            if (_held != null && Plugin.CarryPreview.Value) _carry = 1f;
+            _bend = Mathf.MoveTowards(_bend, _act == Carried.ActBend ? 1f : 0f, dt * 2.5f);
+            if ((_carry <= 0f && _bend <= 0f) || _pose.muscles == null) return;
+            int[] m = Muscles();
+            void Set(int which, float value, float weight)
+            {
+                int i = m[which];
+                if (i >= 0 && i < _pose.muscles.Length) _pose.muscles[i] = Mathf.Lerp(_pose.muscles[i], value, weight);
+            }
+            // arms forward, elbows bent, holding something in front of his chest (the Carry settings: testing, to tune by eye)
+            float up = Plugin.CarryArmsUp.Value, front = Plugin.CarryArmsForward.Value, elbow = Plugin.CarryElbows.Value;
+            Set(ArmUpL, up, _carry); Set(ArmFrontL, front, _carry); Set(ElbowL, elbow, _carry);
+            Set(ArmUpR, up, _carry); Set(ArmFrontR, front, _carry); Set(ElbowR, elbow, _carry);
+            // bending down to the floor, arms reaching
+            Set(Spine, 0.9f, _bend); Set(Chest, 0.7f, _bend);
+            Set(ArmFrontL, 0.6f, _bend); Set(ArmFrontR, 0.6f, _bend); Set(ArmUpL, -0.4f, _bend); Set(ArmUpR, -0.4f, _bend);
+        }
+
+        /// <summary>The carried item's own model between his hands (the game's prefab, every working part taken off), sized to fit.</summary>
+        private void ShowHeld(string name)
+        {
+            if (_held != null) { Destroy(_held); _held = null; }
+            if (string.IsNullOrEmpty(name)) return;
+            GameObject prefab = ZNetScene.instance?.GetPrefab(name);
+            if (prefab == null) return;
+            ZNetView.m_forceDisableInit = true;
+            try { _held = Instantiate(prefab, _root); }
+            finally { ZNetView.m_forceDisableInit = false; }
+            _held.name = "cogling_held";
+            foreach (MonoBehaviour b in _held.GetComponentsInChildren<MonoBehaviour>(true)) DestroyImmediate(b);
+            foreach (Joint j in _held.GetComponentsInChildren<Joint>(true)) DestroyImmediate(j);
+            foreach (Rigidbody r in _held.GetComponentsInChildren<Rigidbody>(true)) DestroyImmediate(r);
+            foreach (Collider c in _held.GetComponentsInChildren<Collider>(true)) DestroyImmediate(c);
+            // the sparkle loose items have (on the item's own root for some: then only the effect goes, not the item)
+            foreach (ParticleSystem p in _held.GetComponentsInChildren<ParticleSystem>(true))
+            {
+                if (p.gameObject != _held) { DestroyImmediate(p.gameObject); continue; }
+                if (p.GetComponent<ParticleSystemRenderer>() is ParticleSystemRenderer pr) DestroyImmediate(pr);
+                DestroyImmediate(p);
+            }
+            foreach (Transform t in _held.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = gameObject.layer;
+            // its own size measured once (at scale 1, facing his way); Hold sizes and turns it by the Carry: item settings each frame
+            Renderer[] rs = _held.GetComponentsInChildren<Renderer>();
+            if (rs.Length == 0) { Destroy(_held); _held = null; return; }
+            _held.transform.localScale = Vector3.one;
+            _held.transform.rotation = transform.rotation;
+            Bounds box = rs[0].bounds;
+            foreach (Renderer r in rs) box.Encapsulate(r.bounds);
+            _heldBiggest = Mathf.Max(box.size.x, Mathf.Max(box.size.y, box.size.z));
+            _heldCentre = _held.transform.InverseTransformPoint(box.center);
+        }
+
+        private void Hold()
+        {
+            if (_held == null || _leftHand == null || _rightHand == null) return;
+            // in his hands (between them), nudged by the Carry: item settings
+            Vector3 forward = transform.forward;
+            forward.y = 0f;
+            Vector3 at = (_leftHand.position + _rightHand.position) / 2f
+                         + forward.normalized * Plugin.Height.Value * Plugin.CarryOut.Value + Vector3.up * Plugin.Height.Value * Plugin.CarryHeight.Value;
+            // never bigger than its own size; its biggest side at most the Carry: item size share of his height
+            float scale = _heldBiggest > 0.001f ? Mathf.Min(1f, Plugin.Height.Value * Plugin.CarryItemSize.Value / _heldBiggest) : 1f;
+            _held.transform.localScale = Vector3.one * scale;
+            _held.transform.rotation = transform.rotation * Quaternion.Euler(0f, Plugin.CarryItemTurn.Value, 0f);
+            _held.transform.position = at - _held.transform.TransformVector(_heldCentre);
+        }
+
 
         private void OnDestroy()
         {
             Live.Remove(this);
             _from?.Dispose();
+            _idle?.Dispose();
+            _idle = null;
             _to?.Dispose();
             _from = _to = null;
             // a hot reload swaps this component for the new copy's (PieceReload.Reattach), which builds its own robot: this one's goes

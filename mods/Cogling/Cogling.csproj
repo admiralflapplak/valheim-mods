@@ -14,6 +14,8 @@
   <ItemGroup>
     <EmbeddedResource Include="assets/cogling.bin" LogicalName="Cogling.assets.cogling.bin" />
     <EmbeddedResource Include="assets/cogling.png" LogicalName="Cogling.assets.cogling.png" />
+    <!-- his own animations (Mixamo, for his skeleton), made by tools/convert_anim.py -->
+    <EmbeddedResource Include="assets/*.anim" LogicalName="Cogling.assets.%(Filename).anim" />
   </ItemGroup>
 
   <!-- Unity modules Cogling needs beyond the references in ../Directory.Build.props: the humanoid avatar and pose copying -->

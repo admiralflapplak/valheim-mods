@@ -12,7 +12,7 @@ namespace Cogling
     internal static class Commands
     {
         private const string Command = "cogling";
-        private const string Usage = "cogling goto [x y z] | cogling home";
+        private const string Usage = "cogling goto [x y z] | cogling home | cogling items";
 
         private static readonly AccessTools.FieldRef<Dictionary<string, Terminal.ConsoleCommand>> TerminalCommands =
             AccessTools.StaticFieldRefAccess<Dictionary<string, Terminal.ConsoleCommand>>(AccessTools.Field(typeof(Terminal), "commands"));
@@ -25,7 +25,14 @@ namespace Cogling
         {
             Player p = Player.m_localPlayer;
             string sub = a.Length > 1 ? a[1].ToLowerInvariant() : "";
-            if (p == null || (sub != "goto" && sub != "home")) { t.AddString(Usage); return; }
+            if (p == null || (sub != "goto" && sub != "home" && sub != "items")) { t.AddString(Usage); return; }
+            if (sub == "items")
+            {
+                List<Antenna> network = Antenna.NetworkAt(p.transform.position);
+                if (network.Count == 0) { t.AddString("You're not in a Cogling Antenna's area."); return; }
+                foreach (string line in FloorItems.Explain(network, p.transform.position)) { t.AddString(line); Plugin.Log.LogInfo("Cogling items: " + line); }
+                return;
+            }
             CoglingAI cog = BaseAI.BaseAIInstances.OfType<CoglingAI>()
                 .Where(c => c != null && c.GetComponent<ZNetView>()?.IsOwner() == true)
                 .OrderBy(c => Vector3.Distance(c.transform.position, p.transform.position)).FirstOrDefault();

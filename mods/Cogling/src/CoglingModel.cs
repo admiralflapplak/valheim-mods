@@ -22,6 +22,7 @@ namespace Cogling
         internal static Texture2D Glow;          // white where the eyes are, black elsewhere: the wood material's emission map (colour: Eye colour)
         private static Color32[] _darkEyes;      // the texture with the eyes' painted green made dark glass (the glow gives their colour)
         internal static float Height;            // its height in metres (Plugin.Height when it was loaded)
+        internal static float Size = 1f;         // the scale the model file was loaded at (animations made for it use the same)
 
         internal static bool Load()
         {
@@ -75,6 +76,7 @@ namespace Cogling
                 }
                 // the model made Plugin.Height tall (its skeleton too), so the robot's root needs no scale
                 float size = Plugin.Height.Value / Mathf.Max(0.01f, top);
+                Size = size;
                 for (int i = 0; i < n; i++) pos[i] *= size;
                 for (int i = 0; i < bones; i++) RestPos[i] *= size;
                 top *= size;
