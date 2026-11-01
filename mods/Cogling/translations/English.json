@@ -1,0 +1,7 @@
+{
+  "cogling_name": "Cogling",
+  "cogling_desc": "A little copperwood automaton that keeps your base in order.",
+  "cogling_antenna": "Cogling Antenna",
+  "cogling_antenna_desc": "A Cogling's home. It keeps to the area around its antenna; antennas whose areas overlap make one bigger area.",
+  "cogling_needs_antenna": "A Cogling must be built inside a Cogling Antenna's area"
+}
