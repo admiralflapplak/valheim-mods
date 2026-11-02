@@ -15,7 +15,7 @@ namespace Cogling
         internal const string ItemKey = "cogling_carry", PrefabKey = "cogling_carry_prefab", ActKey = "cogling_act";
         internal const string AwakeKey = "cogling_awake";   // powered up (else down, as a new Cogling starts: he boots up)
         internal const string MoodKey = "cogling_mood";     // frightened (step 8: red eyes, his cry, cowering) or calm
-        internal const int MoodCalm = 0, MoodScared = 1;
+        internal const int MoodCalm = 0, MoodScared = 1, MoodWary = 2;
         internal const int ActNone = 0, ActBend = 1, ActDeposit = 2;
 
         internal static ItemDrop.ItemData Read(ZDO zdo)
@@ -63,6 +63,7 @@ namespace Cogling
         private int _takeQuality;
         private float _until;
         private List<Antenna> _network;
+        private float _nextSearchLog;
 
         internal CoglingJob(CoglingAI ai, CoglingNavigator nav)
         {
@@ -73,13 +74,32 @@ namespace Cogling
         private ZDO Zdo => _ai.GetComponent<ZNetView>()?.GetZDO();
         internal bool Carrying => Carried.Read(Zdo) != null;
 
+        /// <summary>What the job is at, for the task line under his name: a key and its words (count, item name key).</summary>
+        internal (string key, string a, string b) Describe()
+        {
+            ItemDrop.ItemData carried = Carried.Read(Zdo);
+            switch (_phase)
+            {
+                case Phase.ToItem:
+                case Phase.Picking:
+                    return _item != null ? ("cogling_task_fetching", _item.m_itemData.m_stack.ToString(), _item.m_itemData.m_shared.m_name) : ("cogling_task_busy", "", "");
+                case Phase.ToSource:
+                case Phase.Taking:
+                    return ("cogling_task_tidying", "", "$item_" + (_takeName ?? "").Replace("$item_", ""));
+                default:
+                    return carried != null ? ("cogling_task_carrying", carried.m_stack.ToString(), carried.m_shared.m_name) : ("cogling_task_busy", "", "");
+            }
+        }
+
         /// <summary>An item in the area worth taking (one that has a chest to go to), and off he goes. False: nothing to do.</summary>
         internal bool TryStart(List<Antenna> network)
         {
             _network = network;
             List<Container> chests = Chests.Usable(network);
             if (chests.Count == 0) return false;
-            foreach (ItemDrop d in FloorItems.Candidates(network, _ai.transform.position).Take(6))
+            var candidates = FloorItems.Candidates(network, _ai.transform.position);
+            if (Plugin.LogAI.Value && Time.time > _nextSearchLog) { _nextSearchLog = Time.time + 10f; _ai.Log($"floor search: {candidates.Count} item(s) he may take, {chests.Count} chest(s)"); }
+            foreach (ItemDrop d in candidates.Take(6))
             {
                 ItemDrop.ItemData load = d.m_itemData.Clone();
                 load.m_stack = FloorItems.Load(d.m_itemData);   // (what he'll carry: a heavy stack in several trips)

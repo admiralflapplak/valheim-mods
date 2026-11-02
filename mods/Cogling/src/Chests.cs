@@ -50,6 +50,29 @@ namespace Cogling
         private static readonly int Below = LayerMask.GetMask("piece", "Default", "static_solid", "Default_small", "terrain");
 
         /// <summary>
+        /// The creatures that would be a fight to walk into: the game's own "enemy of the players' side" (BaseAI.IsEnemy), not wild
+        /// animals (boars, deer: they don't come for him), not friendly ones (Dvergr, other mods' helpers, tames). (Before, any creature
+        /// not a player, an animal or TWIG counted, and an unseen friendly one near a pile of coins kept him from them.)
+        /// </summary>
+        private static List<Character> Enemies()
+        {
+            Character me = Player.m_localPlayer;   // (the players' side, as he is)
+            return Character.GetAllCharacters().Where(c => c != null && !c.IsDead() && !c.IsPlayer() && c.GetFaction() != Character.Faction.AnimalsVeg
+                                                           && !CoglingStance.IsCogling(c) && (me != null ? BaseAI.IsEnemy(me, c) : c.GetFaction() != Character.Faction.Players)).ToList();
+        }
+
+        /// <summary>
+        /// The enemy that makes fetching an item a walk into a fight (its name), or null: one within 8 m of it, or one within 20 m that's
+        /// alerted (hunting or fighting something). A boar grazing at the edge of the base isn't (it kept him from a pile of coins).
+        /// </summary>
+        private static string FightNear(ItemDrop d, List<Character> enemies) =>
+            enemies.FirstOrDefault(e =>
+            {
+                float distance = Vector3.Distance(e.transform.position, d.transform.position);
+                return distance < 8f || (distance < 20f && e.GetBaseAI() != null && e.GetBaseAI().IsAlerted());
+            })?.m_name;
+
+        /// <summary>
         /// How long ago an item was dropped: the drop time the game saves on every item (ZDO s_spawnTime, the world's clock), so it holds
         /// through restarts and hot reloads, and a stack he took part of keeps its own (it's still the same item). Items without one:
         /// from when he first saw them.
@@ -94,16 +117,14 @@ namespace Cogling
         {
             float now = Time.time;
             var found = new List<ItemDrop>();
-            List<Character> enemies = null;
+            List<Character> enemies = Enemies();
             foreach (ItemDrop d in Instances())
             {
                 if (d == null || !Antenna.InArea(network, d.transform.position)) continue;
                 ZDOID id = Id(d);
                 if (id == ZDOID.None || Claimed.Contains(id)) continue;
                 if (!Allowed(d, id, Age(d, id))) continue;
-                if (enemies == null) enemies = Character.GetAllCharacters().Where(c => c != null && !c.IsDead() && !c.IsTamed() && c.GetFaction() != Character.Faction.Players
-                                                                                      && c.GetFaction() != Character.Faction.AnimalsVeg && c.GetFaction() != Character.Faction.TrainingDummy).ToList();
-                if (enemies.Any(e => Vector3.Distance(e.transform.position, d.transform.position) < 20f)) continue;   // (a fight near it: later)
+                if (FightNear(d, enemies) != null) continue;   // (a fight near it: later)
                 found.Add(d);
             }
             if (FirstSeen.Count > 2000) Prune();
@@ -149,11 +170,14 @@ namespace Cogling
         {
             var lines = new List<string>();
             List<Container> chests = Chests.Usable(network);
+            List<Character> enemies = Enemies();
             foreach (ItemDrop d in Instances().Where(x => x != null && Antenna.InArea(network, x.transform.position)).OrderBy(x => Vector3.Distance(x.transform.position, from)).Take(25))
             {
                 ZDOID id = Id(d);
                 float age = Age(d, id);
-                string why = Claimed.Contains(id) ? "he's on his way to it" : WhyNot(d, id, age);
+                string fight = FightNear(d, enemies);
+                string why = Claimed.Contains(id) ? "he's on his way to it"
+                    : WhyNot(d, id, age) ?? (fight != null ? $"an enemy near it ({Localization.instance.Localize(fight)}): later" : null);
                 if (why == null)
                 {
                     Container c = Sorting.Choose(d.m_itemData, chests, d.transform.position, out string reason);

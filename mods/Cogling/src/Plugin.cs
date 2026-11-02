@@ -16,7 +16,7 @@ namespace Cogling
     {
         public const string Guid = "nick.Cogling";
         public const string Name = "Cogling";
-        public const string Version = "0.12.4";
+        public const string Version = "0.13.4";
 
         internal static BepInEx.Logging.ManualLogSource Log;
         internal static ServerSettings Synced;

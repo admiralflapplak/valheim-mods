@@ -13,7 +13,7 @@ namespace Cogling
     /// </summary>
     internal sealed class CoglingDanger
     {
-        private const float NoticeRange = 12f, SafeRange = 20f, CalmAfter = 6f;
+        private const float NoticeRange = 12f, SafeRange = 20f, CalmAfter = 6f, WaryRange = 25f;
         private static readonly int SolidMask = LayerMask.GetMask("Default", "static_solid", "Default_small", "piece", "terrain", "vehicle");
         private static readonly int SightMask = LayerMask.GetMask("Default", "static_solid", "Default_small", "piece", "terrain", "viewblock", "vehicle");
 
@@ -26,6 +26,9 @@ namespace Cogling
         internal CoglingDanger(CoglingAI ai) => _ai = ai;
 
         internal bool Afraid { get; private set; }
+        internal bool Wary { get; private set; }   // an enemy he can see further off: eyes yellow, the "aware" icon, he keeps working
+        private Character _seen;
+        internal string ThreatName => (_threat != null ? _threat : _seen) is Character c && c != null ? c.m_name : "";
 
         internal string Status() =>
             $"afraid {Afraid}, threat {(_threat == null ? "none" : _threat.m_name + (_threat.IsDead() ? " (dead)" : ""))}, last seen {Time.time - _lastThreatSeen:F1} s ago, hurt {Time.time - _hurtAt:F1} s ago, cover {(_haveCover ? _cover.ToString("F1") : "none")}";
@@ -68,6 +71,20 @@ namespace Cogling
                 else if (_threat != null) _lastThreatSeen = Time.time;   // (still about, a little further off)
             }
             bool afraid = Time.time - _lastThreatSeen < CalmAfter;
+            // wary (only when not afraid): an enemy within WaryRange he has a line of sight to (checked with the look, twice a second)
+            if (Time.time >= _nextWaryLook)
+            {
+                _nextWaryLook = Time.time + 0.5f;
+                _seen = afraid ? null : Watched();
+                bool wary = !afraid && _seen != null;
+                if (wary != Wary)
+                {
+                    Wary = wary;
+                    if (!afraid) _ai.SetMood(wary ? Carried.MoodWary : Carried.MoodCalm);
+                    _ai.Log(wary ? $"keeping an eye on {_seen.m_name}" : "nothing to watch any more");
+                }
+            }
+            _ai.SetIcons(aware: Wary && !afraid, alerted: afraid);
             if (afraid != Afraid)
             {
                 Afraid = afraid;
@@ -97,6 +114,25 @@ namespace Cogling
                 if (_threat != null) _ai.Face(_ai.transform.position * 2f - _threat.transform.position);   // (his back to it, cowering)
             }
             return true;
+        }
+
+        private float _nextWaryLook;
+
+        /// <summary>The nearest enemy within WaryRange he can see (a clear line between them), or null.</summary>
+        private Character Watched()
+        {
+            Character me = _ai.Body;
+            Character best = null;
+            float bestDistance = WaryRange;
+            foreach (Character c in Character.GetAllCharacters())
+            {
+                if (c == null || c == me || c.IsDead() || !BaseAI.IsEnemy(me, c)) continue;
+                float d = Vector3.Distance(c.transform.position, me.transform.position);
+                if (d >= bestDistance || !Sees(c, me.transform.position)) continue;
+                best = c;
+                bestDistance = d;
+            }
+            return best;
         }
 
         private static bool Sees(Character watcher, Vector3 spot)

@@ -61,6 +61,7 @@ namespace Cogling
                 CoglingPrefab.HammerTarget(transform.parent.gameObject);
                 // (a Cogling standing from before the voice existed)
                 if (transform.parent.GetComponent<CoglingVoice>() == null) transform.parent.gameObject.AddComponent<CoglingVoice>();
+                if (transform.parent.GetComponent<CoglingTag>() == null) transform.parent.gameObject.AddComponent<CoglingTag>();
                 CoglingAI.Install(transform.parent.gameObject);   // (and from before he had his own brain)
             }
             if (SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null) return;   // dedicated server: nothing to show
@@ -321,7 +322,7 @@ namespace Cogling
             // again), blended from a snapshot of his last walking pose (the walk's own animator switches to the Fuling idle as soon as
             // he stops, and that showed for a moment), gently; out quickly, back to the live walk, when he moves again
             _stillFor = _speed < 0.25f ? _stillFor + dt : 0f;
-            bool idle = _stillFor > 0.1f || _sleepWeight > 0f;
+            bool idle = _stillFor > 0.1f || _sleepWeight > 0f || Time.time < _greetUntil;
             if (idle && !_snapped && _pose.muscles != null)
             {
                 _walkSnap = new HumanPose { bodyPosition = _pose.bodyPosition, bodyRotation = _pose.bodyRotation, muscles = (float[])_pose.muscles.Clone() };
@@ -343,7 +344,7 @@ namespace Cogling
 
             // which idle: now and then the happy one; chosen as he stops, and again each time the one playing comes round. Walking
             // (with something to carry), his arms are his usual idle's
-            if (idle) { if (_variant == null || Time.time >= _variantEnds) PickVariant(); }
+            if (idle && Time.time >= _greetUntil) { if (_variant == null || Time.time >= _variantEnds) PickVariant(); }
             ClipPlayer playing = idle && _variant != null ? _variant : _idle;
             float at = Time.time - (playing == _variant ? _variantStart : _idleStart);
             if (_scared && idle && _sad != null) { playing = _sad; at = Time.time; }   // (frightened, standing: cowering)
@@ -382,6 +383,19 @@ namespace Cogling
         private HumanPose _otherPose;
         private float _variantStart, _variantEnds, _previousStart, _variantBlend = 1f;
         private bool _asleep, _wasIdle, _scared;
+        private int _mood = -1;
+        private float _greetUntil;
+
+        /// <summary>Greeted: his happy idle for a moment, wherever he was (his owner stops him and turns him to the greeter).</summary>
+        internal void Greet()
+        {
+            _greetUntil = Time.time + 2.6f;
+            if (_happy == null) return;
+            if (_variant != _happy) { _previous = _variant; _previousStart = _variantStart; _variantBlend = _variant != null ? 0f : 1f; }
+            _variant = _happy;
+            _variantStart = Time.time;
+            _variantEnds = Time.time + _happy.Length * 2f;
+        }
         private float _sleepWeight, _eyeLevel = 1f, _flickerUntil, _nextFlick;
 
         /// <summary>The idle to play next: the happy one now and then (Happy idle chance), else his usual; a change is cross-faded.</summary>
@@ -503,8 +517,14 @@ namespace Cogling
                     ZDO zdo = _view.GetZDO();
                     _act = zdo.GetInt(Carried.ActKey);
                     SetAsleep(!zdo.GetBool(Carried.AwakeKey));
-                    bool scared = zdo.GetInt(Carried.MoodKey) == Carried.MoodScared;
-                    if (scared != _scared) { _scared = scared; SetEyes(scared ? new Color(1f, 0.12f, 0.08f) : (Color?)null); }
+                    int mood = zdo.GetInt(Carried.MoodKey);
+                    if (mood != _mood)
+                    {
+                        _mood = mood;
+                        _scared = mood == Carried.MoodScared;
+                        // frightened: red; wary: yellow; calm: his own colour
+                        SetEyes(mood == Carried.MoodScared ? new Color(1f, 0.12f, 0.08f) : mood == Carried.MoodWary ? new Color(1f, 0.82f, 0.1f) : (Color?)null);
+                    }
                     name = zdo.GetString(Carried.PrefabKey);
                 }
                 if (Plugin.CarryPreview.Value && string.IsNullOrEmpty(name)) name = "Wood";   // (testing: the carry pose on every Cogling)

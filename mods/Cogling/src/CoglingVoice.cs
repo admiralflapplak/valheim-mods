@@ -63,6 +63,17 @@ namespace Cogling
         }
 
         private bool _scared;
+
+        /// <summary>Greeted: a quick chirp, higher than his babble.</summary>
+        internal void Greet()
+        {
+            if (_source == null || _idle == null || _idle.Length == 0) return;
+            Settings();
+            _source.Stop();
+            _source.pitch = Plugin.VoicePitch.Value * 1.15f;
+            _source.PlayOneShot(_idle[Random.Range(0, _idle.Length)]);
+            _next = Time.time + Plugin.BabbleEvery.Value;
+        }
         private float _nextMoodRead;
 
         private void Update()

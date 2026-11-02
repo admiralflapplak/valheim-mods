@@ -103,7 +103,9 @@ namespace Cogling
 
         /// <summary>The Coglings a network powers: those standing in its area (loaded), and those its antennas are rebuilding.</summary>
         internal static int CoglingsIn(List<Antenna> network) =>
-            Character.GetAllCharacters().Count(c => CoglingStance.IsCogling(c) && !c.IsDead() && InArea(network, c.transform.position))
+            // (real ones only: the build ghost is a whole Cogling too, without saved data, and it counted itself: "2/2" with one Cogling)
+            Character.GetAllCharacters().Count(c => CoglingStance.IsCogling(c) && !c.IsDead() && c.GetComponent<ZNetView>()?.GetZDO() != null
+                                                     && InArea(network, c.transform.position))
             + network.Sum(a => a != null ? Rebuilds.Pending(a).Count : 0);
 
         /// <summary>Whether a spot is inside a network's area.</summary>

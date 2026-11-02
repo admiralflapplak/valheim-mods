@@ -93,6 +93,7 @@ namespace Cogling
             // where the Dverger's capsule is. A copy of the capsule on "piece_nonsolid" (it pushes nothing) lets the hammer find him.
             HammerTarget(cog);
             cog.AddComponent<CoglingVoice>();
+            cog.AddComponent<CoglingTag>();
 
             // no loot, no talk
             foreach (Type t in new[] { typeof(CharacterDrop), typeof(NpcTalk) })

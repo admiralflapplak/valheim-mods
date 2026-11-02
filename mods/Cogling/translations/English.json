@@ -5,5 +5,16 @@
   "cogling_antenna_desc": "A Cogling's home. It keeps to the area around its antenna; antennas whose areas overlap make one bigger area.",
   "cogling_needs_antenna": "A Cogling must be built inside a Cogling Antenna's area",
   "cogling_network_full": "These antennas power all the Coglings they can ({0}/{1}): build another antenna",
-  "cogling_rebuilt": "A Cogling is back on his feet"
+  "cogling_rebuilt": "A Cogling is back on his feet",
+  "cogling_greet": "Greet",
+  "cogling_task_resting": "Resting by his antenna",
+  "cogling_task_off": "Powered down",
+  "cogling_task_booting": "Booting up",
+  "cogling_task_home": "Heading back to his antenna",
+  "cogling_task_fetching": "Fetching {0} {1}",
+  "cogling_task_carrying": "Taking {0} {1} to a chest",
+  "cogling_task_tidying": "Tidying up the {1}",
+  "cogling_task_busy": "Busy",
+  "cogling_task_hiding": "Hiding from {0}!",
+  "cogling_task_watching": "Keeping an eye on {0}"
 }

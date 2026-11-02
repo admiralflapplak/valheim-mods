@@ -94,6 +94,8 @@ namespace Cogling
             if (!base.UpdateAI(dt)) return false;   // (not ours to run: another player's game moves him)
             _lastUpdate = Time.time;
             if (FinishStuckDeath()) return true;
+            UpdateTask();
+            if (Time.time < _greetUntil) { StopMoving(); if (_greeter != Vector3.zero) LookAt(_greeter); return true; }   // (greeted: a moment for you)
             m_character.m_walkSpeed = Plugin.WalkSpeed.Value;
             m_character.m_runSpeed = Plugin.RunSpeed.Value;
             if (Plugin.Paused.Value)
@@ -320,6 +322,50 @@ namespace Cogling
         internal void Walk(Vector3 dir) => MoveTowards(dir, run: Running);
 
         private bool _homeAfterFright;
+
+        // ---- greeted (E): he turns to you for a moment (his body and voice do the rest on every game)
+
+        private float _greetUntil;
+        private Vector3 _greeter;
+
+        internal void Greeted(Vector3 from)
+        {
+            if (!PoweredUp) SetAwake(true);
+            _greeter = from;
+            _greetUntil = Time.time + 2.6f;
+        }
+
+        // ---- the task line under his name (saved on him; written only when it changes)
+
+        private string _task = "";
+
+        private void UpdateTask()
+        {
+            (string key, string a, string b) t;
+            if (_danger != null && _danger.Afraid) t = ("cogling_task_hiding", _danger.ThreatName, "");
+            else if (_danger != null && _danger.Wary) t = ("cogling_task_watching", _danger.ThreatName, "");
+            else if (!PoweredUp) t = ("cogling_task_off", "", "");
+            else if (Time.time < _bootUntil) t = ("cogling_task_booting", "", "");
+            else if (_mode == Mode.Working && _job != null) t = _job.Describe();
+            else if (_mode == Mode.GoingHome || _mode == Mode.Returning) t = ("cogling_task_home", "", "");
+            else t = ("cogling_task_resting", "", "");
+            string task = $"{t.key}|{t.a}|{t.b}";
+            if (task == _task || m_nview == null || !m_nview.IsValid() || !m_nview.IsOwner()) return;
+            _task = task;
+            m_nview.GetZDO().Set(CoglingTag.TaskKey, task);
+        }
+
+        // ---- the game's own icons over his name plate: "aware" (searching) while wary, "alerted" (red !) while frightened
+
+        private static readonly HarmonyLib.AccessTools.FieldRef<BaseAI, bool> AlertedField = HarmonyLib.AccessTools.FieldRefAccess<BaseAI, bool>("m_alerted");
+
+        internal void SetIcons(bool aware, bool alerted)
+        {
+            if (m_nview == null || !m_nview.IsValid() || !m_nview.IsOwner()) return;
+            ZDO zdo = m_nview.GetZDO();
+            if (zdo.GetBool(ZDOVars.s_haveTargetHash) != aware) zdo.Set(ZDOVars.s_haveTargetHash, aware);
+            if (AlertedField(this) != alerted) { AlertedField(this) = alerted; zdo.Set(ZDOVars.s_alert, alerted); }   // (not SetAlerted: it changes the walk to a fight stance)
+        }
 
         /// <summary>His mood, saved on him (every player's game shows it).</summary>
         internal void SetMood(int mood)
