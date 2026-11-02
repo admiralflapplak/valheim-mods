@@ -16,7 +16,7 @@ namespace Cogling
     {
         public const string Guid = "nick.Cogling";
         public const string Name = "Cogling";
-        public const string Version = "0.9.6";
+        public const string Version = "0.11.8";
 
         internal static BepInEx.Logging.ManualLogSource Log;
         internal static ServerSettings Synced;
@@ -44,10 +44,12 @@ namespace Cogling
 
         // 6 - Floor items (the server's: the owner of a Cogling decides what he takes)
         internal static ConfigEntry<float> DropWait, MaxCarryWeight, ColdEggWait;
-        internal static ConfigEntry<bool> CollectColdEggs;
+        internal static ConfigEntry<bool> CollectColdEggs, ResortGroups;
         internal static ConfigEntry<bool> LogAI;
         internal static ConfigEntry<float> CarryArmsUp, CarryArmsForward, CarryElbows, CarryOut, CarryHeight, CarryItemSize, CarryItemTurn;
-        internal static ConfigEntry<bool> CarryPreview, Paused, UseIdle;
+        internal static ConfigEntry<bool> CarryPreview, Paused, UseIdle, BendPreview, LogGround, PowerPreview;
+        internal static ConfigEntry<float> PowerFrame, HappyIdleChance, PowerDownAfter;
+        internal static ConfigEntry<float> BendSpine, BendArms;
         internal static ConfigEntry<float> EyeGlow;
         internal static ConfigEntry<UnityEngine.Color> EyeColor;
 
@@ -60,7 +62,7 @@ namespace Cogling
             Synced = new ServerSettings(Guid, Config, Logger);
 
             Config.SaveOnConfigSet = false;
-            Cost = Synced.Bind("1 - Building", "Cost", "Copper:10, BronzeNails:10, FineWood:5",
+            Cost = Synced.Bind("1 - Building", "Cost", "Copper:10, BronzeNails:10, FineWood:5, Ectoplasm:5",
                 "What a Cogling costs to build (all of it back when it's taken down with the hammer). " + Costs.Help);
             Station = Synced.Bind("1 - Building", "Station", "piece_workbench",
                 "The crafting station that must be near to build one. " + Costs.StationHelp);
@@ -96,7 +98,7 @@ namespace Cogling
                 new AcceptableValueRange<float>(0f, 10f)));
             WalkSpeed = Synced.Bind("1 - Building", "Walk speed", 1.4f, "How fast a Cogling walks, in metres a second (a Dverger walks at 2).",
                 new AcceptableValueRange<float>(0.5f, 4f));
-            StrollEvery = Config.Bind("9 - Testing", "Stroll every", 25f, new ConfigDescription(
+            StrollEvery = Config.Bind("9 - Testing", "Stroll every", 0f, new ConfigDescription(
                 "Testing his walking: about how often a resting Cogling strolls to a spot in his area and back, in seconds (0: never).",
                 new AcceptableValueRange<float>(0f, 300f)));
             CarryArmsUp = Config.Bind("9 - Testing", "Carry: arms up", 0.193f, new ConfigDescription("His carry pose: how high the arms are (-1 down, 1 up).", new AcceptableValueRange<float>(-1f, 1f)));
@@ -106,18 +108,29 @@ namespace Cogling
             CarryHeight = Config.Bind("9 - Testing", "Carry: item height", 0.045f, new ConfigDescription("The carried item above (+) or below (-) his hands (in his heights).", new AcceptableValueRange<float>(-0.6f, 0.4f)));
             CarryItemSize = Config.Bind("9 - Testing", "Carry: item size", 0.6f, new ConfigDescription("The biggest a carried item looks: its longest side at most this share of his height (smaller items keep their own size).", new AcceptableValueRange<float>(0.1f, 1f)));
             CarryItemTurn = Config.Bind("9 - Testing", "Carry: item turn", 82.572f, new ConfigDescription("Turns the carried item around the up axis, in degrees (90: a log held across instead of pointing ahead).", new AcceptableValueRange<float>(-180f, 180f)));
+            BendPreview = Config.Bind("9 - Testing", "Bend: preview", false, "Show every Cogling bent down as when he picks something up.");
+            BendSpine = Config.Bind("9 - Testing", "Bend: spine", -0.9f, new ConfigDescription("How far he bends at the spine to pick up (on his rig -1 is forward, 1 leans back).", new AcceptableValueRange<float>(-1f, 1f)));
+            BendArms = Config.Bind("9 - Testing", "Bend: arms", -0.6f, new ConfigDescription("Where his arms reach when he bends (on his rig -1 is forward).", new AcceptableValueRange<float>(-1f, 1f)));
             CarryPreview = Config.Bind("9 - Testing", "Carry: preview", false, "Show every Cogling carrying a log, to tune the carry pose by eye.");
             UseIdle = Config.Bind("9 - Testing", "Own idle", true, "Standing still, he plays his own idle animation (reference/Idle.fbx) instead of the Fuling's.");
+            LogGround = Config.Bind("9 - Testing", "Log his footing", false, "Write how his body is lifted onto his feet to the log, ten times a second (testing a bounce).");
+            HappyIdleChance = Config.Bind("3 - Looks", "Happy idle chance", 0.3f, new ConfigDescription("How often, standing about, he plays his happy idle instead of his usual one.", new AcceptableValueRange<float>(0f, 1f)));
+            PowerDownAfter = Synced.Bind("1 - Building", "Power down after", 10f, "Seconds with nothing to do at his antenna before he powers down (he boots up when there's work).", new AcceptableValueRange<float>(2f, 600f));
+            PowerPreview = Config.Bind("9 - Testing", "Power: preview down", false, "Show every Cogling powered down (the frozen frame of his sad idle).");
+            PowerFrame = Config.Bind("9 - Testing", "Power: frame", 0.6f, new ConfigDescription("Which moment of his sad idle he freezes on when powered down (0 start, 1 end).", new AcceptableValueRange<float>(0f, 1f)));
             Paused = Config.Bind("9 - Testing", "Pause Coglings", false, "Every Cogling stands still and faces you (to look at him while you change the sliders).");
             LogAI = Config.Bind("9 - Testing", "Log what he does", true, "Write each Cogling's decisions to the log (testing).");
             DropWait = Synced.Bind("6 - Floor items", "Wait after a drop", 60f,
                 "Seconds he leaves an item alone after he first sees it on the floor (you may have dropped it on purpose).", new AcceptableValueRange<float>(0f, 600f));
             MaxCarryWeight = Synced.Bind("6 - Floor items", "Heaviest he carries", 50f,
-                "The heaviest stack he picks up (weight). The dragon egg is 200.", new AcceptableValueRange<float>(1f, 500f));
+                "The most weight he carries in one trip: a heavier stack takes several trips, and a single item heavier than this (the dragon egg, 200) he leaves.", new AcceptableValueRange<float>(1f, 500f));
             CollectColdEggs = Synced.Bind("6 - Floor items", "Collect cold eggs", true,
                 "Eggs warm enough to hatch (near a fire, under a roof) are always left alone. Cold eggs: collected once they've stayed cold a while.");
             ColdEggWait = Synced.Bind("6 - Floor items", "Cold egg wait", 3f,
                 "Minutes an egg must stay cold before he collects it (time to move it somewhere warm).", new AcceptableValueRange<float>(0f, 60f));
+            ResortGroups = Synced.Bind("5 - Sorting", "Re-sort by groups", false,
+                "Besides gathering an item kept in several chests into the one with the most of it (always), move a lone stray (its only stack "
+                + "in a chest with nothing of its group) to the chest where its group lives. Off: he never moves your one-off stacks.");
             Sorting.Bind(Config);
             Config.SaveOnConfigSet = true;
             Config.Save();

@@ -184,6 +184,8 @@ namespace Cogling
 
             antenna.transform.localScale = Vector3.one * Plugin.AntennaSize.Value;
             antenna.AddComponent<Antenna>();
+            try { piece.m_icon = Icon.Make(antenna, fallback: null) ?? piece.m_icon; }
+            catch (Exception e) { Plugin.Log.LogWarning("Cogling antenna icon: " + e.Message); }
             return antenna;
         }
 

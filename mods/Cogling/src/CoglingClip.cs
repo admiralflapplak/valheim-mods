@@ -78,6 +78,8 @@ namespace Cogling
             _handler.GetHumanPose(ref pose);
         }
 
+        internal float Length => _clip.Length;
+
         internal void Dispose()
         {
             _handler?.Dispose();

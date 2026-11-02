@@ -12,7 +12,7 @@ namespace Cogling
     internal static class Commands
     {
         private const string Command = "cogling";
-        private const string Usage = "cogling goto [x y z] | cogling home | cogling items";
+        private const string Usage = "cogling goto [x y z] | cogling home | cogling items | cogling tidy";
 
         private static readonly AccessTools.FieldRef<Dictionary<string, Terminal.ConsoleCommand>> TerminalCommands =
             AccessTools.StaticFieldRefAccess<Dictionary<string, Terminal.ConsoleCommand>>(AccessTools.Field(typeof(Terminal), "commands"));
@@ -25,7 +25,20 @@ namespace Cogling
         {
             Player p = Player.m_localPlayer;
             string sub = a.Length > 1 ? a[1].ToLowerInvariant() : "";
-            if (p == null || (sub != "goto" && sub != "home" && sub != "items")) { t.AddString(Usage); return; }
+            if (p == null || (sub != "goto" && sub != "home" && sub != "items" && sub != "tidy")) { t.AddString(Usage); return; }
+            if (sub == "tidy")
+            {
+                List<Antenna> net = Antenna.NetworkAt(p.transform.position);
+                if (net.Count == 0) { t.AddString("You're not in a Cogling Antenna's area."); return; }
+                List<Container> chests = Chests.Usable(net);
+                Tidy.Move move = Tidy.Next(chests, p.transform.position);
+                string line = move == null
+                    ? $"Nothing to tidy among the {chests.Count} chest(s) he may use (re-sort by groups {(Plugin.ResortGroups.Value ? "on" : "off")}): no item split across chests that could be gathered (a full chest can't take more)."
+                    : $"Next: {move.Name} from the chest at {move.From.transform.position:F1} to the chest at {move.To.transform.position:F1} ({move.Why}).";
+                t.AddString(line);
+                Plugin.Log.LogInfo("Cogling tidy: " + line);
+                return;
+            }
             if (sub == "items")
             {
                 List<Antenna> network = Antenna.NetworkAt(p.transform.position);

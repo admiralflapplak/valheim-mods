@@ -149,6 +149,9 @@ namespace Cogling
             else Plugin.Log.LogWarning("No animations to give the Cogling: he moves like a crossbow Dverger");
             if (visual != null) visual.gameObject.AddComponent<CoglingBody>();
             else Plugin.Log.LogWarning("The Dverger has no Visual: the Cogling shows as a Dverger");
+            // the build-menu picture: the robot (put onto the picture's copy, which has no scripts to build him), in his idle
+            try { piece.m_icon = Icon.Make(cog, new Vector3(0.35f, 0.15f, 1f), copy => CoglingBody.Picture(copy)) ?? piece.m_icon; }
+            catch (Exception e) { Plugin.Log.LogWarning("Cogling icon: " + e.Message); }
             return cog;
         }
 

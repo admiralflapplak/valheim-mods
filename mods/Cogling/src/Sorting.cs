@@ -122,6 +122,13 @@ namespace Cogling
             return false;
         }
 
+        /// <summary>How many other kinds of thing in an inventory are an item's relatives: of its group, or trophies / seeds with it.</summary>
+        internal static int Kin(Inventory inv, ItemDrop.ItemData item)
+        {
+            var groups = Groups().Where(g => InGroup(g, item)).ToList();
+            return inv.GetAllItems().Count(i => i.m_shared.m_name != item.m_shared.m_name && (SameKind(i, item) || groups.Any(g => InGroup(g, i))));
+        }
+
         /// <summary>The chest an item should go into, of those given (each one he may use), and why; null when none has room.</summary>
         internal static Container Choose(ItemDrop.ItemData item, IEnumerable<Container> chests, Vector3 from, out string why)
         {

@@ -49,6 +49,28 @@ namespace Cogling
         internal static readonly HashSet<ZDOID> Claimed = new HashSet<ZDOID>();   // (by a Cogling on this game: two never race)
         private static readonly int Below = LayerMask.GetMask("piece", "Default", "static_solid", "Default_small", "terrain");
 
+        /// <summary>
+        /// How long ago an item was dropped: the drop time the game saves on every item (ZDO s_spawnTime, the world's clock), so it holds
+        /// through restarts and hot reloads, and a stack he took part of keeps its own (it's still the same item). Items without one:
+        /// from when he first saw them.
+        /// </summary>
+        private static float Age(ItemDrop d, ZDOID id)
+        {
+            ZDO zdo = d.GetComponent<ZNetView>()?.GetZDO();
+            long ticks = zdo != null ? zdo.GetLong(ZDOVars.s_spawnTime, 0L) : 0L;
+            if (ticks > 0L && ZNet.instance != null) return (float)(ZNet.instance.GetTime() - new System.DateTime(ticks)).TotalSeconds;
+            if (!FirstSeen.TryGetValue(id, out float seen)) FirstSeen[id] = seen = Time.time;
+            return Time.time - seen;
+        }
+
+        /// <summary>How many of an item he takes in one trip: the whole stack, or as many as his weight limit allows (at least one).</summary>
+        internal static int Load(ItemDrop.ItemData item)
+        {
+            float w = item.m_shared.m_weight;
+            if (w <= 0.0001f) return item.m_stack;
+            return Mathf.Clamp(Mathf.FloorToInt(Plugin.MaxCarryWeight.Value / w), 1, item.m_stack);
+        }
+
         internal static ZDOID Id(ItemDrop d) => d.GetComponent<ZNetView>()?.GetZDO()?.m_uid ?? ZDOID.None;
 
         /// <summary>No chest had room for it: leave it be a while.</summary>
@@ -65,8 +87,7 @@ namespace Cogling
                 if (d == null || !Antenna.InArea(network, d.transform.position)) continue;
                 ZDOID id = Id(d);
                 if (id == ZDOID.None || Claimed.Contains(id)) continue;
-                if (!FirstSeen.TryGetValue(id, out float seen)) { FirstSeen[id] = now; continue; }
-                if (!Allowed(d, id, now - seen)) continue;
+                if (!Allowed(d, id, Age(d, id))) continue;
                 if (enemies == null) enemies = Character.GetAllCharacters().Where(c => c != null && !c.IsDead() && !c.IsTamed() && c.GetFaction() != Character.Faction.Players
                                                                                       && c.GetFaction() != Character.Faction.AnimalsVeg && c.GetFaction() != Character.Faction.TrainingDummy).ToList();
                 if (enemies.Any(e => Vector3.Distance(e.transform.position, d.transform.position) < 20f)) continue;   // (a fight near it: later)
@@ -85,7 +106,7 @@ namespace Cogling
             if (age < Plugin.DropWait.Value) return $"freshly dropped ({Plugin.DropWait.Value - age:F0} s to wait)";
             if (d.IsPiece()) return "placed with the build menu";
             ItemDrop.ItemData item = d.m_itemData;
-            if (item == null || item.m_shared.m_weight * item.m_stack > Plugin.MaxCarryWeight.Value) return "too heavy";
+            if (item == null || item.m_shared.m_weight > Plugin.MaxCarryWeight.Value) return $"too heavy (one weighs {item?.m_shared.m_weight:F0}: the dragon egg)";
             Vector3 at = d.transform.position;
             if (Floating.GetLiquidLevel(at, 1f, LiquidType.Water) > at.y + 0.05f) return "in water";
             if (Player.GetAllPlayers().Any(p => Vector3.Distance(p.transform.position, at) < 2f)) return "a player is next to it";
@@ -105,8 +126,7 @@ namespace Cogling
                 if (d.m_itemData.m_shared.m_name != like.m_shared.m_name || d.m_itemData.m_quality != like.m_quality) continue;
                 ZDOID id = Id(d);
                 if (id == ZDOID.None || Claimed.Contains(id)) continue;
-                float age = FirstSeen.TryGetValue(id, out float seen) ? Time.time - seen : 0f;
-                if (WhyNot(d, id, age) == null) near.Add(d);
+                if (WhyNot(d, id, Age(d, id)) == null) near.Add(d);
             }
             return near;
         }
@@ -119,7 +139,7 @@ namespace Cogling
             foreach (ItemDrop d in Instances().Where(x => x != null && Antenna.InArea(network, x.transform.position)).OrderBy(x => Vector3.Distance(x.transform.position, from)).Take(25))
             {
                 ZDOID id = Id(d);
-                float age = FirstSeen.TryGetValue(id, out float seen) ? Time.time - seen : 0f;
+                float age = Age(d, id);
                 string why = Claimed.Contains(id) ? "he's on his way to it" : WhyNot(d, id, age);
                 if (why == null)
                 {
