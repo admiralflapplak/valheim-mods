@@ -12,7 +12,7 @@ namespace Cogling
     internal static class Commands
     {
         private const string Command = "cogling";
-        private const string Usage = "cogling goto [x y z] | cogling home | cogling items | cogling tidy";
+        private const string Usage = "cogling goto [x y z] | cogling home | cogling items | cogling tidy | cogling status";
 
         private static readonly AccessTools.FieldRef<Dictionary<string, Terminal.ConsoleCommand>> TerminalCommands =
             AccessTools.StaticFieldRefAccess<Dictionary<string, Terminal.ConsoleCommand>>(AccessTools.Field(typeof(Terminal), "commands"));
@@ -25,7 +25,17 @@ namespace Cogling
         {
             Player p = Player.m_localPlayer;
             string sub = a.Length > 1 ? a[1].ToLowerInvariant() : "";
-            if (p == null || (sub != "goto" && sub != "home" && sub != "items" && sub != "tidy")) { t.AddString(Usage); return; }
+            if (p == null || (sub != "goto" && sub != "home" && sub != "items" && sub != "tidy" && sub != "status")) { t.AddString(Usage); return; }
+            if (sub == "status")
+            {
+                foreach (CoglingAI c in Object.FindObjectsByType<CoglingAI>(FindObjectsSortMode.None))   // (a command: once)
+                {
+                    string line = $"Cogling at {c.transform.position:F1}: {c.Status()}";
+                    t.AddString(line);
+                    Plugin.Log.LogInfo("Cogling status: " + line);
+                }
+                return;
+            }
             if (sub == "tidy")
             {
                 List<Antenna> net = Antenna.NetworkAt(p.transform.position);

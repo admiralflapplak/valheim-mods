@@ -10,7 +10,7 @@ namespace Cogling
     /// </summary>
     internal sealed class CoglingVoice : MonoBehaviour
     {
-        private static AudioClip[] _idle;
+        private static AudioClip[] _idle, _alerted;
         private static UnityEngine.Audio.AudioMixerGroup _mixer;
 
         private static readonly System.Collections.Generic.List<CoglingVoice> Live = new System.Collections.Generic.List<CoglingVoice>();
@@ -27,6 +27,7 @@ namespace Cogling
                 ZSFX sfx = ZNetScene.instance?.GetPrefab("sfx_dverger_vo_idle")?.GetComponent<ZSFX>();
                 if (sfx == null || sfx.m_audioClips == null || sfx.m_audioClips.Length == 0) { Plugin.Log.LogWarning("No Dverger voice to borrow: the Cogling stays quiet"); enabled = false; return; }
                 _idle = sfx.m_audioClips;
+                _alerted = ZNetScene.instance.GetPrefab("sfx_dverger_vo_alerted")?.GetComponent<ZSFX>()?.m_audioClips;
                 _mixer = sfx.GetComponent<AudioSource>()?.outputAudioMixerGroup;
             }
             var mouth = new GameObject("cogling_voice");
@@ -61,9 +62,21 @@ namespace Cogling
             _filter.Crunch = Plugin.VoiceCrunch.Value;
         }
 
+        private bool _scared;
+        private float _nextMoodRead;
+
         private void Update()
         {
-            if (_source == null || Time.time < _next) return;
+            if (_source == null) return;
+            // frightened (his saved mood): his cry, once as it starts; no babbling while it lasts
+            if (Time.time > _nextMoodRead)
+            {
+                _nextMoodRead = Time.time + 0.25f;
+                bool scared = GetComponent<ZNetView>()?.GetZDO()?.GetInt(Carried.MoodKey) == Carried.MoodScared;
+                if (scared && !_scared && _alerted != null && _alerted.Length > 0) { Settings(); _source.Stop(); _source.PlayOneShot(_alerted[Random.Range(0, _alerted.Length)]); }
+                _scared = scared;
+            }
+            if (_scared || Time.time < _next) return;
             _next = Time.time + Plugin.BabbleEvery.Value * Random.Range(0.6f, 1.4f);
             Settings();
             if (!_source.isPlaying) _source.PlayOneShot(_idle[Random.Range(0, _idle.Length)]);

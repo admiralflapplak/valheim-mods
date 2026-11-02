@@ -27,12 +27,23 @@ namespace Cogling
         {
             _view = GetComponent<ZNetView>();
             _marker = transform.Find("AreaMarker")?.gameObject;
-            if (_marker != null && _marker.GetComponent<CircleProjector>() is CircleProjector circle) circle.m_radius = Radius / Mathf.Max(0.01f, transform.localScale.x);
-            if (_view != null && _view.GetZDO() != null) All.Add(this);   // (not the build ghost: it has no ZDO)
+            if (_marker != null && _marker.GetComponent<CircleProjector>() is CircleProjector circle) circle.m_radius = Radius;   // (world metres: the circle ignores the antenna's size)
+            if (_view != null && _view.GetZDO() != null)   // (not the build ghost: it has no ZDO)
+            {
+                All.Add(this);
+                _view.Unregister(Rebuilds.AddRpc);   // (an older copy's, after a hot reload)
+                _view.Register<long, long>(Rebuilds.AddRpc, (sender, due, creator) => Rebuilds.RPC_Add(this, due, creator));
+            }
             Shape(gameObject);   // (also an antenna built by an older copy of the mod, given this copy's code by PieceReload)
         }
 
-        private void OnDestroy() => All.Remove(this);
+        private void OnDestroy()
+        {
+            All.Remove(this);
+            if (_view != null && _view.IsValid()) _view.Unregister(Rebuilds.AddRpc);
+        }
+
+        private float _nextRebuildCheck;
 
         /// <summary>The Size setting, on the prefab and on every antenna standing (the area circle keeps its radius: it's sized in metres).</summary>
         internal static void ApplySize()
@@ -44,13 +55,14 @@ namespace Cogling
 
         private void Update()
         {
+            if (Time.time > _nextRebuildCheck) { _nextRebuildCheck = Time.time + 5f; Rebuilds.Tick(this); }
             // the circle shows while the player builds an antenna or a Cogling (the ghost's own too), as a ward's does while placing
             // (only real antennas and the build ghost: not pictures and render copies, where a just-made circle showed as a pale slab)
             bool show = (_view != null && _view.GetZDO() != null || gameObject.layer == GhostLayer) && ShowAreas();
             if (_marker != null && _marker.activeSelf != show)
             {
                 _marker.SetActive(show);
-                if (show && _marker.GetComponent<CircleProjector>() is CircleProjector circle) circle.m_radius = Radius / Mathf.Max(0.01f, transform.localScale.x);
+                if (show && _marker.GetComponent<CircleProjector>() is CircleProjector circle) circle.m_radius = Radius;   // (world metres: the circle ignores the antenna's size)
             }
         }
 
@@ -69,6 +81,10 @@ namespace Cogling
         internal static float Radius => Plugin.AntennaRadius.Value;
 
         /// <summary>Whether a spot is inside any antenna's area (across the ground: height doesn't matter, as for a ward).</summary>
+        /// <summary>The nearest antenna standing (loaded) within a distance, or null.</summary>
+        internal static Antenna Nearest(Vector3 at, float within) =>
+            All.Where(a => a != null && Vector3.Distance(a.transform.position, at) <= within).OrderBy(a => Vector3.Distance(a.transform.position, at)).FirstOrDefault();
+
         internal static bool Covers(Vector3 at) => All.Any(a => a != null && Utils.DistanceXZ(a.transform.position, at) <= Radius);
 
         /// <summary>
@@ -84,6 +100,11 @@ namespace Cogling
                         network.Add(other);
             return network;
         }
+
+        /// <summary>The Coglings a network powers: those standing in its area (loaded), and those its antennas are rebuilding.</summary>
+        internal static int CoglingsIn(List<Antenna> network) =>
+            Character.GetAllCharacters().Count(c => CoglingStance.IsCogling(c) && !c.IsDead() && InArea(network, c.transform.position))
+            + network.Sum(a => a != null ? Rebuilds.Pending(a).Count : 0);
 
         /// <summary>Whether a spot is inside a network's area.</summary>
         internal static bool InArea(List<Antenna> network, Vector3 at) =>
@@ -319,23 +340,31 @@ namespace Cogling
         }
     }
 
-    /// <summary>A Cogling can only be built inside an antenna's area: the ghost shows red outside one, and placing says why.</summary>
+    /// <summary>
+    /// Where a Cogling may be built: inside an antenna's area, and only while the linked antennas power fewer Coglings than they can
+    /// (Coglings per antenna, each; those waiting to be rebuilt count). The ghost shows red otherwise, and placing says why.
+    /// </summary>
     [HarmonyPatch]
     internal static class AntennaRule
     {
         private static readonly AccessTools.FieldRef<Player, GameObject> Ghost = AccessTools.FieldRefAccess<Player, GameObject>("m_placementGhost");
         private static readonly AccessTools.FieldRef<Player, Player.PlacementStatus> Status = AccessTools.FieldRefAccess<Player, Player.PlacementStatus>("m_placementStatus");
 
-        private static bool OutsideArea(Player player, out GameObject ghost)
+        /// <summary>Why a Cogling can't be placed where the ghost is (a message for the player), or null.</summary>
+        private static string Problem(Player player, out GameObject ghost)
         {
             ghost = Ghost(player);
-            return ghost != null && ghost.activeSelf && Utils.GetPrefabName(ghost) == CoglingPrefab.Name && !Antenna.Covers(ghost.transform.position);
+            if (ghost == null || !ghost.activeSelf || Utils.GetPrefabName(ghost) != CoglingPrefab.Name) return null;
+            List<Antenna> network = Antenna.NetworkAt(ghost.transform.position);
+            if (network.Count == 0) return "$cogling_needs_antenna";
+            int have = Antenna.CoglingsIn(network), can = network.Count * Plugin.CoglingsPerAntenna.Value;
+            return have >= can ? Nick.Shared.Translations.T("cogling_network_full", have, can) : null;
         }
 
         [HarmonyPostfix, HarmonyPatch(typeof(Player), "UpdatePlacementGhost")]
         private static void Ghost_Postfix(Player __instance)
         {
-            if (!OutsideArea(__instance, out GameObject ghost) || Status(__instance) != Player.PlacementStatus.Valid) return;
+            if (Status(__instance) != Player.PlacementStatus.Valid || Problem(__instance, out GameObject ghost) == null) return;
             Status(__instance) = Player.PlacementStatus.Invalid;
             ghost.GetComponent<Piece>()?.SetInvalidPlacementHeightlight(true);
         }
@@ -343,8 +372,10 @@ namespace Cogling
         [HarmonyPrefix, HarmonyPatch(typeof(Player), nameof(Player.TryPlacePiece))]
         private static bool TryPlace_Prefix(Player __instance, Piece piece, ref bool __result)
         {
-            if (piece == null || piece.gameObject.name != CoglingPrefab.Name || !OutsideArea(__instance, out _)) return true;
-            __instance.Message(MessageHud.MessageType.Center, "$cogling_needs_antenna");
+            if (piece == null || piece.gameObject.name != CoglingPrefab.Name) return true;
+            string problem = Problem(__instance, out _);
+            if (problem == null) return true;
+            __instance.Message(MessageHud.MessageType.Center, problem);
             __result = false;
             return false;
         }

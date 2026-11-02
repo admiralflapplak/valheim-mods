@@ -16,7 +16,7 @@ namespace Cogling
     {
         public const string Guid = "nick.Cogling";
         public const string Name = "Cogling";
-        public const string Version = "0.11.8";
+        public const string Version = "0.12.4";
 
         internal static BepInEx.Logging.ManualLogSource Log;
         internal static ServerSettings Synced;
@@ -25,7 +25,8 @@ namespace Cogling
         internal static ConfigEntry<string> Cost;
         internal static ConfigEntry<string> Station;
         internal static ConfigEntry<float> Height;
-        internal static ConfigEntry<float> WalkSpeed;
+        internal static ConfigEntry<float> WalkSpeed, RunSpeed, RebuildMinutes;
+        internal static ConfigEntry<int> CoglingsPerAntenna;
 
         // 2 - Antenna (the server's)
         internal static ConfigEntry<string> AntennaCost;
@@ -98,6 +99,14 @@ namespace Cogling
                 new AcceptableValueRange<float>(0f, 10f)));
             WalkSpeed = Synced.Bind("1 - Building", "Walk speed", 1.4f, "How fast a Cogling walks, in metres a second (a Dverger walks at 2).",
                 new AcceptableValueRange<float>(0.5f, 4f));
+            RunSpeed = Synced.Bind("1 - Building", "Run speed", 3.5f, "How fast a frightened Cogling runs for cover, in metres a second.",
+                new AcceptableValueRange<float>(1f, 8f));
+            RebuildMinutes = Synced.Bind("1 - Building", "Rebuild minutes", 5f,
+                "Minutes before the nearest antenna rebuilds a Cogling that broke down (broken by monsters or a fall: no cost back; taken down with the hammer: his cost back, no rebuild).",
+                new AcceptableValueRange<float>(0.1f, 120f));
+            CoglingsPerAntenna = Synced.Bind("2 - Antenna", "Coglings per antenna", 2,
+                "How many Coglings each antenna powers: linked antennas power the sum. A Cogling can't be built past it (those being rebuilt count).",
+                new AcceptableValueRange<int>(1, 20));
             StrollEvery = Config.Bind("9 - Testing", "Stroll every", 0f, new ConfigDescription(
                 "Testing his walking: about how often a resting Cogling strolls to a spot in his area and back, in seconds (0: never).",
                 new AcceptableValueRange<float>(0f, 300f)));

@@ -3,5 +3,7 @@
   "cogling_desc": "A little copperwood automaton that keeps your base in order.",
   "cogling_antenna": "Cogling Antenna",
   "cogling_antenna_desc": "A Cogling's home. It keeps to the area around its antenna; antennas whose areas overlap make one bigger area.",
-  "cogling_needs_antenna": "A Cogling must be built inside a Cogling Antenna's area"
+  "cogling_needs_antenna": "A Cogling must be built inside a Cogling Antenna's area",
+  "cogling_network_full": "These antennas power all the Coglings they can ({0}/{1}): build another antenna",
+  "cogling_rebuilt": "A Cogling is back on his feet"
 }

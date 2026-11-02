@@ -14,6 +14,8 @@ namespace Cogling
     {
         internal const string ItemKey = "cogling_carry", PrefabKey = "cogling_carry_prefab", ActKey = "cogling_act";
         internal const string AwakeKey = "cogling_awake";   // powered up (else down, as a new Cogling starts: he boots up)
+        internal const string MoodKey = "cogling_mood";     // frightened (step 8: red eyes, his cry, cowering) or calm
+        internal const int MoodCalm = 0, MoodScared = 1;
         internal const int ActNone = 0, ActBend = 1, ActDeposit = 2;
 
         internal static ItemDrop.ItemData Read(ZDO zdo)
@@ -83,7 +85,14 @@ namespace Cogling
                 load.m_stack = FloorItems.Load(d.m_itemData);   // (what he'll carry: a heavy stack in several trips)
                 Container chest = Sorting.Choose(load, chests, d.transform.position, out _);
                 if (chest == null) { FloorItems.NoHome(d); continue; }
-                if (!_nav.SetTarget(d.transform.position)) { _ai.Log($"no way to {Sorting.Short(d.m_itemData)} at {d.transform.position:F1}"); FloorItems.NoHome(d, 120f); continue; }
+                if (!_nav.SetTarget(d.transform.position))
+                {
+                    // (often for a moment only: the game maps where creatures can walk as areas are first visited) soon again; a long
+                    // while only once it keeps failing
+                    float wait = FloorItems.NoWay(d);
+                    _ai.Log($"no way to {Sorting.Short(d.m_itemData)} at {d.transform.position:F1} (again in {wait:F0} s)");
+                    continue;
+                }
                 _item = d;
                 _itemId = FloorItems.Id(d);
                 FloorItems.Claimed.Add(_itemId);
@@ -263,7 +272,7 @@ namespace Cogling
         private void Scoop(ItemDrop.ItemData carried, Vector3 at)
         {
             int added = 0;
-            foreach (ItemDrop d in FloorItems.Near(at, 1.2f, carried))
+            foreach (ItemDrop d in FloorItems.Near(at, 2f, carried))   // (a creature's drops scatter)
             {
                 if (carried.m_stack >= Mathf.Min(carried.m_shared.m_maxStackSize, FloorItems.Load(new ItemDrop.ItemData { m_shared = carried.m_shared, m_stack = int.MaxValue / 2 }))) break;
                 ZNetView view = d.GetComponent<ZNetView>();

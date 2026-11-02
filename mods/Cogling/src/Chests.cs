@@ -76,6 +76,19 @@ namespace Cogling
         /// <summary>No chest had room for it: leave it be a while.</summary>
         internal static void NoHome(ItemDrop d, float seconds = 90f) => NoHomeUntil[Id(d)] = Time.time + seconds;
 
+        private static readonly Dictionary<ZDOID, int> NoWayCount = new Dictionary<ZDOID, int>();
+
+        /// <summary>No way to an item was found: tried again in 10 s, 30 s, then every 2 minutes. Returns the wait.</summary>
+        internal static float NoWay(ItemDrop d)
+        {
+            ZDOID id = Id(d);
+            NoWayCount.TryGetValue(id, out int n);
+            NoWayCount[id] = ++n;
+            float wait = n == 1 ? 10f : n == 2 ? 30f : 120f;
+            NoHome(d, wait);
+            return wait;
+        }
+
         /// <summary>The items in the area he may take now, nearest first.</summary>
         internal static List<ItemDrop> Candidates(List<Antenna> network, Vector3 from)
         {
@@ -181,6 +194,7 @@ namespace Cogling
             FirstSeen.Clear();
             ColdSince.Clear();
             NoHomeUntil.Clear();
+            NoWayCount.Clear();
             Claimed.Clear();
         }
     }

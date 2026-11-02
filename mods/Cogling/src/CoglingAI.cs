@@ -14,10 +14,13 @@ namespace Cogling
     /// </summary>
     internal sealed class CoglingAI : BaseAI
     {
-        private enum Mode { Resting, Strolling, GoingHome, Working }
+        private enum Mode { Resting, Strolling, GoingHome, Working, Returning }
+        private float _nextReturnPlan;
 
         private CoglingNavigator _nav;
         private CoglingJob _job;
+        private CoglingDanger _danger;
+        internal bool Running;
         private float _nextJobLook, _nextTidy;
         private Mode _mode = Mode.GoingHome;
         private float _nextStroll;
@@ -64,6 +67,8 @@ namespace Cogling
             if (GetComponent<Character>() is Character c) CharacterAI(c) = this;
             _nav = new CoglingNavigator(this);
             _job = new CoglingJob(this, _nav);
+            _danger = new CoglingDanger(this);
+            SetMood(Carried.MoodCalm);   // (a fright saved when his area unloaded mid-flight would leave his eyes red)
             _nextStroll = Time.time + Random.Range(5f, 15f);
         }
 
@@ -87,8 +92,10 @@ namespace Cogling
         public override bool UpdateAI(float dt)
         {
             if (!base.UpdateAI(dt)) return false;   // (not ours to run: another player's game moves him)
+            _lastUpdate = Time.time;
             if (FinishStuckDeath()) return true;
             m_character.m_walkSpeed = Plugin.WalkSpeed.Value;
+            m_character.m_runSpeed = Plugin.RunSpeed.Value;
             if (Plugin.Paused.Value)
             {
                 // testing: he stands still and faces the nearest player (to look at a pose); what he was doing waits
@@ -99,13 +106,43 @@ namespace Cogling
             }
             _nav.CloseDoors(force: false);
 
+            // danger before anything, wherever he is: an enemy near or a hit, and he runs for cover (what he was doing waits; what he
+            // carries stays his). (It came after the "no antenna here: wait" check: once he fled out of his area he froze there.)
+            if (_danger.Update(_nav))
+            {
+                if (!PoweredUp) SetAwake(true);   // (no time to boot up slowly)
+                if (_mode == Mode.Working) _job.Abandon();
+                _mode = Mode.GoingHome;           // (afterwards: home, and work again if there is any)
+                _homeAfterFright = true;
+                return true;
+            }
+
             if (Time.time > _nextNetwork) { _network = Antenna.NetworkAt(transform.position); _nextNetwork = Time.time + 2f; }
             List<Antenna> network = _network;
             network.RemoveAll(a => a == null);
-            if (network.Count == 0) { StopMoving(); return true; }   // no antenna loaded near: he waits
+            if (network.Count == 0)
+            {
+                // outside every antenna's area (fled, or pushed): back to the nearest antenna there is; none loaded: he waits
+                Antenna back = Antenna.Nearest(transform.position, 80f);
+                if (back == null) { StopMoving(); return true; }
+                if (!PoweredUp) SetAwake(true);
+                if (_mode != Mode.Returning || Time.time > _nextReturnPlan)
+                {
+                    _mode = Mode.Returning;
+                    _nextReturnPlan = Time.time + 5f;
+                    _nav.SetTarget(back.transform.position + back.transform.forward * 1.3f);
+                    Log("outside his area: back to the antenna");
+                }
+                if (_nav.Update(dt) == CoglingNavigator.Result.GaveUp) _nextReturnPlan = 0f;
+                return true;
+            }
+            if (_mode == Mode.Returning) { _mode = Mode.GoingHome; _haveHome = false; }
             if (!_haveHome || !Antenna.InArea(network, _home) || Time.time > _nextHomeCheck) PickHome(network);
+            if (_haveHome && _mode == Mode.GoingHome && _nav.Target != _home && !_homeAfterFright && Utils.DistanceXZ(_nav.Target, _home) > 0.5f && _job != null && !_job.Carrying) _nav.SetTarget(_home);
             if (!PoweredUp && _mode != Mode.Resting) { Log($"awake: not resting ({_mode})"); Wake(); }   // (built or loaded powered down, but not resting at home: up, and home)
             if (!PoweredUp && _mode == Mode.Resting && Utils.DistanceXZ(transform.position, _home) > 2.5f) { Log($"awake: {Utils.DistanceXZ(transform.position, _home):F1} m from home"); Wake(); _mode = Mode.GoingHome; _nav.SetTarget(_home); }
+
+            if (_homeAfterFright) { _homeAfterFright = false; _nav.SetTarget(_home); _nextJobLook = 0f; }
 
             // work first: something carried from before, else an item on the floor (looked for every few seconds)
             if (_mode != Mode.Working && Time.time > _nextJobLook)
@@ -208,6 +245,12 @@ namespace Cogling
             if (_haveHome) _nav.SetTarget(_home);
         }
 
+        internal string Status() =>
+            $"mode {_mode}, powered up {PoweredUp}, enabled {enabled}, owner {m_nview?.IsOwner()}, in the AI list {BaseAI.BaseAIInstances.Contains(this)}, "
+            + $"brains here {GetComponents<BaseAI>().Length}, running {Running}, {_danger?.Status()}, carrying {_job?.Carrying}, updated {Time.time - _lastUpdate:F1} s ago";
+
+        private float _lastUpdate;
+
         internal void Log(string what)
         {
             if (Plugin.LogAI.Value) Plugin.Log.LogInfo($"Cogling AI {GetComponent<ZNetView>()?.GetZDO()?.m_uid.ID}: {what}");
@@ -274,7 +317,21 @@ namespace Cogling
         }
 
         // ---- BaseAI's helpers for the navigator (protected there)
-        internal void Walk(Vector3 dir) => MoveTowards(dir, run: false);
+        internal void Walk(Vector3 dir) => MoveTowards(dir, run: Running);
+
+        private bool _homeAfterFright;
+
+        /// <summary>His mood, saved on him (every player's game shows it).</summary>
+        internal void SetMood(int mood)
+        {
+            if (m_nview != null && m_nview.IsValid() && m_nview.IsOwner()) m_nview.GetZDO().Set(Carried.MoodKey, mood);
+        }
+
+        protected override void OnDamaged(float damage, Character attacker)
+        {
+            base.OnDamaged(damage, attacker);
+            if (this != null) _danger?.Hurt(attacker);
+        }
         internal void Stop() => StopMoving();
         internal Character Body => m_character;
 

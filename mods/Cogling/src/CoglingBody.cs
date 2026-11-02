@@ -345,7 +345,9 @@ namespace Cogling
             // (with something to carry), his arms are his usual idle's
             if (idle) { if (_variant == null || Time.time >= _variantEnds) PickVariant(); }
             ClipPlayer playing = idle && _variant != null ? _variant : _idle;
-            playing.Pose(Time.time - (playing == _variant ? _variantStart : _idleStart), ref _idlePose);
+            float at = Time.time - (playing == _variant ? _variantStart : _idleStart);
+            if (_scared && idle && _sad != null) { playing = _sad; at = Time.time; }   // (frightened, standing: cowering)
+            playing.Pose(at, ref _idlePose);
             if (_idlePose.muscles == null) return;
             if (idle && _variantBlend < 1f && _previous != null)
             {
@@ -379,7 +381,7 @@ namespace Cogling
         private ClipPlayer _happy, _sad, _variant, _previous;
         private HumanPose _otherPose;
         private float _variantStart, _variantEnds, _previousStart, _variantBlend = 1f;
-        private bool _asleep, _wasIdle;
+        private bool _asleep, _wasIdle, _scared;
         private float _sleepWeight, _eyeLevel = 1f, _flickerUntil, _nextFlick;
 
         /// <summary>The idle to play next: the happy one now and then (Happy idle chance), else his usual; a change is cross-faded.</summary>
@@ -501,6 +503,8 @@ namespace Cogling
                     ZDO zdo = _view.GetZDO();
                     _act = zdo.GetInt(Carried.ActKey);
                     SetAsleep(!zdo.GetBool(Carried.AwakeKey));
+                    bool scared = zdo.GetInt(Carried.MoodKey) == Carried.MoodScared;
+                    if (scared != _scared) { _scared = scared; SetEyes(scared ? new Color(1f, 0.12f, 0.08f) : (Color?)null); }
                     name = zdo.GetString(Carried.PrefabKey);
                 }
                 if (Plugin.CarryPreview.Value && string.IsNullOrEmpty(name)) name = "Wood";   // (testing: the carry pose on every Cogling)
