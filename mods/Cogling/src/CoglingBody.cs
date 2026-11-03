@@ -82,6 +82,11 @@ namespace Cogling
             _leftHand = bones.FirstOrDefault(b => b.name.EndsWith("LeftHand"));
             _rightHand = bones.FirstOrDefault(b => b.name.EndsWith("RightHand"));
             _chest = bones.FirstOrDefault(b => b.name.EndsWith("Spine2"));
+            _head = bones.FirstOrDefault(b => b.name.EndsWith("Head"));
+            _upperArmR = bones.FirstOrDefault(b => b.name.EndsWith("RightArm")); _foreArmR = bones.FirstOrDefault(b => b.name.EndsWith("RightForeArm"));
+            _upperArmL = bones.FirstOrDefault(b => b.name.EndsWith("LeftArm")); _foreArmL = bones.FirstOrDefault(b => b.name.EndsWith("LeftForeArm"));
+            if (_rightHand != null) _handRestR = _rightHand.localRotation;
+            if (_leftHand != null) _handRestL = _leftHand.localRotation;
             _hips = bones[0];
             _leftFoot = bones.FirstOrDefault(b => b.name.EndsWith("LeftFoot"));
             _rightFoot = bones.FirstOrDefault(b => b.name.EndsWith("RightFoot"));
@@ -299,6 +304,9 @@ namespace Cogling
             Work();
             _to.SetHumanPose(ref _pose);
             Ground();
+            Carrying();
+            Hammering();
+            Look();
             Hold();
         }
 
@@ -322,7 +330,8 @@ namespace Cogling
             // again), blended from a snapshot of his last walking pose (the walk's own animator switches to the Fuling idle as soon as
             // he stops, and that showed for a moment), gently; out quickly, back to the live walk, when he moves again
             _stillFor = _speed < 0.25f ? _stillFor + dt : 0f;
-            bool idle = _stillFor > 0.1f || _sleepWeight > 0f || Time.time < _greetUntil;
+            // (seated or getting up: still, whatever nudges his body gets, else the Fuling animation showed through)
+            bool idle = _stillFor > 0.1f || _sleepWeight > 0f || Time.time < _greetUntil || _sitStart >= 0f || (_standStart >= 0f && _speed < 0.5f);
             if (idle && !_snapped && _pose.muscles != null)
             {
                 _walkSnap = new HumanPose { bodyPosition = _pose.bodyPosition, bodyRotation = _pose.bodyRotation, muscles = (float[])_pose.muscles.Clone() };
@@ -361,6 +370,8 @@ namespace Cogling
                 _sad.Pose(_sad.Length * Mathf.Clamp01(Plugin.PowerFrame.Value) * 0.999f, ref _otherPose);
                 if (_otherPose.muscles != null) Mix(ref _idlePose, _otherPose, Mathf.SmoothStep(0f, 1f, _sleepWeight));
             }
+
+            Sitting(dt);
 
             float w = Mathf.SmoothStep(0f, 1f, _idleWeight);
             if (w > 0f)
@@ -401,7 +412,8 @@ namespace Cogling
         /// <summary>The idle to play next: the happy one now and then (Happy idle chance), else his usual; a change is cross-faded.</summary>
         private void PickVariant()
         {
-            ClipPlayer next = _happy != null && Random.value < Plugin.HappyIdleChance.Value ? _happy : _idle;
+            ClipPlayer slack = SlackClip();
+            ClipPlayer next = slack ?? (_happy != null && Random.value < Plugin.HappyIdleChance.Value ? _happy : _idle);
             if (_variant != null && next != _variant)
             {
                 _previous = _variant;
@@ -411,7 +423,159 @@ namespace Cogling
             if (next != _variant) _variantStart = Time.time;
             _variant = next;
             // his usual idle once round (8 s), the happy one twice (it's short): then choose again
-            _variantEnds = Time.time + next.Length * (next == _happy ? 2f : 1f);
+            _variantEnds = slack != null ? float.MaxValue : Time.time + next.Length * (next == _happy ? 2f : 1f);
+        }
+
+        // ---- slacking off (CoglingSlack decides; saved on him, so every game shows it)
+
+        private int _slack;
+        private float _slackStart, _sitStart = -1f, _standStart = -1f, _seatWeight;
+        private HumanPose _sitPose, _sitPose2;
+        private readonly Dictionary<string, ClipPlayer> _clips = new Dictionary<string, ClipPlayer>();
+        private static int[][] _mirror;
+
+        /// <summary>One of his clips, made the first time it's needed (each plays on a hidden skeleton of its own).</summary>
+        private ClipPlayer Clip(string name)
+        {
+            if (_clips.TryGetValue(name, out ClipPlayer p)) return p;
+            CoglingClip clip = CoglingClip.Get(name);
+            return _clips[name] = clip != null && _avatar != null ? new ClipPlayer(clip, _avatar) : null;
+        }
+
+        internal static float ClipLength(string name) => CoglingClip.Get(name)?.Length ?? 10f;
+        internal static float StandUpSeconds => ClipLength("standing_up") / Mathf.Max(0.1f, Plugin.SitStandSpeed.Value);
+
+        /// <summary>The clip a break plays standing (in place of his idle), or null.</summary>
+        private ClipPlayer SlackClip()
+        {
+            switch ((CoglingSlack.Activity)_slack)
+            {
+                case CoglingSlack.Activity.LookAround: return Clip("looking_around");
+                case CoglingSlack.Activity.Bored: return Clip("bored");
+                case CoglingSlack.Activity.Dance: return Clip("robot_dance");
+            }
+            return null;
+        }
+
+        private void SlackChanged(int slack)
+        {
+            bool wasSitting = _slack == (int)CoglingSlack.Activity.Sit;
+            _slack = slack;
+            _slackStart = Time.time;
+            if (slack == (int)CoglingSlack.Activity.Sit) { _sitStart = Time.time; _standStart = -1f; }
+            else if (wasSitting) { _sitStart = -1f; _standStart = Time.time; }
+            // the clip changes at once (cross-faded), from its start
+            if (_variant != null || SlackClip() != null) PickVariant();
+            if (SlackClip() != null) _variantStart = Time.time;
+        }
+
+        /// <summary>
+        /// Sitting: the sit-down clip (reference "falling down", up to Sit: down clip until, then into the sitting pose), the sitting
+        /// pose, and getting up (the stand-up clip, at Sit: stand up speed), over his idle, on the ground (Ground keeps his feet there).
+        /// Walking off (fleeing) ends it at once. The sit-down clip came from another rig with no right arm: his left arm, mirrored.
+        /// </summary>
+        private void Sitting(float dt)
+        {
+            float target = 0f;
+            if (_sitStart >= 0f)
+            {
+                float t = Time.time - _sitStart, cut = Plugin.SitDownUntil.Value, blend = Mathf.Max(0.05f, Plugin.SitBlend.Value);
+                ClipPlayer down = Clip("sitting_down"), sit = Clip("sitting");
+                if (down != null && sit != null)
+                {
+                    down.Pose(Mathf.Min(t, cut), ref _sitPose);
+                    if (_sitPose.muscles != null) MirrorLeftArm(ref _sitPose);
+                    sit.Pose(0f, ref _sitPose2);
+                    if (_sitPose.muscles != null && _sitPose2.muscles != null)
+                    {
+                        Mix(ref _sitPose, _sitPose2, Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(cut - blend, cut, t)));
+                        Mix(ref _idlePose, _sitPose, Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / 0.25f)));
+                        // sat down: his head bobs along to his happy idle
+                        HappyHead(Time.time - _sitStart, Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(cut, cut + 0.8f, t)));
+                    }
+                }
+                target = Mathf.Clamp01(t / Mathf.Max(0.1f, cut));
+            }
+            else if (_standStart >= 0f)
+            {
+                float speed = Mathf.Max(0.1f, Plugin.SitStandSpeed.Value), s = (Time.time - _standStart) * speed;
+                ClipPlayer up = Clip("standing_up");
+                if (up == null || s >= up.Length || _speed > 0.5f) _standStart = -1f;   // (up, or off and walking: his walk at once)
+                else
+                {
+                    up.Pose(s, ref _sitPose);
+                    if (_sitPose.muscles != null)
+                    {
+                        // in from the sitting pose, out into his idle over the last part
+                        float w = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(up.Length, up.Length - 0.8f, s));
+                        Mix(ref _idlePose, _sitPose, w);
+                        HappyHead(Time.time - _standStart, 1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(s / 0.6f)));   // (eased out as he gets up)
+                    }
+                    target = 1f - Mathf.Clamp01(s / (up.Length * 0.5f));
+                }
+            }
+            _seatWeight = Mathf.MoveTowards(_seatWeight, target, dt * 3f);
+        }
+
+        private static int[] _headMuscles;
+
+        /// <summary>His head and neck as in his happy idle (looping from a time), over the pose so far, by a weight.</summary>
+        private void HappyHead(float time, float weight)
+        {
+            if (weight <= 0f || _happy == null) return;
+            if (_headMuscles == null)
+                _headMuscles = HumanTrait.MuscleName.Select((n, i) => (n, i)).Where(x => x.n.StartsWith("Neck ") || x.n.StartsWith("Head ")).Select(x => x.i).ToArray();
+            _happy.Pose(time, ref _otherPose);
+            if (_otherPose.muscles == null) return;
+            foreach (int i in _headMuscles)
+                if (i < _idlePose.muscles.Length && i < _otherPose.muscles.Length) _idlePose.muscles[i] = Mathf.Lerp(_idlePose.muscles[i], _otherPose.muscles[i], weight);
+        }
+
+        private static void MirrorLeftArm(ref HumanPose pose)
+        {
+            if (_mirror == null)
+            {
+                string[] names = HumanTrait.MuscleName;
+                _mirror = names.Select((n, i) => (n, i))
+                    .Where(x => x.n.StartsWith("Left Shoulder") || x.n.StartsWith("Left Arm") || x.n.StartsWith("Left Forearm") || x.n.StartsWith("Left Hand"))
+                    .Select(x => new[] { x.i, System.Array.IndexOf(names, "Right" + x.n.Substring(4)) })
+                    .Where(p => p[1] >= 0).ToArray();
+            }
+            foreach (int[] p in _mirror) if (p[0] < pose.muscles.Length && p[1] < pose.muscles.Length) pose.muscles[p[1]] = pose.muscles[p[0]];
+        }
+
+        // ---- where he looks (Good Tidings' Dagny: after the pose, his head turned toward a point, his upper spine a little)
+
+        private Transform _head;
+        private float _lookWeight;
+        private Vector3 _lookPoint, _lookVel;
+
+        /// <summary>Where he looks now, or null (straight on): staring into the distance, his gaze drifts slowly.</summary>
+        private Vector3? LookTarget()
+        {
+            if (_slack != (int)CoglingSlack.Activity.Stare || _head == null) return null;
+            float t = Time.time - _slackStart;
+            return _head.position + transform.forward * 10f + transform.right * (Mathf.Sin(t * 0.21f) * 2.5f + Mathf.Sin(t * 0.07f) * 1.5f)
+                   + Vector3.up * (1.2f + Mathf.Sin(t * 0.13f) * 1.2f);
+        }
+
+        private void Look()
+        {
+            if (_head == null) return;
+            Vector3? target = LookTarget();
+            if (target is Vector3 p)
+            {
+                if (_lookWeight <= 0.001f) _lookPoint = p;
+                _lookPoint = Vector3.SmoothDamp(_lookPoint, p, ref _lookVel, 0.8f);
+            }
+            _lookWeight = Mathf.MoveTowards(_lookWeight, target.HasValue ? 1f : 0f, Time.deltaTime * 1.2f);
+            if (_lookWeight <= 0f) return;
+            Vector3 ahead = transform.forward, to = _lookPoint - _head.position;
+            float w = _lookWeight * Mathf.InverseLerp(120f, 80f, Vector3.Angle(ahead, to));   // (round behind him: let go)
+            if (w <= 0f) return;
+            Quaternion turn = Quaternion.RotateTowards(Quaternion.identity, Quaternion.FromToRotation(ahead, to), 70f);
+            if (_chest != null) _chest.rotation = Quaternion.Slerp(Quaternion.identity, turn, 0.15f * w) * _chest.rotation;
+            _head.rotation = Quaternion.Slerp(Quaternion.identity, turn, 0.85f * w) * _head.rotation;
         }
 
         private static void Mix(ref HumanPose a, HumanPose b, float w)
@@ -475,6 +639,9 @@ namespace Cogling
             float off = (transform.position.y + _footRest) - ankle;
             // (exactly, every frame: smoothing it lagged behind the pose, and the body rose and settled as he straightened into the idle)
             _hips.position += Vector3.up * off;
+            // sitting on the ground: the pose's feet are on the ground already; Sit: height / forward nudge him, eased on and off
+            if (_seatWeight > 0f)
+                _hips.position += (Vector3.up * Plugin.SitHeight.Value + transform.forward * Plugin.SitForward.Value) * Mathf.SmoothStep(0f, 1f, _seatWeight);
             if (Plugin.LogGround.Value && Time.time > _nextGroundLog) { _nextGroundLog = Time.time + 0.1f; Plugin.Log.LogInfo($"Cogling ground: idle {_idleWeight:F2} speed {_speed:F2} lift {off:F3} hips {_hips.position.y - transform.position.y:F3}"); }
         }
 
@@ -482,13 +649,99 @@ namespace Cogling
 
         // ---- working: the carry pose, bending down, and the carried item in his hands, from his saved state (every player sees them)
 
-        private Transform _leftHand, _rightHand, _chest;
+        private Transform _leftHand, _rightHand, _chest, _upperArmR, _foreArmR, _upperArmL, _foreArmL;
+        private Quaternion _handRestR = Quaternion.identity, _handRestL = Quaternion.identity;
         private ZNetView _view;
         private string _heldName = "";
         private GameObject _held;
         private Vector3 _heldCentre;
         private float _heldBiggest;
-        private float _carry, _bend, _nextRead;
+        private float _carry, _bend, _hammer, _nextKnock, _nextRead;
+        private static GameObject _knockSound;
+
+        /// <summary>
+        /// Hammering: both arms aimed in his own body's directions (up, forward, out to his side), not by Unity's arm muscles, whose
+        /// zero hangs about 40 degrees down and 30 forward, so every muscle swing ran on a slant. The right arm's upper arm held still,
+        /// the forearm swinging at the elbow and the wrist flicking, in the arm's own upright plane; the left arm held still.
+        /// </summary>
+        private void Carrying()
+        {
+            if (_carry <= 0f) return;
+            float raise = Plugin.CarryRaise.Value, outward = Plugin.CarryOutward.Value, twist = Plugin.CarryTwist.Value, elbow = Plugin.CarryElbow.Value, wrist = Plugin.CarryWrist.Value;
+            Aim(_upperArmR, _foreArmR, _rightHand, _handRestR, 1f, raise, outward, twist, elbow, wrist, 0f, _carry);
+            Aim(_upperArmL, _foreArmL, _leftHand, _handRestL, -1f, raise, outward, -twist, elbow, wrist, 0f, _carry);
+        }
+
+        private void Hammering()
+        {
+            if (_hammer <= 0f) return;
+            float top = Plugin.SwingFreeze.Value ? Plugin.SwingFrozenAt.Value   // (testing: held still at one point of the swing, to tune)
+                : Mathf.Sin(Time.time * Mathf.PI * 2f / Mathf.Max(0.1f, Plugin.SwingTime.Value)) * 0.5f + 0.5f;   // 1: the top, 0: the knock
+            Aim(_upperArmR, _foreArmR, _rightHand, _handRestR, 1f, Plugin.SwingRaise.Value, Plugin.SwingOut.Value, Plugin.SwingTwist.Value,
+                Mathf.Lerp(Plugin.SwingElbowLow.Value, Plugin.SwingElbowHigh.Value, top), Mathf.Lerp(Plugin.SwingWristLow.Value, Plugin.SwingWristHigh.Value, top), Plugin.SwingHandTurn.Value, _hammer);
+            Aim(_upperArmL, _foreArmL, _leftHand, _handRestL, -1f, Plugin.SwingLeftRaise.Value, Plugin.SwingLeftOut.Value, 0f, Plugin.SwingLeftElbow.Value, 0f, 0f, _hammer);
+        }
+
+        /// <summary>
+        /// One arm aimed: the upper arm raised (degrees from hanging down; 90 is straight ahead, level) and turned out to his side (degrees
+        /// from straight ahead; below 0 is across him), twisted about itself; the forearm bent up from it at the elbow, in the upright
+        /// plane through the upper arm; the hand bent on from the forearm and turned about it.
+        /// </summary>
+        private void Aim(Transform upper, Transform fore, Transform hand, Quaternion handRest, float side, float raise, float outward, float twist, float elbow, float wrist, float handTurn, float w)
+        {
+            if (upper == null || fore == null || hand == null) return;
+            Transform body = transform;
+            Vector3 up = body.up, ahead = body.forward, sideways = body.right * side;
+            float r = raise * Mathf.Deg2Rad, o = outward * Mathf.Deg2Rad;
+            Vector3 dir = (-up * Mathf.Cos(r) + (ahead * Mathf.Cos(o) + sideways * Mathf.Sin(o)) * Mathf.Sin(r)).normalized;
+            Vector3 bendToward = Vector3.ProjectOnPlane(up, dir);   // (the way the elbow bends: up, square to the arm)
+            if (bendToward.sqrMagnitude < 0.01f) bendToward = Vector3.ProjectOnPlane(ahead, dir);
+            bendToward.Normalize();
+            Vector3 Bent(float degrees) => (dir * Mathf.Cos(degrees * Mathf.Deg2Rad) + bendToward * Mathf.Sin(degrees * Mathf.Deg2Rad)).normalized;
+
+            Quaternion turn = Quaternion.AngleAxis(twist, dir) * Quaternion.FromToRotation(fore.position - upper.position, dir);
+            upper.rotation = Quaternion.Slerp(Quaternion.identity, turn, w) * upper.rotation;
+            Vector3 foreDir = Bent(elbow);
+            turn = Quaternion.AngleAxis(handTurn, foreDir) * Quaternion.FromToRotation(hand.position - fore.position, foreDir);
+            fore.rotation = Quaternion.Slerp(Quaternion.identity, turn, w) * fore.rotation;
+            // (the hand: straight on from the forearm as he was made, then bent up by the wrist)
+            Quaternion straight = fore.rotation * handRest;
+            Quaternion bent = Quaternion.FromToRotation(foreDir, Bent(elbow + wrist)) * straight;
+            hand.rotation = Quaternion.Slerp(hand.rotation, bent, w);
+        }
+        private GameObject _tool;
+
+        /// <summary>
+        /// The game's own hammer in his right hand while he hammers (the hammer item's "attach" part, the one a player holds), placed by
+        /// the Hammer: settings (testing, live: Hammer: preview shows it), hidden otherwise.
+        /// </summary>
+        private void ShowTool(bool show)
+        {
+            if (!show) { if (_tool != null && _tool.activeSelf) _tool.SetActive(false); return; }
+            if (_tool == null)
+            {
+                Transform attach = ZNetScene.instance?.GetPrefab("Hammer")?.transform.Find("attach");
+                if (attach == null || _rightHand == null) return;
+                _tool = Instantiate(attach.gameObject, _rightHand, false);
+                _tool.name = "cogling_hammer";
+                foreach (Collider c in _tool.GetComponentsInChildren<Collider>(true)) Destroy(c);
+                foreach (Transform t in _tool.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = gameObject.layer;
+            }
+            if (!_tool.activeSelf) _tool.SetActive(true);
+            _tool.transform.localPosition = new Vector3(Plugin.HammerX.Value, Plugin.HammerY.Value, Plugin.HammerZ.Value) / 100f;
+            _tool.transform.localRotation = Quaternion.Euler(Plugin.HammerTurnX.Value, Plugin.HammerTurnY.Value, Plugin.HammerTurnZ.Value);
+            _tool.transform.localScale = Vector3.one * Plugin.HammerSize.Value;
+        }
+
+        /// <summary>The hammer's knock (the game's own building sound), played here on this game only.</summary>
+        private void Knock()
+        {
+            if (_knockSound == null) _knockSound = ZNetScene.instance?.GetPrefab("sfx_build_hammer_wood");
+            if (_knockSound == null) return;
+            ZNetView.m_forceDisableInit = true;
+            try { Destroy(Instantiate(_knockSound, transform.position + transform.forward * 0.4f + Vector3.up * 0.4f, Quaternion.identity), 3f); }
+            finally { ZNetView.m_forceDisableInit = false; }
+        }
         private int _act;
         private static int[] _muscles;   // the muscles the work poses move (Unity's humanoid muscle indices)
         private const int ArmUpL = 0, ArmFrontL = 1, ElbowL = 2, ArmUpR = 3, ArmFrontR = 4, ElbowR = 5, Spine = 6, Chest = 7;
@@ -516,6 +769,8 @@ namespace Cogling
                 {
                     ZDO zdo = _view.GetZDO();
                     _act = zdo.GetInt(Carried.ActKey);
+                    int slack = zdo.GetInt(CoglingSlack.SlackKey);
+                    if (slack != _slack) SlackChanged(slack);
                     SetAsleep(!zdo.GetBool(Carried.AwakeKey));
                     int mood = zdo.GetInt(Carried.MoodKey);
                     if (mood != _mood)
@@ -534,8 +789,12 @@ namespace Cogling
             _carry = Mathf.MoveTowards(_carry, _held != null || _act == Carried.ActDeposit ? 1f : 0f, dt * 3f);
             if (_held != null && Plugin.CarryPreview.Value) _carry = 1f;
             _bend = Mathf.MoveTowards(_bend, _act == Carried.ActBend || Plugin.BendPreview.Value ? 1f : 0f, dt * 2.5f);
+            bool hammering = _act == Carried.ActHammer || Plugin.HammerPreview.Value;
+            _hammer = Mathf.MoveTowards(_hammer, hammering ? 1f : 0f, dt * 4f);
+            ShowTool(hammering);
+            if (_act == Carried.ActHammer && !Plugin.SwingFreeze.Value && Time.time >= _nextKnock) { _nextKnock = Time.time + Mathf.Max(0.1f, Plugin.SwingTime.Value); Knock(); }
             if (Plugin.BendPreview.Value) _bend = 1f;
-            if ((_carry <= 0f && _bend <= 0f) || _pose.muscles == null) return;
+            if ((_carry <= 0f && _bend <= 0f && _hammer <= 0f) || _pose.muscles == null) return;
             int[] m = Muscles();
             void Set(int which, float value, float weight)
             {
@@ -543,14 +802,17 @@ namespace Cogling
                 if (i >= 0 && i < _pose.muscles.Length) _pose.muscles[i] = Mathf.Lerp(_pose.muscles[i], value, weight);
             }
             // arms forward, elbows bent, holding something in front of his chest (the Carry settings: testing, to tune by eye)
-            float up = Plugin.CarryArmsUp.Value, front = Plugin.CarryArmsForward.Value, elbow = Plugin.CarryElbows.Value;
-            Set(ArmUpL, up, _carry); Set(ArmFrontL, front, _carry); Set(ElbowL, elbow, _carry);
-            Set(ArmUpR, up, _carry); Set(ArmFrontR, front, _carry); Set(ElbowR, elbow, _carry);
+            // (the arms themselves are aimed after the pose is set: Carrying)
             // bending down to the floor, arms reaching
             float spine = Plugin.BendSpine.Value, arms = Plugin.BendArms.Value;
             Set(Spine, spine, _bend); Set(Chest, spine * 0.8f, _bend);
             Set(ArmFrontL, arms, _bend); Set(ArmFrontR, arms, _bend); Set(ArmUpL, -0.6f, _bend); Set(ArmUpR, -0.6f, _bend);
             Set(ElbowL, 0.8f, _bend); Set(ElbowR, 0.8f, _bend);
+            // hammering: his right arm up and down, a knock each time it comes down (on his rig -1 is forward)
+            if (_hammer > 0f)
+            {
+                // (the arms themselves are aimed after the pose is set: Hammering)
+            }
         }
 
         /// <summary>The carried item's own model between his hands (the game's prefab, every working part taken off), sized to fit.</summary>
@@ -611,6 +873,8 @@ namespace Cogling
             _happy?.Dispose();
             _sad?.Dispose();
             _idle = _happy = _sad = null;
+            foreach (ClipPlayer c in _clips.Values) c?.Dispose();
+            _clips.Clear();
             _to?.Dispose();
             _from = _to = null;
             // a hot reload swaps this component for the new copy's (PieceReload.Reattach), which builds its own robot: this one's goes

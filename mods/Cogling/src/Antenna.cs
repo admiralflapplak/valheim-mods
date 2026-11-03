@@ -13,8 +13,33 @@ namespace Cogling
     /// (Dish tilt), and the ward's area circle. Its radius is a Cogling's working area; antennas whose areas overlap link into one area
     /// (a network). A Cogling can only be built inside an area. Registered through PieceReload, as the Cogling is.
     /// </summary>
-    internal sealed class Antenna : MonoBehaviour
+    internal sealed class Antenna : MonoBehaviour, Hoverable
     {
+        // ---- looking at it: its name, with how many Coglings its network powers, who they are, rebuilds waiting and its range (grey)
+
+        public string GetHoverName() => Localization.instance.Localize("$cogling_antenna");
+
+        public float GetHoverOffset() => 0f;
+
+        public string GetHoverText()
+        {
+            List<Antenna> network = NetworkAt(transform.position);
+            if (network.Count == 0) network = new List<Antenna> { this };
+            int have = CoglingsIn(network), can = network.Count * Plugin.CoglingsPerAntenna.Value;
+            var names = Character.GetAllCharacters().Where(c => CoglingStance.IsCogling(c) && !c.IsDead() && c.GetComponent<ZNetView>()?.GetZDO() != null
+                                                               && InArea(network, c.transform.position)).Select(CoglingTag.NameOf).ToList();
+            long now = ZNet.instance != null ? ZNet.instance.GetTime().Ticks : 0L;
+            var waits = network.SelectMany(a => Rebuilds.Pending(a)).Select(r => Mathf.Max(0f, (float)new System.TimeSpan(r.due - now).TotalMinutes)).OrderBy(m => m).ToList();
+            var lines = new List<string>
+            {
+                Nick.Shared.Translations.T(network.Count > 1 ? "cogling_antenna_powers_linked" : "cogling_antenna_powers", have, can, network.Count),
+            };
+            if (names.Count > 0) lines.Add(string.Join(", ", names));
+            foreach (float m in waits) lines.Add(Nick.Shared.Translations.T("cogling_antenna_rebuilding", Mathf.CeilToInt(m)));
+            lines.Add(Nick.Shared.Translations.T("cogling_antenna_range", Radius.ToString("0")));
+            return GetHoverName() + "\n<color=#bdb7a9>" + string.Join("\n", lines) + "</color>";
+        }
+
         internal const string Name = "cogling_antenna";
 
         // ---- the antennas standing (loaded) in the world: our own list, never a scene search

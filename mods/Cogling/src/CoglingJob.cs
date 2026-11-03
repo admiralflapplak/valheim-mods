@@ -16,7 +16,7 @@ namespace Cogling
         internal const string AwakeKey = "cogling_awake";   // powered up (else down, as a new Cogling starts: he boots up)
         internal const string MoodKey = "cogling_mood";     // frightened (step 8: red eyes, his cry, cowering) or calm
         internal const int MoodCalm = 0, MoodScared = 1, MoodWary = 2;
-        internal const int ActNone = 0, ActBend = 1, ActDeposit = 2;
+        internal const int ActNone = 0, ActBend = 1, ActDeposit = 2, ActHammer = 3;
 
         internal static ItemDrop.ItemData Read(ZDO zdo)
         {
@@ -49,7 +49,7 @@ namespace Cogling
     internal sealed class CoglingJob
     {
         internal enum State { Working, Done }
-        private enum Phase { ToItem, Picking, ToChest, Opening, Closing, ToSource, Taking, TakenClosing }
+        private enum Phase { ToItem, Picking, ToChest, Opening, Closing, ToSource, Taking, TakenClosing, ToPiece, Hammering, ToStation, FixingGear }
 
         private readonly CoglingAI _ai;
         private readonly CoglingNavigator _nav;
@@ -59,7 +59,10 @@ namespace Cogling
         private Container _chest;
         private Container _source;     // tidying: the chest he takes a stack from
         private Container _goal;       // tidying: the chest it's for (else Sorting chooses)
-        private string _takeName;
+        private string _takeName, _tidyKey;
+        private WearNTear _piece;            // repairing: the damaged building piece
+        private CraftingStation _station;    // repairing gear: the station it's mended at
+        private bool _gear;                  // (this trip from a chest is a repair, back to the same chest)
         private int _takeQuality;
         private float _until;
         private List<Antenna> _network;
@@ -83,8 +86,15 @@ namespace Cogling
                 case Phase.ToItem:
                 case Phase.Picking:
                     return _item != null ? ("cogling_task_fetching", _item.m_itemData.m_stack.ToString(), _item.m_itemData.m_shared.m_name) : ("cogling_task_busy", "", "");
+                case Phase.ToPiece:
+                case Phase.Hammering:
+                    return ("cogling_task_repairing", "", _piece != null ? _piece.GetComponent<Piece>()?.m_name ?? "" : "");
+                case Phase.ToStation:
+                case Phase.FixingGear:
+                    return ("cogling_task_mending", carried != null ? carried.m_shared.m_name : "", _station != null ? _station.m_name : "");
                 case Phase.ToSource:
                 case Phase.Taking:
+                    if (_gear) return ("cogling_task_mending", _takeName ?? "", _station != null ? _station.m_name : "");
                     return ("cogling_task_tidying", "", "$item_" + (_takeName ?? "").Replace("$item_", ""));
                 default:
                     return carried != null ? ("cogling_task_carrying", carried.m_stack.ToString(), carried.m_shared.m_name) : ("cogling_task_busy", "", "");
@@ -133,11 +143,45 @@ namespace Cogling
             if (move == null) return false;
             _source = move.From;
             _goal = move.To;
+            _tidyKey = Tidy.Key(move.From, move.Name);
+            Tidy.Claimed.Add(_tidyKey);
             _takeName = move.Name;
             _takeQuality = move.Quality;
             if (!_nav.SetTarget(ChestSpot(_source))) { _source = _goal = null; return false; }
             _phase = Phase.ToSource;
             _ai.Log($"tidying: {Sorting.Short(new ItemDrop.ItemData { m_shared = new ItemDrop.ItemData.SharedData { m_name = move.Name } })} from the chest at {_source.transform.position:F1} ({move.Why})");
+            return true;
+        }
+
+        /// <summary>A damaged building piece in the area, and off he goes to mend it. False: nothing needs it.</summary>
+        internal bool TryStartRepair(List<Antenna> network)
+        {
+            _network = network;
+            WearNTear piece = Repairs.NextPiece(network, _ai.transform.position);
+            if (piece == null) return false;
+            if (!_nav.SetTarget(RepairSpot(piece))) { Repairs.SkipFor(piece, 300f); return false; }
+            _piece = piece;
+            Repairs.Claimed.Add(Repairs.Id(piece));
+            _phase = Phase.ToPiece;
+            _ai.Log($"repairing {Localization.instance.Localize(piece.GetComponent<Piece>().m_name)} at {piece.transform.position:F1} ({piece.GetHealthPercentage() * 100f:F0}%)");
+            return true;
+        }
+
+        /// <summary>A worn item in a chest whose station stands in the area: off to take it there. False: none.</summary>
+        internal bool TryStartGear(List<Antenna> network)
+        {
+            _network = network;
+            List<Container> chests = Chests.Usable(network);
+            var (chest, item, station) = Repairs.NextGear(network, chests);
+            if (chest == null || !_nav.SetTarget(ChestSpot(chest))) return false;
+            _source = chest;
+            _goal = chest;   // (back where it came from)
+            _station = station;
+            _gear = true;
+            _takeName = item.m_shared.m_name;
+            _takeQuality = item.m_quality;
+            _phase = Phase.ToSource;
+            _ai.Log($"mending {Localization.instance.Localize(item.m_shared.m_name)} ({item.m_durability / item.GetMaxDurability() * 100f:F0}%) at the {Localization.instance.Localize(station.m_name)}");
             return true;
         }
 
@@ -154,7 +198,7 @@ namespace Cogling
         internal State Update(float dt)
         {
             State state = Step(dt);
-            if (state == State.Done) _ai.Log($"job over ({_phase})");
+            if (state == State.Done) { _ai.Log($"job over ({_phase})"); Release(); }
             return state;
         }
 
@@ -232,6 +276,75 @@ namespace Cogling
                     _goal = null;
                     Act(Carried.ActNone);
                     return State.Done;
+                case Phase.ToPiece:
+                {
+                    if (_piece == null || !_piece.GetComponent<ZNetView>().IsValid()) return Finish("the piece is gone");
+                    if (_piece.GetHealthPercentage() >= 0.999f) return Finish("someone repaired it already");
+                    // (within arm's reach of the piece: he walks right up to it, a small robot's reach)
+                    Vector3 at = Repairs.NearestPoint(_piece, _ai.transform.position);
+                    float reach = Vector3.Distance(_ai.transform.position + Vector3.up * 0.5f, at);
+                    if (reach < 1.3f) { StartHammering(at); return State.Working; }
+                    var r = _nav.Update(dt);
+                    if (r != CoglingNavigator.Result.Moving && reach < 1.9f) { StartHammering(at); return State.Working; }   // (as close as he gets: a chest in the way)
+                    if (r == CoglingNavigator.Result.GaveUp || r == CoglingNavigator.Result.Arrived)
+                    {
+                        Repairs.SkipFor(_piece, 300f);   // (out of his reach: up on a roof, behind a wall)
+                        return Finish("can't reach the piece");
+                    }
+                    return State.Working;
+                }
+                case Phase.Hammering:
+                {
+                    _ai.Stop();
+                    _ai.Face(_hammerAt);
+                    if (Time.time < _until) return State.Working;
+                    Act(Carried.ActNone);
+                    if (_piece != null && _piece.Repair())
+                    {
+                        Piece p = _piece.GetComponent<Piece>();
+                        p?.m_placeEffect.Create(_piece.transform.position, _piece.transform.rotation);
+                        _ai.Log($"repaired {Localization.instance.Localize(p?.m_name ?? "")}");
+                    }
+                    Release();   // (before forgetting the piece: its claim goes with it)
+                    _piece = null;
+                    return State.Done;
+                }
+                case Phase.ToStation:
+                {
+                    if (_station == null) { _gear = false; return Reroute("the station is gone"); }
+                    if (Utils.DistanceXZ(_ai.transform.position, _station.transform.position) < 1.5f) { StartHammering(_station.transform.position); _phase = Phase.FixingGear; return State.Working; }
+                    var r = _nav.Update(dt);
+                    if (r == CoglingNavigator.Result.GaveUp && Utils.DistanceXZ(_ai.transform.position, _station.transform.position) < 2f) { StartHammering(_station.transform.position); _phase = Phase.FixingGear; return State.Working; }
+                    if (r == CoglingNavigator.Result.GaveUp) { _gear = false; return Reroute("can't reach the station"); }
+                    if (r == CoglingNavigator.Result.Arrived && Utils.DistanceXZ(_ai.transform.position, _station.transform.position) < 2f) { StartHammering(_station.transform.position); _phase = Phase.FixingGear; return State.Working; }
+                    if (r == CoglingNavigator.Result.Arrived) _nav.SetTarget(StationSpot(_station));
+                    return State.Working;
+                }
+                case Phase.FixingGear:
+                {
+                    _ai.Stop();
+                    _ai.Face(_hammerAt);
+                    if (Time.time < _until) return State.Working;
+                    Act(Carried.ActNone);
+                    ItemDrop.ItemData item = Carried.Read(Zdo);
+                    if (item != null)
+                    {
+                        item.m_durability = item.GetMaxDurability();
+                        Carried.Write(Zdo, item);   // (mended in his hands: saved so)
+                        _station?.m_repairItemDoneEffects.Create(_station.transform.position, Quaternion.identity);
+                        _ai.Log($"mended {Localization.instance.Localize(item.m_shared.m_name)}");
+                    }
+                    _gear = false;
+                    // back to the chest it came from (if it still has room), else wherever the rulebook says
+                    if (item != null && _goal != null && ContainerAccess.IsStorage(_goal) && _goal.GetInventory().CanAddItem(item))
+                    {
+                        _chest = _goal;
+                        _phase = Phase.ToChest;
+                        _nav.SetTarget(ChestSpot(_chest));
+                        return State.Working;
+                    }
+                    return item != null && ToAChest(item) ? State.Working : State.Done;
+                }
                 case Phase.ToSource:
                 {
                     if (_source == null || !ContainerAccess.IsStorage(_source)) return Finish("the chest to tidy is gone");
@@ -249,8 +362,9 @@ namespace Cogling
                     if (_source == null) return Finish("the chest to tidy is gone");
                     // the stack (smallest of that item there, as planned), checked in the chest's latest contents: his first, then out
                     Inventory inv = _source.GetInventory();
-                    ItemDrop.ItemData stack = inv.GetAllItems().Where(i => i.m_shared.m_name == _takeName && i.m_quality == _takeQuality)
-                        .OrderBy(i => i.m_stack).FirstOrDefault();
+                    var matching = inv.GetAllItems().Where(i => i.m_shared.m_name == _takeName && i.m_quality == _takeQuality);
+                    ItemDrop.ItemData stack = _gear ? matching.OrderBy(i => i.m_durability / Mathf.Max(0.01f, i.GetMaxDurability())).FirstOrDefault()
+                                                    : matching.OrderBy(i => i.m_stack).FirstOrDefault();
                     if (stack == null) { _source.SetInUse(false); return Finish("it was taken meanwhile"); }
                     ItemDrop.ItemData carried = stack.Clone();
                     Carried.Write(Zdo, carried);
@@ -270,6 +384,12 @@ namespace Cogling
                     Act(Carried.ActNone);
                     ItemDrop.ItemData item = Carried.Read(Zdo);
                     if (item == null) return Finish("nothing in his hands");
+                    if (_gear && _station != null)
+                    {
+                        _phase = Phase.ToStation;
+                        _nav.SetTarget(StationSpot(_station));
+                        return State.Working;
+                    }
                     // to the planned chest, if it still has room; else wherever the rulebook says (never back where it came from)
                     if (_goal != null && ContainerAccess.IsStorage(_goal) && _goal.GetInventory().CanAddItem(item))
                     {
@@ -339,6 +459,56 @@ namespace Cogling
             return ToAChest(item, skip) ? State.Working : State.Done;
         }
 
+        /// <summary>The piece or tidying move he had claimed, free again.</summary>
+        private void Release()
+        {
+            if (_piece != null) Repairs.Claimed.Remove(Repairs.Id(_piece));
+            if (_tidyKey != null) { Tidy.Claimed.Remove(_tidyKey); _tidyKey = null; }
+        }
+
+        private Vector3 _hammerAt;
+
+        /// <summary>A moment of hammering (his swing on every player's game, the hammer's sound with it).</summary>
+        private void StartHammering(Vector3 at)
+        {
+            _ai.Stop();
+            _hammerAt = at;
+            _phase = Phase.Hammering;
+            _until = Time.time + 1.8f;
+            Act(Carried.ActHammer);
+        }
+
+        /// <summary>Where he stands to mend a piece: on the ground just in front of its nearest point, on his side.</summary>
+        private Vector3 RepairSpot(WearNTear piece)
+        {
+            Vector3 at = Repairs.NearestPoint(piece, _ai.transform.position);
+            Vector3 toward = _ai.transform.position - at;
+            toward.y = 0f;
+            Vector3 spot = at + (toward.sqrMagnitude > 0.01f ? toward.normalized : Vector3.zero) * 0.6f;
+            // (on the floor or ground under it: not on top of a chest, a station or other furniture standing there)
+            RaycastHit[] hits = Physics.RaycastAll(spot + Vector3.up * 1f, Vector3.down, 4f, LayerMask.GetMask("Default", "static_solid", "Default_small", "piece", "terrain"));
+            System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+            foreach (RaycastHit hit in hits)
+            {
+                if (hit.collider.GetComponentInParent<WearNTear>() == piece || Furniture(hit.collider)) continue;
+                return hit.point;
+            }
+            return spot;
+        }
+
+        private static bool Furniture(Collider c) =>
+            c.GetComponentInParent<Container>() != null || c.GetComponentInParent<CraftingStation>() != null || c.GetComponentInParent<StationExtension>() != null
+            || c.GetComponentInParent<Bed>() != null || c.GetComponentInParent<Fireplace>() != null || c.GetComponentInParent<Smelter>() != null
+            || c.GetComponentInParent<ItemStand>() != null || c.GetComponentInParent<Chair>() != null;
+
+        private Vector3 StationSpot(CraftingStation s)
+        {
+            Vector3 away = _ai.transform.position - s.transform.position;
+            away.y = 0f;
+            if (away.sqrMagnitude < 0.01f) away = s.transform.forward;
+            return s.transform.position + away.normalized * 0.9f;
+        }
+
         private void StartTaking()
         {
             _ai.Stop();
@@ -394,9 +564,13 @@ namespace Cogling
         /// <summary>The job ends here (no drop): a claimed item freed, an opened lid closed.</summary>
         internal void Abandon()
         {
+            Release();
             if (_source != null && _source.GetComponent<ZNetView>()?.IsOwner() == true) _source.SetInUse(false);
             _source = null;
             _goal = null;
+            _piece = null;
+            _station = null;
+            _gear = false;
             if (_itemId != ZDOID.None) FloorItems.Claimed.Remove(_itemId);
             if (_chest != null && _chest.GetComponent<ZNetView>()?.IsOwner() == true) _chest.SetInUse(false);
             _chest = null;

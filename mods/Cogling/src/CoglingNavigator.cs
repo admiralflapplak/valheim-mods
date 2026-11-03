@@ -31,6 +31,7 @@ namespace Cogling
         private Vector3 _lastProgressAt;
         private float _lastProgressTime;
         private int _stuckTries;
+        private float _closeSince = -1f;   // when he stopped close to the spot with no way closer (a chest in the way): stuck after a while
         private float _sidestepUntil;
         private Vector3 _sidestepDir;
 
@@ -175,10 +176,19 @@ namespace Cogling
             while (_path.Count > 0 && Utils.DistanceXZ(_path[0], Here) < 0.4f) _path.RemoveAt(0);
             if (_path.Count == 0)
             {
-                if (Utils.DistanceXZ(Here, to) < 1.2f) { _ai.Stop(); return Result.Moving; }
+                if (Utils.DistanceXZ(Here, to) < 1.2f)
+                {
+                    // (close, but no closer: once stood there a moment it counts as stuck, so he steps aside, tries again, and in
+                    // the end gives up, which every job handles; before, he stood there for good)
+                    _ai.Stop();
+                    if (_closeSince < 0f) _closeSince = Time.time;
+                    else if (Time.time - _closeSince > 1.5f) { _closeSince = -1f; return Stuck("can't get any closer"); }
+                    return Result.Moving;
+                }
                 if (Time.time > _nextPath) { if (_phase == Phase.ToDoor) PathTo(_doorNear, whole: false); else Plan(); _nextPath = Time.time + 2f; }
                 if (_path.Count == 0) return Stuck("no way on");
             }
+            _closeSince = -1f;
             Vector3 dir = _path[0] - Here;
             dir.y = 0f;
             if (Time.time > _nextDoorLook) { _nextDoorLook = Time.time + 0.25f; if (DoorAhead(dir)) return Result.Moving; }

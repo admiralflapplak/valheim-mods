@@ -22,11 +22,17 @@ namespace Cogling
             internal string Why;
         }
 
+        /// <summary>The moves Coglings of this game are making (chest and item): two never plan the same one.</summary>
+        internal static readonly HashSet<string> Claimed = new HashSet<string>();
+
+        internal static string Key(Container from, string name) => $"{Repairs.Id(from)}|{name}";
+
         internal static Move Next(List<Container> chests, Vector3 from)
         {
             var moves = new List<Move>();
             Consolidate(chests, moves);
             if (Plugin.ResortGroups.Value && moves.Count == 0) Resort(chests, moves);
+            moves.RemoveAll(m => Claimed.Contains(Key(m.From, m.Name)));
             return moves.OrderBy(m => Vector3.Distance(from, m.From.transform.position) + Vector3.Distance(m.From.transform.position, m.To.transform.position) * 0.5f).FirstOrDefault();
         }
 

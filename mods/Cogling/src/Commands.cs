@@ -12,7 +12,7 @@ namespace Cogling
     internal static class Commands
     {
         private const string Command = "cogling";
-        private const string Usage = "cogling goto [x y z] | cogling home | cogling items | cogling tidy | cogling status";
+        private const string Usage = "cogling goto [x y z] | cogling home | cogling items | cogling tidy | cogling status | cogling slack [stare|look|bored|dance|sit]";
 
         private static readonly AccessTools.FieldRef<Dictionary<string, Terminal.ConsoleCommand>> TerminalCommands =
             AccessTools.StaticFieldRefAccess<Dictionary<string, Terminal.ConsoleCommand>>(AccessTools.Field(typeof(Terminal), "commands"));
@@ -25,7 +25,7 @@ namespace Cogling
         {
             Player p = Player.m_localPlayer;
             string sub = a.Length > 1 ? a[1].ToLowerInvariant() : "";
-            if (p == null || (sub != "goto" && sub != "home" && sub != "items" && sub != "tidy" && sub != "status")) { t.AddString(Usage); return; }
+            if (p == null || (sub != "goto" && sub != "home" && sub != "items" && sub != "tidy" && sub != "status" && sub != "slack")) { t.AddString(Usage); return; }
             if (sub == "status")
             {
                 foreach (CoglingAI c in Object.FindObjectsByType<CoglingAI>(FindObjectsSortMode.None))   // (a command: once)
@@ -61,6 +61,14 @@ namespace Cogling
                 .OrderBy(c => Vector3.Distance(c.transform.position, p.transform.position)).FirstOrDefault();
             if (cog == null) { t.AddString("No Cogling near that this game runs."); return; }
             if (sub == "home") { cog.GoHome(); t.AddString("Going home."); return; }
+            if (sub == "slack")
+            {
+                string w = a.Length > 2 ? a[2].ToLowerInvariant() : "";
+                CoglingSlack.Activity? what = w == "stare" ? CoglingSlack.Activity.Stare : w == "look" ? CoglingSlack.Activity.LookAround
+                    : w == "bored" ? CoglingSlack.Activity.Bored : w == "dance" ? CoglingSlack.Activity.Dance : w == "sit" ? CoglingSlack.Activity.Sit : (CoglingSlack.Activity?)null;
+                t.AddString(cog.SlackNow(what) ? $"Taking a break{(what.HasValue ? $" ({what})" : "")}." : "He can't take that break here.");
+                return;
+            }
             if (a.Length >= 5 && float.TryParse(a[2], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float x)
                 && float.TryParse(a[3], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float y)
                 && float.TryParse(a[4], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float z))

@@ -16,5 +16,17 @@
   "cogling_task_tidying": "Tidying up the {1}",
   "cogling_task_busy": "Busy",
   "cogling_task_hiding": "Hiding from {0}!",
-  "cogling_task_watching": "Keeping an eye on {0}"
+  "cogling_task_watching": "Keeping an eye on {0}",
+  "cogling_task_repairing": "Repairing the {1}",
+  "cogling_task_mending": "Mending the {0} at the {1}",
+  "cogling_antenna_powers": "Powers {0} of {1} Coglings",
+  "cogling_antenna_powers_linked": "Powers {0} of {1} Coglings ({2} antennas linked)",
+  "cogling_antenna_rebuilding": "Rebuilding a Cogling: {0} min",
+  "cogling_antenna_range": "Range {0} m",
+  "cogling_task_slack_going": "Off for a little break",
+  "cogling_task_slack_stare": "Staring into the distance",
+  "cogling_task_slack_look": "Having a look around",
+  "cogling_task_slack_bored": "Bored",
+  "cogling_task_slack_dance": "Dancing",
+  "cogling_task_slack_sit": "Sitting down for a bit"
 }

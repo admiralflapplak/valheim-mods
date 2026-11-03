@@ -173,7 +173,14 @@ namespace Cogling
                 cam.cullingMask = 1 << layer;
                 rt = RenderTexture.GetTemporary(Size * 2, Size * 2, 24, RenderTextureFormat.ARGB32);
                 cam.targetTexture = rt;
-                cam.Render();
+                // The game's ambient light and reflections change with the time of day and the place, and the icon is drawn once, wherever
+                // the player is: the same wood came out brown or green (Spyglass found it). A neutral light and little reflection meanwhile.
+                var ambientMode = RenderSettings.ambientMode; var ambient = RenderSettings.ambientLight; float reflection = RenderSettings.reflectionIntensity;
+                RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
+                RenderSettings.ambientLight = new Color(0.5f, 0.5f, 0.5f);
+                RenderSettings.reflectionIntensity = 0.25f;
+                try { cam.Render(); }
+                finally { RenderSettings.ambientMode = ambientMode; RenderSettings.ambientLight = ambient; RenderSettings.reflectionIntensity = reflection; }
                 RenderTexture.active = rt;
                 var tex = new Texture2D(rt.width, rt.height, TextureFormat.RGBA32, false);
                 tex.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0);

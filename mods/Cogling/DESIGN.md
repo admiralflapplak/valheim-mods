@@ -150,6 +150,20 @@ The feel: peaceful, not fast. A little helper with a personality, pottering abou
   dish, which leans toward the antenna's front by "Antenna dish tilt" (F1 3 - Looks, default 35, live). Standing antennas reshape
   themselves in Antenna.Awake.
 
+## Slacking off and personality (0.16.x, decided with the user 2026-11-03)
+
+- Now and then a Cogling takes a break, **even with work to do**, never while frightened or wary (danger ends a break at once). What he
+  carries he **drops on the ground**; his job is let go. Breaks: stare into the distance (at his area's edge facing out, or where he
+  is; his head drifts, Dagny's head turn), look around, bored, dance (Robot Hip Hop Dance, facing a player if one is near), sit on the
+  ground (the user's sitting clips are a floor sit, not for chairs): by a fire burning in his area facing it, else at its edge
+  looking out, or where he is (sit down, sitting, stand up).
+- **Personality is hidden**: traits drawn once from a saved number (diligence, curiosity, playfulness, restfulness, dreaminess) only
+  change how often and what he does. The user wants it emergent ("oh, Frank is lazy"), never shown. `cogling status` shows it (testing).
+- Clips: reference/RobotAnime (Mixamo), converted to assets/*.anim. The sit-down clip ("falling down") came from another rig: no
+  right arm (his left arm is mirrored onto it) and it goes on to the floor, so only its first part is used (Sit: down clip until).
+- Next: chatting between two Coglings (talking, talking2), joining a dance, reacting to the player; maybe the game's own emotes
+  (the Fuling Heckler's stagger-swap trick works on his hidden Fuling body).
+
 ## Open questions
 
 - Faction: `Players` for now (calm toward players), but monsters hunt that faction. Should monsters attack it? Should it take damage

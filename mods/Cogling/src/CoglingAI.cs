@@ -14,12 +14,13 @@ namespace Cogling
     /// </summary>
     internal sealed class CoglingAI : BaseAI
     {
-        private enum Mode { Resting, Strolling, GoingHome, Working, Returning }
+        private enum Mode { Resting, Strolling, GoingHome, Working, Returning, Slacking }
         private float _nextReturnPlan;
 
         private CoglingNavigator _nav;
         private CoglingJob _job;
         private CoglingDanger _danger;
+        private CoglingSlack _slack;
         internal bool Running;
         private float _nextJobLook, _nextTidy;
         private Mode _mode = Mode.GoingHome;
@@ -68,6 +69,7 @@ namespace Cogling
             _nav = new CoglingNavigator(this);
             _job = new CoglingJob(this, _nav);
             _danger = new CoglingDanger(this);
+            _slack = new CoglingSlack(this, _nav, _job);
             SetMood(Carried.MoodCalm);   // (a fright saved when his area unloaded mid-flight would leave his eyes red)
             _nextStroll = Time.time + Random.Range(5f, 15f);
         }
@@ -84,6 +86,7 @@ namespace Cogling
             }
             BaseOnDestroy?.Invoke(this, null);   // (the game's own clean-up, which this method hides)
             _job?.Abandon();                     // (what he carries stays saved on him: unloaded, he goes on later)
+            if (m_nview != null && m_nview.IsValid() && m_nview.IsOwner()) _slack?.Stop();
             _nav?.CloseDoors(force: true);
             ZNetView view = GetComponent<ZNetView>();
             if (view != null && view.IsValid()) foreach (string rpc in Rpcs) view.Unregister(rpc);
@@ -95,7 +98,7 @@ namespace Cogling
             _lastUpdate = Time.time;
             if (FinishStuckDeath()) return true;
             UpdateTask();
-            if (Time.time < _greetUntil) { StopMoving(); if (_greeter != Vector3.zero) LookAt(_greeter); return true; }   // (greeted: a moment for you)
+            if (Time.time < _greetUntil) { StopMoving(); if (_greeter != Vector3.zero && !_slack.Seated) LookAt(_greeter); return true; }   // (greeted: a moment for you)
             m_character.m_walkSpeed = Plugin.WalkSpeed.Value;
             m_character.m_runSpeed = Plugin.RunSpeed.Value;
             if (Plugin.Paused.Value)
@@ -114,6 +117,7 @@ namespace Cogling
             {
                 if (!PoweredUp) SetAwake(true);   // (no time to boot up slowly)
                 if (_mode == Mode.Working) _job.Abandon();
+                _slack.Stop();                    // (a break ends at once: up and off)
                 _mode = Mode.GoingHome;           // (afterwards: home, and work again if there is any)
                 _homeAfterFright = true;
                 return true;
@@ -128,6 +132,7 @@ namespace Cogling
                 Antenna back = Antenna.Nearest(transform.position, 80f);
                 if (back == null) { StopMoving(); return true; }
                 if (!PoweredUp) SetAwake(true);
+                if (_mode == Mode.Slacking) _slack.Stop();
                 if (_mode != Mode.Returning || Time.time > _nextReturnPlan)
                 {
                     _mode = Mode.Returning;
@@ -146,6 +151,16 @@ namespace Cogling
 
             if (_homeAfterFright) { _homeAfterFright = false; _nav.SetTarget(_home); _nextJobLook = 0f; }
 
+            // on a break (CoglingSlack): it goes on till it's over, then home and work again
+            if (_mode == Mode.Slacking)
+            {
+                if (Time.time < _bootUntil) { StopMoving(); return true; }
+                if (!_slack.Update(dt)) { _mode = Mode.GoingHome; _nav.SetTarget(_home); _nextJobLook = Time.time + 1f; }
+                return true;
+            }
+            // now and then a break, even with work to do (powered down, he boots up for it)
+            if (Time.time >= _bootUntil && _slack.Roll(_mode == Mode.Working, network)) { Wake(); _mode = Mode.Slacking; return true; }
+
             // work first: something carried from before, else an item on the floor (looked for every few seconds)
             if (_mode != Mode.Working && Time.time > _nextJobLook)
             {
@@ -155,7 +170,7 @@ namespace Cogling
                 {
                     // nothing on the floor: the chests, now and then (it reads every chest of the area)
                     _nextTidy = Time.time + 8f;
-                    if (_job.TryStartTidy(network)) { _mode = Mode.Working; Wake(); }
+                    if (_job.TryStartTidy(network) || _job.TryStartRepair(network) || _job.TryStartGear(network)) { _mode = Mode.Working; Wake(); }
                 }
             }
 
@@ -234,6 +249,7 @@ namespace Cogling
         {
             Wake();
             if (_mode == Mode.Working) { _job.Abandon(); }
+            _slack.Stop();
             if (!_nav.SetTarget(spot)) return false;
             _mode = Mode.Strolling;
             Log($"sent to {spot:F1}");
@@ -249,7 +265,20 @@ namespace Cogling
 
         internal string Status() =>
             $"mode {_mode}, powered up {PoweredUp}, enabled {enabled}, owner {m_nview?.IsOwner()}, in the AI list {BaseAI.BaseAIInstances.Contains(this)}, "
-            + $"brains here {GetComponents<BaseAI>().Length}, running {Running}, {_danger?.Status()}, carrying {_job?.Carrying}, updated {Time.time - _lastUpdate:F1} s ago";
+            + $"brains here {GetComponents<BaseAI>().Length}, running {Running}, {_danger?.Status()}, carrying {_job?.Carrying}, {_slack?.Status()}, updated {Time.time - _lastUpdate:F1} s ago";
+
+        /// <summary>Testing (`cogling slack [what]`): a break now. False if that one can't be had here.</summary>
+        internal bool SlackNow(CoglingSlack.Activity? what)
+        {
+            List<Antenna> network = Antenna.NetworkAt(transform.position);
+            if (network.Count == 0) return false;
+            CoglingSlack.Activity a = what ?? (CoglingSlack.Activity)Random.Range(1, 6);
+            if (_mode == Mode.Working) _job.Abandon();
+            if (!_slack.Start(a, network)) return false;
+            Wake();
+            _mode = Mode.Slacking;
+            return true;
+        }
 
         private float _lastUpdate;
 
@@ -347,6 +376,7 @@ namespace Cogling
             else if (!PoweredUp) t = ("cogling_task_off", "", "");
             else if (Time.time < _bootUntil) t = ("cogling_task_booting", "", "");
             else if (_mode == Mode.Working && _job != null) t = _job.Describe();
+            else if (_mode == Mode.Slacking && _slack != null) t = _slack.Describe();
             else if (_mode == Mode.GoingHome || _mode == Mode.Returning) t = ("cogling_task_home", "", "");
             else t = ("cogling_task_resting", "", "");
             string task = $"{t.key}|{t.a}|{t.b}";
