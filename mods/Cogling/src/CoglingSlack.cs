@@ -8,7 +8,9 @@ namespace Cogling
     /// Slacking off: now and then a Cogling takes a break, even with work to do (never while frightened or wary: the danger check comes
     /// first and ends a break at once). What he carries he drops where he stands; his job is let go (he picks things up again after).
     /// He stares into the distance (at the edge of his area, or where he is), looks around, is bored, dances, or sits on the ground for a
-    /// while (by a fire burning in his area, at its edge, or where he is).
+    /// while (by a fire burning in his area, at its edge, or where he is). Or he has a chat with another Cogling: a sociable one asks one
+    /// near (who comes if he's sociable too, less likely when busy), they meet halfway and face each other, and take turns talking (the
+    /// one who asked decides whose turn it is; the talker plays a talking clip and babbles, the other listens and looks at him).
     ///
     /// Each Cogling has his own personality, never shown: a few traits drawn once from a number saved on him (cogling_traits), which make
     /// one slack more often and longer, dance more, or sit more. It only shows in what he does: a player who names him may come to know
@@ -19,15 +21,21 @@ namespace Cogling
     /// </summary>
     internal sealed class CoglingSlack
     {
-        internal enum Activity { None = 0, Stare = 1, LookAround = 2, Bored = 3, Dance = 4, Sit = 5 }
-        internal const string SlackKey = "cogling_slack", TraitsKey = "cogling_traits";
+        internal enum Activity { None = 0, Stare = 1, LookAround = 2, Bored = 3, Dance = 4, Sit = 5, Chat = 6 }
+        // (the dance he does, saved for his body: his robot dance is Activity.Dance; these are the game's own)
+        internal const int PoseHeadbang = 9, PoseVikingDance = 10;
+        private int _dancePose;
+        private float _nextCheer;
+        // (saved for his body: a break's own number, but in a chat what he does in it: talking, with either clip, or listening)
+        internal const int PoseTalk = 6, PoseListen = 7, PoseTalk2 = 8;
+        internal const string SlackKey = "cogling_slack", TraitsKey = "cogling_traits", LookKey = "cogling_look";
 
         /// <summary>His personality: each from 0 to 1.</summary>
         internal struct Traits
         {
-            internal float Diligence, Curiosity, Playfulness, Restfulness, Dreaminess;
+            internal float Diligence, Curiosity, Playfulness, Restfulness, Dreaminess, Sociability;
             public override string ToString() =>
-                $"diligence {Diligence:F2}, curiosity {Curiosity:F2}, playfulness {Playfulness:F2}, restfulness {Restfulness:F2}, dreaminess {Dreaminess:F2}";
+                $"diligence {Diligence:F2}, curiosity {Curiosity:F2}, playfulness {Playfulness:F2}, restfulness {Restfulness:F2}, dreaminess {Dreaminess:F2}, sociability {Sociability:F2}";
         }
 
         private enum Step { Going, Facing, Doing, StandingUp }
@@ -39,6 +47,12 @@ namespace Cogling
         private float _until, _nextRoll, _lastEnded = -999f, _stepUntil;
         private Vector3 _face;
         private Traits? _me;
+        private CoglingSlack _partner;   // in a chat: the other one
+        private bool _host, _hostTalking;
+        private float _turnUntil;
+
+        /// <summary>Every Cogling brain on this game (a chat's partner is one of them).</summary>
+        private static readonly List<CoglingSlack> All = new List<CoglingSlack>();
 
         internal Activity Doing { get; private set; }
         internal bool Seated => Doing == Activity.Sit && (_step == Step.Doing || _step == Step.StandingUp);
@@ -49,7 +63,15 @@ namespace Cogling
             _nav = nav;
             _job = job;
             _nextRoll = Time.time + Random.Range(20f, 40f);
-            Write(Activity.None);   // (a break saved as his area unloaded: over)
+            Write(0);   // (a break saved as his area unloaded: over)
+            All.Add(this);
+        }
+
+        /// <summary>His brain is going (unloaded, hot reload).</summary>
+        internal void Dispose()
+        {
+            All.Remove(this);
+            if (Owner) Stop();
         }
 
         private ZDO Zdo
@@ -79,6 +101,7 @@ namespace Cogling
                 var r = new System.Random(seed);
                 float N() => (float)r.NextDouble();
                 _me = new Traits { Diligence = N(), Curiosity = N(), Playfulness = N(), Restfulness = N(), Dreaminess = N() };
+                var m = _me.Value; m.Sociability = N(); _me = m;   // (drawn after the first five: theirs stay as they were)
                 return _me.Value;
             }
         }
@@ -109,13 +132,14 @@ namespace Cogling
                 (Activity.Dance, t.Playfulness < 0.15f ? 0.05f : 0.2f + t.Playfulness * 2f),   // (some never dance)
             };
             weights.Add((Activity.Sit, 0.4f + t.Restfulness * 1.8f));
+            if (Partner(network, false) != null) weights.Add((Activity.Chat, 0.3f + t.Sociability * 2f));
             float total = weights.Sum(w => w.Item2), pick = Random.value * total;
             foreach ((Activity a, float w) in weights) { if (pick < w) return a; pick -= w; }
             return Activity.Stare;
         }
 
         /// <summary>A break now (testing: `cogling slack`, or a roll). False if it can't be had.</summary>
-        internal bool Start(Activity what, List<Antenna> network)
+        internal bool Start(Activity what, List<Antenna> network, bool force = false)
         {
             Stop();
             Traits t = Me;
@@ -159,16 +183,35 @@ namespace Cogling
                     _face = here + _ai.transform.forward * 5f;
                     break;
                 case Activity.Dance:
-                    duration = CoglingBody.ClipLength("robot_dance") * (t.Playfulness > 0.7f ? 2f : 1f);
+                    // his robot dance mostly; now and then the players' headbang or their dance
+                    float d = Random.value;
+                    _dancePose = d < 0.6f ? (int)Activity.Dance : d < 0.8f ? PoseHeadbang : PoseVikingDance;
+                    duration = _dancePose == (int)Activity.Dance ? CoglingBody.ClipLength("robot_dance") * (t.Playfulness > 0.7f ? 2f : 1f)
+                             : Random.Range(8f, 16f) * (0.7f + t.Playfulness * 0.6f);
                     Player near = Player.GetClosestPlayer(here, 15f);   // (for an audience, if there is one)
                     _face = near != null ? near.transform.position : here + _ai.transform.forward * 5f;
                     break;
+                case Activity.Chat:
+                {
+                    // halfway between them, a little apart, facing each other (the other one is asked first: he may say no)
+                    CoglingSlack other = Partner(network, !force);
+                    if (other == null) return false;
+                    Vector3 there = other._ai.transform.position, side = Flat(here - there), mid = (here + there) / 2f;
+                    go = Floor(mid + side * 0.65f);
+                    if (!other._ai.JoinChat(this, Floor(mid - side * 0.65f))) return false;
+                    _partner = other;
+                    _host = true;
+                    _turnUntil = 0f;
+                    _face = there;
+                    duration = Random.Range(15f, 40f) * (0.6f + (t.Sociability + other.Me.Sociability) / 2f);
+                    break;
+                }
                 default:
                     return false;
             }
             if (go.HasValue && !_nav.SetTarget(go.Value)) go = null;   // (no way there: where he is)
             // what he carries falls where he stands; his job is let go
-            if (_job.Carrying) _job.Drop(); else _job.Abandon();
+            if (_job.Carrying) { _job.Drop(); _ai.Say(CoglingVoice.Line.Oops); } else _job.Abandon();
             Doing = what;
             _until = duration;   // (counted from when he starts: Step.Doing)
             if (go.HasValue) _step = Step.Going;
@@ -196,20 +239,46 @@ namespace Cogling
                 }
                 case Step.Facing:
                     _ai.Stop();
+                    if (Doing == Activity.Chat)
+                    {
+                        if (!PartnerHere) { End(); return false; }
+                        _face = _partner._ai.transform.position;
+                    }
                     _ai.Face(_face);
                     if (Time.time < _stepUntil) return true;
+                    if (Doing == Activity.Chat && _partner._step < Step.Facing)
+                    {
+                        // (waiting for the other one to get there; too long, and the chat's off)
+                        if (Time.time > _stepUntil + 15f) { _ai.Log("the other one never came"); End(); return false; }
+                        return true;
+                    }
                     _step = Step.Doing;
                     _until += Time.time;
-                    Write(Doing);
+                    if (Doing == Activity.Chat)
+                    {
+                        Write(PoseListen);
+                        WriteLook(_partner._ai.transform.position);
+                    }
+                    else Write(Doing == Activity.Dance ? _dancePose : (int)Doing);
+                    _nextCheer = Time.time + Random.Range(2f, 5f);
                     return true;
                 case Step.Doing:
                     _ai.Stop();
+                    if (Doing == Activity.Chat)
+                    {
+                        if (!PartnerHere) { End(); return false; }
+                        _face = _partner._ai.transform.position;
+                        if (_host && Time.time >= _turnUntil) NextTurn();
+                    }
                     if (Doing != Activity.Sit) _ai.Face(_face);   // (seated, he stays as he sat)
+                    if (Doing == Activity.Dance && Time.time >= _nextCheer) { _nextCheer = Time.time + Random.Range(3f, 7f); _ai.Say(CoglingVoice.Line.Excited); }
+                    // (in a chat, the one who asked ends it; the other goes on till then, or a minute and a half at most)
+                    if (Doing == Activity.Chat && !_host && Time.time < _until + 90f) return true;
                     if (Time.time < _until && Plugin.Slacking.Value) return true;
                     if (Doing == Activity.Sit)
                     {
                         // standing up takes a while: he's still on his break till he's up
-                        Write(Activity.None);
+                        Write(0);
                         _step = Step.StandingUp;
                         _stepUntil = Time.time + CoglingBody.StandUpSeconds;
                         return true;
@@ -235,15 +304,90 @@ namespace Cogling
         /// <summary>The break ends now (danger, or another one starts): he's up at once.</summary>
         internal void Stop()
         {
-            if (Doing != Activity.None) Write(Activity.None);
+            if (Doing != Activity.None) Write(0);
             Doing = Activity.None;
+            _partner = null;
+            _host = false;
         }
 
-        private void Write(Activity what)
+        private void Write(int what)
         {
             ZDO zdo = Zdo;
             if (zdo == null || !Owner) return;
-            if (zdo.GetInt(SlackKey) != (int)what) zdo.Set(SlackKey, (int)what);
+            if (zdo.GetInt(SlackKey) != what) zdo.Set(SlackKey, what);
+        }
+
+        private void WriteLook(Vector3 at)
+        {
+            ZDO zdo = Zdo;
+            if (zdo != null && Owner) zdo.Set(LookKey, at);
+        }
+
+        // ---- chatting
+
+        /// <summary>The other one is still in this chat with him.</summary>
+        private bool PartnerHere => _partner != null && _partner._ai != null && _partner.Doing == Activity.Chat && _partner._partner == this;
+
+        /// <summary>
+        /// Another Cogling near (this game runs him, in the area, not on a break, not frightened or wary) to chat with, the nearest; with
+        /// ask, he may say no (yes more likely the more sociable he is, less likely when busy).
+        /// </summary>
+        private CoglingSlack Partner(List<Antenna> network, bool ask)
+        {
+            Vector3 here = _ai.transform.position;
+            CoglingSlack best = null;
+            float bestDistance = 30f;
+            foreach (CoglingSlack s in All)
+            {
+                if (s == this || s._ai == null || s.Doing != Activity.None || !s.Owner || !s._ai.CanChat) continue;
+                Vector3 p = s._ai.transform.position;
+                float d = Vector3.Distance(here, p);
+                if (d >= bestDistance || !Antenna.InArea(network, p)) continue;
+                best = s;
+                bestDistance = d;
+            }
+            if (best == null || !ask) return best;
+            float yes = 0.3f + best.Me.Sociability * 0.7f;
+            if (best._ai.IsWorking) yes *= 1f - best.Me.Diligence * 0.6f;
+            if (Random.value < yes) return best;
+            _ai.Log("asked another Cogling for a chat: no");
+            return null;
+        }
+
+        /// <summary>Asked for a chat by another (his brain has agreed): off to his side of the meeting spot.</summary>
+        internal bool Join(CoglingSlack host, Vector3 spot)
+        {
+            Stop();
+            if (_job.Carrying) _job.Drop(); else _job.Abandon();
+            Doing = Activity.Chat;
+            _partner = host;
+            _host = false;
+            _face = host._ai.transform.position;
+            _until = 0f;
+            if (_nav.SetTarget(spot)) _step = Step.Going;
+            else { _step = Step.Facing; _stepUntil = Time.time + 0.8f; }
+            _ai.Log($"off for a chat ({Me})");
+            return true;
+        }
+
+        /// <summary>Whose turn it is to talk (mostly the other's; the more sociable talks more), and which way.</summary>
+        private void NextTurn()
+        {
+            float lean = (Me.Sociability - _partner.Me.Sociability) * 0.3f;
+            bool hostTalks = _hostTalking ? Random.value < 0.3f + lean : Random.value < 0.8f + lean;
+            if (_turnUntil == 0f) hostTalks = true;   // (the one who asked starts)
+            _hostTalking = hostTalks;
+            int clip = Random.value < 0.5f ? PoseTalk : PoseTalk2;
+            Write(hostTalks ? clip : PoseListen);
+            _partner.Write(hostTalks ? PoseListen : clip);
+            // now and then the talker points, or the listener laughs
+            CoglingAI talker = hostTalks ? _ai : _partner._ai, listener = hostTalks ? _partner._ai : _ai;
+            float r = Random.value;
+            if (r < 0.15f) talker.Say(CoglingVoice.Line.Point);
+            else if (r < 0.35f) listener.Say(CoglingVoice.Line.Laugh);
+            WriteLook(_partner._ai.transform.position);
+            _partner.WriteLook(_ai.transform.position);
+            _turnUntil = Time.time + Random.Range(2.5f, 6f);
         }
 
         internal (string key, string a, string b) Describe()
@@ -256,11 +400,16 @@ namespace Cogling
                 case Activity.Bored: return ("cogling_task_slack_bored", "", "");
                 case Activity.Dance: return ("cogling_task_slack_dance", "", "");
                 case Activity.Sit: return ("cogling_task_slack_sit", "", "");
+                case Activity.Chat:
+                {
+                    string name = _partner?.Zdo?.GetString(CoglingTag.NameKey) ?? "";
+                    return string.IsNullOrEmpty(name) ? ("cogling_task_slack_chat_any", "", "") : ("cogling_task_slack_chat", name, "");
+                }
             }
             return ("cogling_task_resting", "", "");
         }
 
-        internal string Status() => $"slacking {Doing} ({_step}), {Me}";
+        internal string Status() => $"slacking {Doing} ({_step}{(_partner != null ? (_host ? ", asked a chat" : ", asked to chat") : "")}), {Me}";
 
         // ---- places
 
@@ -310,6 +459,6 @@ namespace Cogling
             return p;
         }
 
-        internal static void Forget() { }
+        internal static void Forget() => All.Clear();
     }
 }

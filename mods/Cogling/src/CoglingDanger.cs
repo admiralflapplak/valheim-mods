@@ -48,7 +48,7 @@ namespace Cogling
             float bestDistance = NoticeRange;
             foreach (Character c in Character.GetAllCharacters())
             {
-                if (c == null || c == me || c.IsDead() || !BaseAI.IsEnemy(me, c)) continue;
+                if (c == null || c == me || c.IsDead() || !BaseAI.IsEnemy(me, c) || Built(c)) continue;
                 float d = Vector3.Distance(c.transform.position, me.transform.position);
                 if (d < bestDistance) { best = c; bestDistance = d; }
             }
@@ -82,6 +82,7 @@ namespace Cogling
                     Wary = wary;
                     if (!afraid) _ai.SetMood(wary ? Carried.MoodWary : Carried.MoodCalm);
                     _ai.Log(wary ? $"keeping an eye on {_seen.m_name}" : "nothing to watch any more");
+                    if (wary) _ai.Say(CoglingVoice.Line.Nervous);
                 }
             }
             _ai.SetIcons(aware: Wary && !afraid, alerted: afraid);
@@ -90,6 +91,7 @@ namespace Cogling
                 Afraid = afraid;
                 _ai.SetMood(afraid ? Carried.MoodScared : Carried.MoodCalm);
                 _ai.Log(afraid ? $"frightened by {(_threat != null ? _threat.m_name : "something")}: running for cover" : "the danger has passed");
+                if (!afraid) _ai.Say(CoglingVoice.Line.Relieved);
                 _haveCover = false;
                 if (!afraid) { _ai.Running = false; return false; }
             }
@@ -126,7 +128,7 @@ namespace Cogling
             float bestDistance = WaryRange;
             foreach (Character c in Character.GetAllCharacters())
             {
-                if (c == null || c == me || c.IsDead() || !BaseAI.IsEnemy(me, c)) continue;
+                if (c == null || c == me || c.IsDead() || !BaseAI.IsEnemy(me, c) || Built(c)) continue;
                 float d = Vector3.Distance(c.transform.position, me.transform.position);
                 if (d >= bestDistance || !Sees(c, me.transform.position)) continue;
                 best = c;
@@ -182,5 +184,8 @@ namespace Cogling
             }
             return false;
         }
+
+        /// <summary>A creature that is also a built piece (T.W.I.G., training dummies): nothing to be afraid of.</summary>
+        internal static bool Built(Character c) => c.GetComponent<Piece>() != null;
     }
 }

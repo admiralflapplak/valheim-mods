@@ -78,7 +78,7 @@ namespace Cogling
         /// <summary>Greeted (on every player's game): his chirp and happy idle; his owner turns him toward the greeter.</summary>
         private void RPC_Greet(long sender, Vector3 from)
         {
-            GetComponentInChildren<CoglingBody>()?.Greet();
+            GetComponentInChildren<CoglingBody>()?.Greet();   // (his happy idle: the user liked it better than a wave)
             GetComponent<CoglingVoice>()?.Greet();
             if (_view.IsValid() && _view.IsOwner()) GetComponent<CoglingAI>()?.Greeted(from);
         }

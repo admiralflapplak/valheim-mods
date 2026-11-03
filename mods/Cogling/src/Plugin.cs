@@ -16,7 +16,7 @@ namespace Cogling
     {
         public const string Guid = "nick.Cogling";
         public const string Name = "Cogling";
-        public const string Version = "0.16.5";
+        public const string Version = "0.18.4";
 
         internal static BepInEx.Logging.ManualLogSource Log;
         internal static ServerSettings Synced;
@@ -36,7 +36,7 @@ namespace Cogling
         internal static ConfigEntry<float> DishTilt;
 
         // 4 - Voice (each player's own)
-        internal static ConfigEntry<float> VoicePitch, VoiceRobot, VoiceRing, VoiceCrunch, VoiceVolume, BabbleEvery;
+        internal static ConfigEntry<float> VoicePitch, VoiceRobot, VoiceRing, VoiceCrunch, VoiceVolume;
 
         // 9 - Testing (each player's own, for choosing the look)
         internal static ConfigEntry<ItemDrop.ItemData.AnimationState> Stance;
@@ -90,7 +90,6 @@ namespace Cogling
             VoiceRing = Config.Bind("4 - Voice", "Robot tone", 90f, new ConfigDescription("The robot effect's tone in Hz: low buzzes, high rings.", new AcceptableValueRange<float>(10f, 400f)));
             VoiceCrunch = Config.Bind("4 - Voice", "Crunch", 0.2f, new ConfigDescription("How crunchy and distorted his voice is.", new AcceptableValueRange<float>(0f, 1f)));
             VoiceVolume = Config.Bind("4 - Voice", "Volume", 1f, new ConfigDescription("How loud he is.", new AcceptableValueRange<float>(0f, 1f)));
-            BabbleEvery = Config.Bind("4 - Voice", "Babble every", 30f, new ConfigDescription("About how often he babbles, in seconds.", new AcceptableValueRange<float>(2f, 300f)));
             Animations = Config.Bind("9 - Testing", "Animation set", AnimationSet.Fuling,
                 "Whose animations the Cogling moves with (they must be humanoid ones; the log says which are). Changes every Cogling here at once.");
             Stance = Config.Bind("9 - Testing", "Stance", ItemDrop.ItemData.AnimationState.Unarmed,
@@ -171,9 +170,9 @@ namespace Cogling
                 "Eggs warm enough to hatch (near a fire, under a roof) are always left alone. Cold eggs: collected once they've stayed cold a while.");
             ColdEggWait = Synced.Bind("6 - Floor items", "Cold egg wait", 3f,
                 "Minutes an egg must stay cold before he collects it (time to move it somewhere warm).", new AcceptableValueRange<float>(0f, 60f));
-            ResortGroups = Synced.Bind("5 - Sorting", "Re-sort by groups", false,
+            ResortGroups = Synced.Bind("5 - Sorting", "Re-sort by groups", true,
                 "Besides gathering an item kept in several chests into the one with the most of it (always), move a lone stray (its only stack "
-                + "in a chest with nothing of its group) to the chest where its group lives. Off: he never moves your one-off stacks.");
+                + "in a chest with nothing of its group) to the chest where its group lives. Off: he never moves your one-off stacks (only gathers the same item together).");
             RepairBuildings = Synced.Bind("7 - Repairing", "Repair buildings", true,
                 "With nothing to fetch or tidy, he repairs damaged building pieces in his area (as the hammer does, free; only where you may build).");
             RepairBelow = Synced.Bind("7 - Repairing", "Repair below", 90f,

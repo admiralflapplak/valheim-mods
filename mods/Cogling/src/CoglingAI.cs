@@ -86,7 +86,7 @@ namespace Cogling
             }
             BaseOnDestroy?.Invoke(this, null);   // (the game's own clean-up, which this method hides)
             _job?.Abandon();                     // (what he carries stays saved on him: unloaded, he goes on later)
-            if (m_nview != null && m_nview.IsValid() && m_nview.IsOwner()) _slack?.Stop();
+            _slack?.Dispose();
             _nav?.CloseDoors(force: true);
             ZNetView view = GetComponent<ZNetView>();
             if (view != null && view.IsValid()) foreach (string rpc in Rpcs) view.Unregister(rpc);
@@ -122,6 +122,9 @@ namespace Cogling
                 _homeAfterFright = true;
                 return true;
             }
+
+            if (Time.time < _holdUntil) { StopMoving(); return true; }   // (a gesture: he stands still for it)
+            LookForPlayers();
 
             if (Time.time > _nextNetwork) { _network = Antenna.NetworkAt(transform.position); _nextNetwork = Time.time + 2f; }
             List<Antenna> network = _network;
@@ -188,7 +191,7 @@ namespace Cogling
                 case Mode.Resting:
                     StopMoving();
                     // nothing to do for a while at his antenna: he powers down (and boots up when there's work)
-                    if (PoweredUp && Time.time - _restingSince > Plugin.PowerDownAfter.Value) { SetAwake(false); Log("powering down"); }
+                    if (PoweredUp && Time.time - _restingSince > Plugin.PowerDownAfter.Value) { Say(CoglingVoice.Line.PowerDown); SetAwake(false); Log("powering down"); }
                     if (!PoweredUp) break;
                     if (Time.time > _nextStroll && Plugin.StrollEvery.Value > 0f)
                     {
@@ -256,6 +259,23 @@ namespace Cogling
             return true;
         }
 
+        // ---- chatting (CoglingSlack): asked by another Cogling
+
+        /// <summary>Free to be asked for a chat: not frightened or wary, not on a break or greeted, in his area.</summary>
+        internal bool CanChat => _danger != null && !_danger.Afraid && !_danger.Wary && _mode != Mode.Slacking && _mode != Mode.Returning && Time.time >= _greetUntil && !Plugin.Paused.Value;
+        internal bool IsWorking => _mode == Mode.Working;
+
+        /// <summary>Another Cogling asks for a chat (he has already said yes): what he was doing waits, and off he goes.</summary>
+        internal bool JoinChat(CoglingSlack host, Vector3 spot)
+        {
+            if (!CanChat) return false;
+            if (_mode == Mode.Working) _job.Abandon();
+            if (!_slack.Join(host, spot)) return false;
+            Wake();
+            _mode = Mode.Slacking;
+            return true;
+        }
+
         internal void GoHome()
         {
             Wake();
@@ -272,9 +292,9 @@ namespace Cogling
         {
             List<Antenna> network = Antenna.NetworkAt(transform.position);
             if (network.Count == 0) return false;
-            CoglingSlack.Activity a = what ?? (CoglingSlack.Activity)Random.Range(1, 6);
+            CoglingSlack.Activity a = what ?? (CoglingSlack.Activity)Random.Range(1, 7);
             if (_mode == Mode.Working) _job.Abandon();
-            if (!_slack.Start(a, network)) return false;
+            if (!_slack.Start(a, network, force: true)) return false;
             Wake();
             _mode = Mode.Slacking;
             return true;
@@ -328,6 +348,57 @@ namespace Cogling
 
         internal void Face(Vector3 point) => LookAt(point);
 
+        // ---- what he says (CoglingVoice: every player's game hears it) and the gesture it may come with
+
+        private readonly Dictionary<CoglingVoice.Line, float> _saidAt = new Dictionary<CoglingVoice.Line, float>();
+        private float _holdUntil, _lastSaid;
+
+        /// <summary>
+        /// A line, if he feels like it: how likely by the line (a chatty, sociable one says the small ones more often), never the same
+        /// one twice within a while, and small ones not right after another line. A gesture may come with it: he stands still for it.
+        /// </summary>
+        internal void Say(CoglingVoice.Line line)
+        {
+            if (m_nview == null || !m_nview.IsValid() || !m_nview.IsOwner() || !CoglingVoice.Specs.TryGetValue(line, out CoglingVoice.Spec spec)) return;
+            bool small = spec.Chance < 1f;
+            float gap = line == CoglingVoice.Line.Nervous || line == CoglingVoice.Line.Relieved ? 20f : line == CoglingVoice.Line.Hurt ? 1.5f : small ? 4f : 0.5f;
+            if (_saidAt.TryGetValue(line, out float at) && Time.time - at < gap) return;
+            if (small && Time.time - _lastSaid < 1.5f) return;
+            float social = _slack != null ? _slack.Me.Sociability : 0.5f;
+            if (Random.value >= (small ? Mathf.Clamp01(spec.Chance * (0.6f + social * 0.9f)) : spec.Chance)) return;
+            _saidAt[line] = Time.time;
+            _lastSaid = Time.time;
+            int gesture = -1;
+            if (spec.Gestures != null && Random.value < spec.GestureChance && (_danger == null || !_danger.Afraid) && (_slack == null || !_slack.Seated))
+            {
+                string name = spec.Gestures[Random.Range(0, spec.Gestures.Length)];
+                gesture = System.Array.IndexOf(CoglingVoice.Gestures, name);
+                if (gesture >= 0 && line != CoglingVoice.Line.Point) _holdUntil = Time.time + Mathf.Min(3f, CoglingBody.GameClipLength(name));
+            }
+            m_nview.InvokeRPC(ZNetView.Everybody, CoglingVoice.SayRpc, (int)line, gesture);
+        }
+
+        // ---- a player coming home: he waves (once a player has been away a while)
+
+        private float _playerLastNear = -1f, _nextPlayerLook;
+
+        private void LookForPlayers()
+        {
+            if (Time.time < _nextPlayerLook) return;
+            _nextPlayerLook = Time.time + 1f;
+            if (_playerLastNear < 0f) _playerLastNear = Time.time;   // (just loaded: no welcome for whoever is there already)
+            if (Player.GetClosestPlayer(transform.position, 30f) == null) return;
+            bool away = Time.time - _playerLastNear > 90f;
+            _playerLastNear = Time.time;
+            Player close = Player.GetClosestPlayer(transform.position, 12f);
+            if (away && close != null && PoweredUp && (_slack == null || !_slack.Seated) && (_danger == null || (!_danger.Afraid && !_danger.Wary)))
+            {
+                LookAt(close.transform.position);
+                Say(CoglingVoice.Line.Welcome);
+            }
+            else if (away && close == null) _playerLastNear = Time.time - 91f;   // (seen far off: still to be welcomed when he comes close)
+        }
+
         // ---- powered down / up (saved on him, so every player's game shows it: his body plays it, CoglingBody)
 
         private float _restingSince, _bootUntil;
@@ -345,6 +416,7 @@ namespace Cogling
             SetAwake(true);
             _bootUntil = Time.time + 1.8f;
             Log("booting up");
+            Say(CoglingVoice.Line.BootUp);
         }
 
         // ---- BaseAI's helpers for the navigator (protected there)
@@ -406,7 +478,7 @@ namespace Cogling
         protected override void OnDamaged(float damage, Character attacker)
         {
             base.OnDamaged(damage, attacker);
-            if (this != null) _danger?.Hurt(attacker);
+            if (this != null) { _danger?.Hurt(attacker); Say(CoglingVoice.Line.Hurt); }
         }
         internal void Stop() => StopMoving();
         internal Character Body => m_character;

@@ -30,6 +30,8 @@ namespace Cogling
         private void Start()
         {
             if (SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null || !CoglingModel.Load()) return;
+            try { CoglingVoice.Death(transform.position); }   // (his last words, winding down)
+            catch (System.Exception e) { Plugin.Log.LogWarning("Cogling last words: " + e.Message); }
             try { Fall(); }
             catch (System.Exception e) { Plugin.Log.LogWarning("Cogling collapse: " + e.Message); }
         }

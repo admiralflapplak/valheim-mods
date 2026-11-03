@@ -17,6 +17,7 @@ The feel: peaceful, not fast. A little helper with a personality, pottering abou
   chest already holding the most of it (Quick Stack Store matches by the item's name, `m_shared.m_name`, and skips empty chests; Smart
   Containers adds item groups by name patterns: a later idea). Never: graves, carts/ships, chests a player has open, chests the ward or
   a lock keeps from the antenna's owner (ContainerAccess template; valheim-pitfalls on chests: the owner gives, no duplication).
+  "Re-sort by groups" (a lone stray to the chest where its group lives) is on by default since 0.18.3: the user tried it and liked it.
 - **Floor items**: picks up items lying in the working area and carries them to a chest holding that item (none: leaves them, and
   remembers that for a while). Never touched (agreed with the user 2026-11-01):
   - **eggs that are warming** (EggGrow.CanGrow, private: near a fire and under a roof). A **cold** egg is remembered from when he first
@@ -161,7 +162,20 @@ The feel: peaceful, not fast. A little helper with a personality, pottering abou
   change how often and what he does. The user wants it emergent ("oh, Frank is lazy"), never shown. `cogling status` shows it (testing).
 - Clips: reference/RobotAnime (Mixamo), converted to assets/*.anim. The sit-down clip ("falling down") came from another rig: no
   right arm (his left arm is mirrored onto it) and it goes on to the floor, so only its first part is used (Sit: down clip until).
-- Next: chatting between two Coglings (talking, talking2), joining a dance, reacting to the player; maybe the game's own emotes
+- Chatting (0.17): a sociable one asks the nearest free Cogling this game runs (in the area, not on a break, not frightened or
+  wary); he says yes more often the more sociable he is, less when busy (then drops what he carries). They meet halfway ~1.3 m apart
+  and face each other; the one who asked decides turns (2.5-6 s; the more sociable talks more): the talker plays talking/talking2
+  and babbles line after line, the listener idles and looks at his face. Either one in danger ends it for both. Only Coglings run by
+  the same game chat (a chat across two players' games would need an RPC: later, if wanted).
+- Voice in context (0.18, the user's wish): no babble on a timer any more. He speaks when something happens (CoglingAI.Say, an RPC
+  so every game hears it): pickup chirp, stored, tidied, grumble (no room, can't reach), repaired, nervous (wary), relieved, hurt,
+  power down (sliding down), boot up (sliding up), welcome (a player home after 90 s away), oops (drops his load for a break),
+  excited (dancing), laugh/point in a chat; his last words when he breaks (CoglingCollapse). Small lines more often from a sociable one.
+- Gestures: the player's own emotes played on his skeleton (a humanoid clip on a hidden copy, through a hand-evaluated animation
+  graph): only shrug (grumble) and laugh / point (chat). The user found the others too much and had them taken out: a wave
+  when greeted (the happy idle is better) or when a player comes home, thumbs up / cheer / flex after a repair or at a chest, no no no;
+  dances: his robot dance, the players' Headbang and Dance. `cogling emotes` lists the player's animations.
+- Next: joining a dance, reacting to the player building; maybe the game's own emotes
   (the Fuling Heckler's stagger-swap trick works on his hidden Fuling body).
 
 ## Open questions

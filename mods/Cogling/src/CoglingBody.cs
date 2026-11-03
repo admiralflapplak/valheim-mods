@@ -372,6 +372,7 @@ namespace Cogling
             }
 
             Sitting(dt);
+            PlayGesture(idle);
 
             float w = Mathf.SmoothStep(0f, 1f, _idleWeight);
             if (w > 0f)
@@ -443,6 +444,40 @@ namespace Cogling
         }
 
         internal static float ClipLength(string name) => CoglingClip.Get(name)?.Length ?? 10f;
+        internal static float GameClipLength(string name) => ClipPlayer.GameClips().FirstOrDefault(c => c.name == name)?.length ?? 2f;
+
+        /// <summary>One of the game's player animations, made the first time it's needed.</summary>
+        private ClipPlayer GameClip(string name)
+        {
+            string key = "game:" + name;
+            if (_clips.TryGetValue(key, out ClipPlayer p)) return p;
+            return _clips[key] = _avatar != null ? ClipPlayer.Game(name, _avatar) : null;
+        }
+
+        // ---- a gesture (one of the player's emotes, once through, over his idle while he stands; CoglingVoice's RPC starts it)
+
+        private ClipPlayer _gesture;
+        private float _gestureStart;
+
+        internal void Gesture(string name)
+        {
+            ClipPlayer g = GameClip(name);
+            if (g == null) return;
+            _gesture = g;
+            _gestureStart = Time.time;
+        }
+
+        private void PlayGesture(bool idle)
+        {
+            if (_gesture == null) return;
+            float t = Time.time - _gestureStart;
+            if (t >= _gesture.Length || _sitStart >= 0f) { _gesture = null; return; }
+            _gesture.Pose(t, ref _otherPose);
+            if (_otherPose.muscles == null) return;
+            float w = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / 0.25f)) * Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((_gesture.Length - t) / 0.4f));
+            if (!idle) w *= 0.5f;   // (walking: only half of it, over his walk)
+            Mix(ref _idlePose, _otherPose, w);
+        }
         internal static float StandUpSeconds => ClipLength("standing_up") / Mathf.Max(0.1f, Plugin.SitStandSpeed.Value);
 
         /// <summary>The clip a break plays standing (in place of his idle), or null.</summary>
@@ -454,6 +489,10 @@ namespace Cogling
                 case CoglingSlack.Activity.Bored: return Clip("bored");
                 case CoglingSlack.Activity.Dance: return Clip("robot_dance");
             }
+            if (_slack == CoglingSlack.PoseHeadbang) return GameClip("Headbang");
+            if (_slack == CoglingSlack.PoseVikingDance) return GameClip("Dance");
+            if (_slack == CoglingSlack.PoseTalk) return Clip("talking");
+            if (_slack == CoglingSlack.PoseTalk2) return Clip("talking2");
             return null;
         }
 
@@ -547,13 +586,17 @@ namespace Cogling
         // ---- where he looks (Good Tidings' Dagny: after the pose, his head turned toward a point, his upper spine a little)
 
         private Transform _head;
+        private Vector3 _chatWith;
+        private bool Chatting => _slack == CoglingSlack.PoseTalk || _slack == CoglingSlack.PoseTalk2 || _slack == CoglingSlack.PoseListen;
         private float _lookWeight;
         private Vector3 _lookPoint, _lookVel;
 
         /// <summary>Where he looks now, or null (straight on): staring into the distance, his gaze drifts slowly.</summary>
         private Vector3? LookTarget()
         {
-            if (_slack != (int)CoglingSlack.Activity.Stare || _head == null) return null;
+            if (_head == null) return null;
+            if (Chatting) return _chatWith + Vector3.up * Plugin.Height.Value * 0.8f;   // (at the other one's face)
+            if (_slack != (int)CoglingSlack.Activity.Stare) return null;
             float t = Time.time - _slackStart;
             return _head.position + transform.forward * 10f + transform.right * (Mathf.Sin(t * 0.21f) * 2.5f + Mathf.Sin(t * 0.07f) * 1.5f)
                    + Vector3.up * (1.2f + Mathf.Sin(t * 0.13f) * 1.2f);
@@ -771,6 +814,7 @@ namespace Cogling
                     _act = zdo.GetInt(Carried.ActKey);
                     int slack = zdo.GetInt(CoglingSlack.SlackKey);
                     if (slack != _slack) SlackChanged(slack);
+                    if (Chatting) _chatWith = zdo.GetVec3(CoglingSlack.LookKey, transform.position + transform.forward * 3f);
                     SetAsleep(!zdo.GetBool(Carried.AwakeKey));
                     int mood = zdo.GetInt(Carried.MoodKey);
                     if (mood != _mood)

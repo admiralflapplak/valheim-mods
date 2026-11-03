@@ -217,6 +217,7 @@ namespace Cogling
                         // the pathfinder's map); out of reach, he leaves it a good while
                         if (Utils.DistanceXZ(_ai.transform.position, _item.transform.position) < 1.6f) { StartPicking(); return State.Working; }
                         FloorItems.NoHome(_item, 300f);
+                        _ai.Say(CoglingVoice.Line.Grumble);
                         return Finish("can't reach the item");
                     }
                     if (r == CoglingNavigator.Result.Arrived && Utils.DistanceXZ(_ai.transform.position, _item.transform.position) > 1.5f) _nav.SetTarget(_item.transform.position);   // (it rolled)
@@ -241,6 +242,7 @@ namespace Cogling
                     _item = null;
                     Act(Carried.ActNone);
                     _ai.Log($"picked up {item.m_stack} {Sorting.Short(item)}");
+                    _ai.Say(CoglingVoice.Line.Pickup);
                     return ToAChest(item) ? State.Working : State.Done;
                 }
                 case Phase.ToChest:
@@ -266,6 +268,7 @@ namespace Cogling
                     inv.AddItem(item);          // (the chest is his now: the game saves it on change)
                     Carried.Write(Zdo, null);
                     _ai.Log($"put {count} {Sorting.Short(item)} in the chest at {_chest.transform.position:F1}");
+                    _ai.Say(_tidyKey != null ? CoglingVoice.Line.Tidied : CoglingVoice.Line.Stored);
                     return Close();
                 }
                 case Phase.Closing:
@@ -289,6 +292,7 @@ namespace Cogling
                     if (r == CoglingNavigator.Result.GaveUp || r == CoglingNavigator.Result.Arrived)
                     {
                         Repairs.SkipFor(_piece, 300f);   // (out of his reach: up on a roof, behind a wall)
+                        _ai.Say(CoglingVoice.Line.Grumble);
                         return Finish("can't reach the piece");
                     }
                     return State.Working;
@@ -304,6 +308,7 @@ namespace Cogling
                         Piece p = _piece.GetComponent<Piece>();
                         p?.m_placeEffect.Create(_piece.transform.position, _piece.transform.rotation);
                         _ai.Log($"repaired {Localization.instance.Localize(p?.m_name ?? "")}");
+                        _ai.Say(CoglingVoice.Line.Repaired);
                     }
                     Release();   // (before forgetting the piece: its claim goes with it)
                     _piece = null;
@@ -333,6 +338,7 @@ namespace Cogling
                         Carried.Write(Zdo, item);   // (mended in his hands: saved so)
                         _station?.m_repairItemDoneEffects.Create(_station.transform.position, Quaternion.identity);
                         _ai.Log($"mended {Localization.instance.Localize(item.m_shared.m_name)}");
+                        _ai.Say(CoglingVoice.Line.Repaired);
                     }
                     _gear = false;
                     // back to the chest it came from (if it still has room), else wherever the rulebook says
@@ -547,6 +553,7 @@ namespace Cogling
             Act(Carried.ActNone);
             if (dropped != null) FloorItems.NoHome(dropped);
             _ai.Log($"no chest has room: put {item.m_stack} {Sorting.Short(item)} down");
+            _ai.Say(CoglingVoice.Line.Grumble);
         }
 
         /// <summary>He's going (taken down, broken): what he carries falls where he stands, and a lid he opened closes.</summary>

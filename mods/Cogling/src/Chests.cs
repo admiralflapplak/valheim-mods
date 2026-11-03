@@ -58,7 +58,7 @@ namespace Cogling
         {
             Character me = Player.m_localPlayer;   // (the players' side, as he is)
             return Character.GetAllCharacters().Where(c => c != null && !c.IsDead() && !c.IsPlayer() && c.GetFaction() != Character.Faction.AnimalsVeg
-                                                           && !CoglingStance.IsCogling(c) && (me != null ? BaseAI.IsEnemy(me, c) : c.GetFaction() != Character.Faction.Players)).ToList();
+                                                           && !CoglingStance.IsCogling(c) && !CoglingDanger.Built(c) && (me != null ? BaseAI.IsEnemy(me, c) : c.GetFaction() != Character.Faction.Players)).ToList();
         }
 
         /// <summary>
