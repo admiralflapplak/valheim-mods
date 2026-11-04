@@ -81,8 +81,8 @@ them, and every player sees the same: what they carry, their breaks, their chats
 
 ## Credits
 
-<!-- TODO (the user): where the robot model and each animation pack came from, and their licences:
-     the robot (Meshy, rigged with Mixamo), the Mixamo animations, Rig_Medium (KayKit?), the Social pack (HumanM@...). -->
+The robot was made with Meshy and rigged with Mixamo. Its animations are from Mixamo and from animation packs licensed for use in
+projects like this one.
 
 Its voice is the Dvergr's, from the game, made robotic.
 
