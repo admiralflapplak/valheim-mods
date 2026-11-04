@@ -6,7 +6,7 @@ schemaVersion = "0.0.1"
 [package]
 namespace = "Flap"
 name = "Cogling"
-versionNumber = "0.36.2"
+versionNumber = "1.0.0"
 description = "Little robot helpers (worker NPCs) that tidy your base: pick up items and auto sort them into chests, repair buildings and gear, refuel fires, keep smelters and kilns going. Each has a personality: chats, dances, naps, fishing."
 websiteUrl = "https://github.com/admiralflapplak/valheim-mods"
 containsNsfwContent = false
@@ -23,6 +23,10 @@ outdir = "./thunderstore-build"
 source = "./bin/Release/net48/Cogling.dll"
 target = "plugins/Cogling.dll"
 
+
+[[build.copy]]
+source = "./CHANGELOG.md"
+target = "CHANGELOG.md"
 [publish]
 repository = "https://thunderstore.io"
 communities = [ "valheim" ]
