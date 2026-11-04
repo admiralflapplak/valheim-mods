@@ -116,8 +116,9 @@ namespace Cogling
             if (idle != null) _idle = new ClipPlayer(idle, _avatar);
             if (happy != null) _happy = new ClipPlayer(happy, _avatar);
             if (sad != null) _sad = new ClipPlayer(sad, _avatar);
-            // as he was saved: powered down (a new Cogling starts so, and boots up) or awake
-            _asleep = _view == null || !_view.IsValid() || !_view.GetZDO().GetBool(Carried.AwakeKey);
+            // as he was saved: powered down (a new Cogling starts so, and boots up) or awake; a copy with nothing saved (the build
+            // ghost, pictures: the Thunderstore icon) awake, his eyes lit
+            _asleep = _view != null && _view.IsValid() && !_view.GetZDO().GetBool(Carried.AwakeKey);
             _sleepWeight = _asleep ? 1f : 0f;
             _eyeLevel = _asleep ? 0f : 1f;
             ShowEyes();

@@ -125,7 +125,9 @@ namespace Cogling
             return val - sat * 0.5f;
         }
 
-        private static bool IsEye(Color32 c) => c.g > c.r + 30;
+        // (and the eye glass's dark green shading: barely greener than red, but greener than both red and blue; the wood around is
+        // brown, redder than green. Without it, dark edges of the eyes stayed unlit)
+        private static bool IsEye(Color32 c) => c.g > c.r + 30 || (c.g >= c.r + 8 && c.g >= c.b + 8);
 
         private static bool IsCopper(Color32[] px, int w, int h, Vector2 a, Vector2 b, Vector2 c)
         {
@@ -160,7 +162,7 @@ namespace Cogling
                 {
                     // the eyes in white for the glow (its colour is the Eye colour setting), and dark glass in the texture itself, so
                     // the painted green doesn't show under another colour
-                    byte bright = (byte)Mathf.Clamp(c.g + 40, 0, 255);
+                    byte bright = (byte)Mathf.Clamp(Mathf.Max(c.g + 40, 190), 0, 255);   // (the whole eye lit, its dark shading too)
                     glow[i] = new Color32(bright, bright, bright, 255);
                     byte dark = (byte)(c.g / 5);
                     _darkEyes = _darkEyes ?? (Color32[])px.Clone();
