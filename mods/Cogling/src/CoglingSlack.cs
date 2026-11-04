@@ -137,6 +137,9 @@ namespace Cogling
         // ---- deciding
 
         /// <summary>Every few seconds a chance of a break (more for a lazy one, less while working). True: he's on a break now.</summary>
+        /// <summary>Never power down: nothing to do, so a break now (whichever his personality picks). False if none could be had.</summary>
+        internal bool Idle(List<Antenna> network) => Plugin.Slacking.Value && Start(Choose(network), network);
+
         internal bool Roll(bool working, List<Antenna> network)
         {
             if (Time.time < _nextRoll) return false;

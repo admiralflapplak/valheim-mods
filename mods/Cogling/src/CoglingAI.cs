@@ -190,6 +190,17 @@ namespace Cogling
                     break;
                 case Mode.Resting:
                     StopMoving();
+                    if (Plugin.NeverPowerDown.Value)
+                    {
+                        // (Never power down: always up, and with nothing to do, after a moment, a break)
+                        if (!PoweredUp) { Wake(); break; }
+                        if (Time.time >= _bootUntil && Time.time - _restingSince > 6f)
+                        {
+                            if (_slack.Idle(network)) { _mode = Mode.Slacking; break; }
+                            _restingSince = Time.time;   // (none to be had now: again in a moment)
+                        }
+                        break;
+                    }
                     // nothing to do for a while at his antenna: he powers down (and boots up when there's work)
                     if (PoweredUp && Time.time - _restingSince > Plugin.PowerDownAfter.Value) { Say(CoglingVoice.Line.PowerDown); SetAwake(false); Log("powering down"); }
                     if (!PoweredUp) break;

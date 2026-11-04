@@ -71,7 +71,7 @@ namespace Cogling
                 List<Container> chests = Chests.Usable(net);
                 Tidy.Move move = Tidy.Next(chests, p.transform.position);
                 string line = move == null
-                    ? $"Nothing to tidy among the {chests.Count} chest(s) he may use (re-sort by groups {(Plugin.ResortGroups.Value ? "on" : "off")}): no item split across chests that could be gathered (a full chest can't take more)."
+                    ? $"Nothing to tidy among the {chests.Count} chest(s) it may use (re-sort by groups {(Plugin.ResortGroups.Value ? "on" : "off")}): no item split across chests that could be gathered (a full chest can't take more)."
                     : $"Next: {move.Name} from the chest at {move.From.transform.position:F1} to the chest at {move.To.transform.position:F1} ({move.Why}).";
                 t.AddString(line);
                 Plugin.Log.LogInfo("Cogling tidy: " + line);
@@ -94,13 +94,13 @@ namespace Cogling
                 // (testing: he breaks down as if wrecked, and the antenna rebuilds him in a few seconds)
                 float seconds = 10f;
                 if (a.Length > 2) float.TryParse(a[2], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out seconds);
-                if (Antenna.NetworkAt(cog.transform.position).Count == 0) { t.AddString("He's outside any antenna's area: nothing would rebuild him."); return; }
+                if (Antenna.NetworkAt(cog.transform.position).Count == 0) { t.AddString("It's outside any antenna's area: nothing would rebuild it."); return; }
                 Character body = cog.GetComponent<Character>();
                 Rebuilds.QuickSeconds = Mathf.Max(1f, seconds);
                 var blow = new HitData { m_point = body.GetCenterPoint(), m_dir = -body.transform.forward };
                 blow.m_damage.m_blunt = body.GetMaxHealth() * 10f;
                 body.Damage(blow);
-                t.AddString($"Breaking him down: the antenna rebuilds him in {Rebuilds.QuickSeconds:F0} s (it checks every 5 s).");
+                t.AddString($"Breaking it down: the antenna rebuilds it in {Rebuilds.QuickSeconds:F0} s (it checks every 5 s).");
                 return;
             }
             if (sub == "slack")
@@ -109,8 +109,8 @@ namespace Cogling
                 CoglingSlack.Activity? what = w == "stare" ? CoglingSlack.Activity.Stare : w == "look" ? CoglingSlack.Activity.LookAround
                     : w == "bored" ? CoglingSlack.Activity.Bored : w == "dance" ? CoglingSlack.Activity.Dance : w == "sit" ? CoglingSlack.Activity.Sit : w == "chair" ? CoglingSlack.Activity.Chair : w == "watch" ? CoglingSlack.Activity.Watch : w == "chat" ? CoglingSlack.Activity.Chat : (CoglingSlack.Activity?)null;
                 bool took = cog.SlackNow(what);
-                if (!took && what == CoglingSlack.Activity.Chair) { t.AddString($"No chair for him: {CoglingSlack.ChairWhy}."); return; }
-                t.AddString(took ? $"Taking a break{(what.HasValue ? $" ({what})" : "")}." : "He can't take that break here (a chat needs another Cogling near, free; a chair, a free chair in his area; watching, you near).");
+                if (!took && what == CoglingSlack.Activity.Chair) { t.AddString($"No chair for it: {CoglingSlack.ChairWhy}."); return; }
+                t.AddString(took ? $"Taking a break{(what.HasValue ? $" ({what})" : "")}." : "It can't take that break here (a chat needs another Cogling near, free; a chair, a free chair in its area; watching, you near).");
                 return;
             }
             if (a.Length >= 5 && float.TryParse(a[2], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float x)
@@ -118,7 +118,7 @@ namespace Cogling
                 && float.TryParse(a[4], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float z))
             {
                 var at = new Vector3(x, y, z);
-                t.AddString(cog.SendTo(at) ? $"Going to {at:F1}." : $"He finds no way to {at:F1}.");
+                t.AddString(cog.SendTo(at) ? $"Going to {at:F1}." : $"It finds no way to {at:F1}.");
                 return;
             }
             Transform cam = GameCamera.instance?.transform;
@@ -127,7 +127,7 @@ namespace Cogling
                 t.AddString("Look at a spot on the ground or a floor.");
                 return;
             }
-            t.AddString(cog.SendTo(hit.point) ? $"Going to {hit.point:F1}." : $"He finds no way to {hit.point:F1}.");
+            t.AddString(cog.SendTo(hit.point) ? $"Going to {hit.point:F1}." : $"It finds no way to {hit.point:F1}.");
         }
     }
 }
