@@ -20,3 +20,6 @@ thunderstore-build/
 # Files that hold this computer's paths, and other authors' work kept for reference
 CLAUDE.md
 reference/
+
+# icon drafts (make_icon.py drafts)
+mods/*/thunderstore/drafts/
