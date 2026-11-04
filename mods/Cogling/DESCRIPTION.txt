@@ -1,0 +1,1 @@
+Little robot helpers (worker NPCs) that tidy your base: pick up items and auto sort them into chests, repair buildings and gear, refuel fires, keep smelters and kilns going. Each has a personality: chats, dances, naps, fishing.

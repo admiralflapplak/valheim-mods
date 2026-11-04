@@ -48,16 +48,16 @@ namespace Cogling
             GroupSettings.Clear();
             foreach (var (name, items) in Defaults)
             {
-                ConfigEntry<string> entry = config.Bind("5 - Sorting", name, items,
+                ConfigEntry<string> entry = config.Bind("4 - Sorting", name, items,
                     "A group: items kept together. When no chest holds an item yet, he puts it with others of its group. Item prefab names or "
                     + "short names (copperore), separated by commas; empty: no such group.");
                 entry.SettingChanged += (s, e) => _groups = null;
                 GroupSettings[name] = entry;
             }
-            MoreGroups = config.Bind("5 - Sorting", "More groups", "",
+            MoreGroups = config.Bind("4 - Sorting", "More groups", "",
                 "Groups of your own, like: Fish = Fish1, Fish2, Fish3 | Potions = MeadHealthMinor, MeadStaminaMinor (groups separated by |).");
             MoreGroups.SettingChanged += (s, e) => _groups = null;
-            CopySmartContainers = config.Bind("5 - Sorting", "Copy groups from Smart Containers", false,
+            CopySmartContainers = config.Bind("4 - Sorting", "Copy groups from Smart Containers", false,
                 "Switch on to copy Smart Containers' item groups into these settings once (it switches itself off). Nothing of it is needed after.");
             CopySmartContainers.SettingChanged += (s, e) => { if (CopySmartContainers.Value) CopyFromSmartContainers(); };
             _groups = null;

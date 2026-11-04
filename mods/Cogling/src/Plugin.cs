@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using BepInEx;
 using BepInEx.Configuration;
 using HarmonyLib;
@@ -8,6 +10,10 @@ using ServerSettings = HeaveHo.Shared.ServerSettings;   // (mods/Shared/ServerSe
 // the mod can be reloaded in a world
 [assembly: System.Reflection.AssemblyMetadata("ClaudeTools.Reload", "world")]
 
+// (Thunderstore's rule: say AI helped make it, in the DLL too)
+[assembly: System.Reflection.AssemblyMetadata("AI_Assisted_Creation", "This assembly was partially or fully created with the assistance of Generative AI.")]
+[assembly: System.Reflection.AssemblyMetadata("AI_Model_Vendor", "Anthropic")]
+
 namespace Cogling
 {
     // publish.ps1 reads Guid, Name and Version from these three constants, so keep them in this exact form.
@@ -16,7 +22,7 @@ namespace Cogling
     {
         public const string Guid = "nick.Cogling";
         public const string Name = "Cogling";
-        public const string Version = "0.35.6";
+        public const string Version = "0.36.1";
 
         internal static BepInEx.Logging.ManualLogSource Log;
         internal static ServerSettings Synced;
@@ -84,6 +90,41 @@ namespace Cogling
         internal static readonly Fixed<bool> Paused = new Fixed<bool>(false);   // Pause Coglings
         internal static readonly Fixed<bool> LogAI = new Fixed<bool>(false);   // Log what it does
 
+        /// <summary>
+        /// The sections were put in a better order (0.36): a value still under its old section (an older config) is moved to the same
+        /// setting in its new section, so nobody's settings go back to the defaults. Old section, and where its settings went.
+        /// </summary>
+        private static readonly Dictionary<string, string[]> OldSections = new Dictionary<string, string[]>
+        {
+            { "1 - Building", new[] { "1 - Cogling" } },
+            { "3 - Looks", new[] { "7 - Cogling looks", "8 - Antenna looks" } },
+            { "4 - Voice", new[] { "9 - Voice" } },
+            { "5 - Sorting", new[] { "4 - Sorting" } },
+            { "6 - Floor items", new[] { "3 - Floor items" } },
+            { "7 - Repairing", new[] { "5 - Repairs and tending" } },
+            { "8 - Slacking off", new[] { "6 - Slacking off" } },
+            { "9 - Tending", new[] { "5 - Repairs and tending" } },
+        };
+
+        private void MoveOldSettings()
+        {
+            var orphans = AccessTools.Property(typeof(ConfigFile), "OrphanedEntries")?.GetValue(Config) as Dictionary<ConfigDefinition, string>;
+            if (orphans == null) return;
+            int moved = 0;
+            foreach (ConfigDefinition old in orphans.Keys.ToList())
+            {
+                if (!OldSections.TryGetValue(old.Section, out string[] to)) continue;
+                ConfigDefinition now = Config.Keys.FirstOrDefault(d => d.Key == old.Key && to.Contains(d.Section));
+                if (now == null) continue;
+                // (only into one still at its default: a value set in the new place already wins)
+                ConfigEntryBase entry = Config[now];
+                if (Equals(entry.BoxedValue, entry.DefaultValue)) entry.SetSerializedValue(orphans[old]);
+                orphans.Remove(old);
+                moved++;
+            }
+            if (moved > 0) { Config.Save(); Log.LogInfo($"Moved {moved} setting(s) to their new sections"); }
+        }
+
         internal static ConfigEntry<float> Height;
         internal static ConfigEntry<float> WalkSpeed, RunSpeed, RebuildMinutes;
         internal static ConfigEntry<int> CoglingsPerAntenna;
@@ -126,11 +167,11 @@ namespace Cogling
             Synced = new ServerSettings(Guid, Config, Logger);
 
             Config.SaveOnConfigSet = false;
-            Cost = Synced.Bind("1 - Building", "Cost", "Copper:10, BronzeNails:10, FineWood:5, Ectoplasm:5",
+            Cost = Synced.Bind("1 - Cogling", "Cost", "Copper:10, BronzeNails:10, FineWood:5, Ectoplasm:5",
                 "What a Cogling costs to build (all of it back when it's taken down with the hammer). " + Costs.Help);
-            Station = Synced.Bind("1 - Building", "Station", "piece_workbench",
+            Station = Synced.Bind("1 - Cogling", "Station", "piece_workbench",
                 "The crafting station that must be near to build one. " + Costs.StationHelp);
-            Height = Synced.Bind("1 - Building", "Height", 0.85f,
+            Height = Synced.Bind("1 - Cogling", "Height", 0.85f,
                 "How tall a Cogling stands, in metres (a Dverger is about 1.45). Takes effect when the game restarts.",
                 new AcceptableValueRange<float>(0.4f, 1.4f));
             AntennaCost = Synced.Bind("2 - Antenna", "Cost", "Copper:5, FineWood:2, Resin:3",
@@ -143,69 +184,70 @@ namespace Cogling
             AntennaSize = Synced.Bind("2 - Antenna", "Size", 0.75f,
                 "How big the antenna is (1 = the size of the Dvergr wisp light it's made from). Changes the antennas standing at once.",
                 new AcceptableValueRange<float>(0.5f, 3f));
-            DishTilt = Config.Bind("3 - Looks", "Antenna dish tilt", 35f, new ConfigDescription(
+            DishTilt = Config.Bind("8 - Antenna looks", "Antenna dish tilt", 35f, new ConfigDescription(
                 "How far the antenna's dish leans toward its front, in degrees (each player's own look).", new AcceptableValueRange<float>(0f, 80f)));
-            CopperShine = Config.Bind("3 - Looks", "Copper shine", 0.75f, new ConfigDescription("How glossy the Coglings' copper is (1: as the game's copper bar; lower: duller, a softer highlight).", new AcceptableValueRange<float>(0f, 1.5f)));
-            CopperMetal = Config.Bind("3 - Looks", "Copper metal", 1f, new ConfigDescription("How much the Coglings' copper mirrors what's around it (1: as the game's copper bar; lower: more like painted copper).", new AcceptableValueRange<float>(0f, 1.5f)));
-            AntennaMoves = Config.Bind("3 - Looks", "Antenna moves", true, "Now and then an antenna's dish turns to a new heading and tips a little, with a creak.");
-            AntennaMoveEvery = Config.Bind("3 - Looks", "Antenna moves every", 12f, new ConfigDescription("About how often an antenna moves, in seconds.", new AcceptableValueRange<float>(3f, 120f)));
-            AntennaTurn = Config.Bind("3 - Looks", "Antenna turn", 90f, new ConfigDescription("How far the dish may turn either way from where it was built facing, in degrees.", new AcceptableValueRange<float>(0f, 180f)));
-            AntennaTip = Config.Bind("3 - Looks", "Antenna tip", 12f, new ConfigDescription("How far the dish may tip up or down from its tilt, in degrees.", new AcceptableValueRange<float>(0f, 30f)));
-            AntennaSoundVolume = Config.Bind("3 - Looks", "Antenna creak volume", 0.5f, new ConfigDescription("How loud the creak is when an antenna moves (0: silent).", new AcceptableValueRange<float>(0f, 1f)));
-            AntennaSoundPitch = Config.Bind("3 - Looks", "Antenna creak pitch", 1.8f, new ConfigDescription("How high and fast the creak is (1: the Ashwood door's own). The move takes as long as the creak.", new AcceptableValueRange<float>(0.5f, 3f)));
-            AntennaLight = Config.Bind("3 - Looks", "Antenna light", true, "A small lamp in the middle of the dish, in the colour of the nearest Cogling's eyes.");
-            AntennaLightBrightness = Config.Bind("3 - Looks", "Antenna light brightness", 1.5f, new ConfigDescription("How much light the lamp gives (0: none, the bulb still glows).", new AcceptableValueRange<float>(0f, 5f)));
-            AntennaLightRange = Config.Bind("3 - Looks", "Antenna light range", 2.5f, new ConfigDescription("How far the lamp's light reaches, in metres.", new AcceptableValueRange<float>(0.5f, 10f)));
-            AntennaLightSize = Config.Bind("3 - Looks", "Antenna light size", 0.35f, new ConfigDescription("How big the bulb is (1: the wisp light's ball).", new AcceptableValueRange<float>(0.05f, 1.5f)));
-            VoicePitch = Config.Bind("4 - Voice", "Pitch", 2f, new ConfigDescription("How high its voice is (1: a Dverger's).", new AcceptableValueRange<float>(0.5f, 3f)));
-            VoiceRobot = Config.Bind("4 - Voice", "Robot", 0.6f, new ConfigDescription("How much robot is in its voice (ring modulation).", new AcceptableValueRange<float>(0f, 1f)));
-            VoiceRing = Config.Bind("4 - Voice", "Robot tone", 90f, new ConfigDescription("The robot effect's tone in Hz: low buzzes, high rings.", new AcceptableValueRange<float>(10f, 400f)));
-            VoiceCrunch = Config.Bind("4 - Voice", "Crunch", 0.2f, new ConfigDescription("How crunchy and distorted its voice is.", new AcceptableValueRange<float>(0f, 1f)));
-            VoiceVolume = Config.Bind("4 - Voice", "Volume", 1f, new ConfigDescription("How loud it is.", new AcceptableValueRange<float>(0f, 1f)));
-            EyeColor = Config.Bind("3 - Looks", "Eye colour", new UnityEngine.Color(0f, 0.792f, 1f),
+            CopperShine = Config.Bind("7 - Cogling looks", "Copper shine", 0.75f, new ConfigDescription("How glossy the Coglings' copper is (1: as the game's copper bar; lower: duller, a softer highlight).", new AcceptableValueRange<float>(0f, 1.5f)));
+            CopperMetal = Config.Bind("7 - Cogling looks", "Copper metal", 1f, new ConfigDescription("How much the Coglings' copper mirrors what's around it (1: as the game's copper bar; lower: more like painted copper).", new AcceptableValueRange<float>(0f, 1.5f)));
+            AntennaMoves = Config.Bind("8 - Antenna looks", "Antenna moves", true, "Now and then an antenna's dish turns to a new heading and tips a little, with a creak.");
+            AntennaMoveEvery = Config.Bind("8 - Antenna looks", "Antenna moves every", 12f, new ConfigDescription("About how often an antenna moves, in seconds.", new AcceptableValueRange<float>(3f, 120f)));
+            AntennaTurn = Config.Bind("8 - Antenna looks", "Antenna turn", 90f, new ConfigDescription("How far the dish may turn either way from where it was built facing, in degrees.", new AcceptableValueRange<float>(0f, 180f)));
+            AntennaTip = Config.Bind("8 - Antenna looks", "Antenna tip", 12f, new ConfigDescription("How far the dish may tip up or down from its tilt, in degrees.", new AcceptableValueRange<float>(0f, 30f)));
+            AntennaSoundVolume = Config.Bind("8 - Antenna looks", "Antenna creak volume", 0.5f, new ConfigDescription("How loud the creak is when an antenna moves (0: silent).", new AcceptableValueRange<float>(0f, 1f)));
+            AntennaSoundPitch = Config.Bind("8 - Antenna looks", "Antenna creak pitch", 1.8f, new ConfigDescription("How high and fast the creak is (1: the Ashwood door's own). The move takes as long as the creak.", new AcceptableValueRange<float>(0.5f, 3f)));
+            AntennaLight = Config.Bind("8 - Antenna looks", "Antenna light", true, "A small lamp in the middle of the dish, in the colour of the nearest Cogling's eyes.");
+            AntennaLightBrightness = Config.Bind("8 - Antenna looks", "Antenna light brightness", 1.5f, new ConfigDescription("How much light the lamp gives (0: none, the bulb still glows).", new AcceptableValueRange<float>(0f, 5f)));
+            AntennaLightRange = Config.Bind("8 - Antenna looks", "Antenna light range", 2.5f, new ConfigDescription("How far the lamp's light reaches, in metres.", new AcceptableValueRange<float>(0.5f, 10f)));
+            AntennaLightSize = Config.Bind("8 - Antenna looks", "Antenna light size", 0.35f, new ConfigDescription("How big the bulb is (1: the wisp light's ball).", new AcceptableValueRange<float>(0.05f, 1.5f)));
+            VoicePitch = Config.Bind("9 - Voice", "Pitch", 2f, new ConfigDescription("How high its voice is (1: a Dverger's).", new AcceptableValueRange<float>(0.5f, 3f)));
+            VoiceRobot = Config.Bind("9 - Voice", "Robot", 0.6f, new ConfigDescription("How much robot is in its voice (ring modulation).", new AcceptableValueRange<float>(0f, 1f)));
+            VoiceRing = Config.Bind("9 - Voice", "Robot tone", 90f, new ConfigDescription("The robot effect's tone in Hz: low buzzes, high rings.", new AcceptableValueRange<float>(10f, 400f)));
+            VoiceCrunch = Config.Bind("9 - Voice", "Crunch", 0.2f, new ConfigDescription("How crunchy and distorted its voice is.", new AcceptableValueRange<float>(0f, 1f)));
+            VoiceVolume = Config.Bind("9 - Voice", "Volume", 1f, new ConfigDescription("How loud it is.", new AcceptableValueRange<float>(0f, 1f)));
+            EyeColor = Config.Bind("7 - Cogling looks", "Eye colour", new UnityEngine.Color(0f, 0.792f, 1f),
                 "The colour of the Coglings' eyes (each player's own).");
-            EyeGlow = Config.Bind("3 - Looks", "Eye glow", 3f, new ConfigDescription("How brightly the Coglings' eyes glow (0: not at all).",
+            EyeGlow = Config.Bind("7 - Cogling looks", "Eye glow", 3f, new ConfigDescription("How brightly the Coglings' eyes glow (0: not at all).",
                 new AcceptableValueRange<float>(0f, 10f)));
-            WalkSpeed = Synced.Bind("1 - Building", "Walk speed", 1.4f, "How fast a Cogling walks, in metres a second (a Dverger walks at 2).",
+            WalkSpeed = Synced.Bind("1 - Cogling", "Walk speed", 1.4f, "How fast a Cogling walks, in metres a second (a Dverger walks at 2).",
                 new AcceptableValueRange<float>(0.5f, 4f));
-            RunSpeed = Synced.Bind("1 - Building", "Run speed", 3.5f, "How fast a frightened Cogling runs for cover, in metres a second.",
+            RunSpeed = Synced.Bind("1 - Cogling", "Run speed", 3.5f, "How fast a frightened Cogling runs for cover, in metres a second.",
                 new AcceptableValueRange<float>(1f, 8f));
-            RebuildMinutes = Synced.Bind("1 - Building", "Rebuild minutes", 5f,
+            RebuildMinutes = Synced.Bind("1 - Cogling", "Rebuild minutes", 5f,
                 "Minutes before the nearest antenna rebuilds a Cogling that broke down (broken by monsters or a fall: no cost back; taken down with the hammer: its cost back, no rebuild).",
                 new AcceptableValueRange<float>(0.1f, 120f));
             CoglingsPerAntenna = Synced.Bind("2 - Antenna", "Coglings per antenna", 2,
                 "How many Coglings each antenna powers: linked antennas power the sum. A Cogling can't be built past it (those being rebuilt count).",
                 new AcceptableValueRange<int>(1, 20));
-            HappyIdleChance = Config.Bind("3 - Looks", "Happy idle chance", 0.3f, new ConfigDescription("How often, standing about, it plays its happy idle instead of its usual one.", new AcceptableValueRange<float>(0f, 1f)));
-            NeverPowerDown = Synced.Bind("1 - Building", "Never power down", false, "Coglings never power down: with nothing to do, they take a break instead (chat, dance, sit, look around...), so they're always working or slacking off. Needs Slacking off on.");
-            PowerDownAfter = Synced.Bind("1 - Building", "Power down after", 10f, "Seconds with nothing to do at its antenna before it powers down (it boots up when there's work).", new AcceptableValueRange<float>(2f, 600f));
-            Slacking = Config.Bind("8 - Slacking off", "Slacking off", true, "Now and then a Cogling takes a break, even with work to do: stares into the distance, looks around, is bored, dances, or sits on the ground for a while. Each has its own personality: some slack more than others. Never while frightened.");
-            SlackEvery = Config.Bind("8 - Slacking off", "Every (minutes)", 4f, new ConfigDescription("How often an average Cogling takes a break, about (a lazy one more often, a hard worker less).", new AcceptableValueRange<float>(0.5f, 30f)));
-            FishingCatches = Synced.Bind("8 - Slacking off", "Fishing catches", true, "Now and then a Cogling with water in its area goes fishing for a break; about a third of the time it lands a fish (the biome's) and puts it in a chest. Off: it fishes, but never catches anything.");
-            DanceAudience = Config.Bind("8 - Slacking off", "Dance audience", true, "When a Cogling dances, others near may come over: a playful one to dance along, a sociable one to clap and cheer.");
-            ChairChance = Config.Bind("8 - Slacking off", "Sit on chairs", 0.6f, new ConfigDescription("Sitting down for a break with a free chair, stool or bench in its area: how likely the Cogling hops up onto it (else it sits on the ground).", new AcceptableValueRange<float>(0f, 1f)));
-            DropWait = Synced.Bind("6 - Floor items", "Wait after a drop", 60f,
+            HappyIdleChance = Config.Bind("7 - Cogling looks", "Happy idle chance", 0.3f, new ConfigDescription("How often, standing about, it plays its happy idle instead of its usual one.", new AcceptableValueRange<float>(0f, 1f)));
+            NeverPowerDown = Synced.Bind("1 - Cogling", "Never power down", false, "Coglings never power down: with nothing to do, they take a break instead (chat, dance, sit, look around...), so they're always working or slacking off. Needs Slacking off on.");
+            PowerDownAfter = Synced.Bind("1 - Cogling", "Power down after", 10f, "Seconds with nothing to do at its antenna before it powers down (it boots up when there's work).", new AcceptableValueRange<float>(2f, 600f));
+            Slacking = Config.Bind("6 - Slacking off", "Slacking off", true, "Now and then a Cogling takes a break, even with work to do: stares into the distance, looks around, is bored, dances, or sits on the ground for a while. Each has its own personality: some slack more than others. Never while frightened.");
+            SlackEvery = Config.Bind("6 - Slacking off", "Every (minutes)", 4f, new ConfigDescription("How often an average Cogling takes a break, about (a lazy one more often, a hard worker less).", new AcceptableValueRange<float>(0.5f, 30f)));
+            FishingCatches = Synced.Bind("6 - Slacking off", "Fishing catches", true, "Now and then a Cogling with water in its area goes fishing for a break; about a third of the time it lands a fish (the biome's) and puts it in a chest. Off: it fishes, but never catches anything.");
+            DanceAudience = Config.Bind("6 - Slacking off", "Dance audience", true, "When a Cogling dances, others near may come over: a playful one to dance along, a sociable one to clap and cheer.");
+            ChairChance = Config.Bind("6 - Slacking off", "Sit on chairs", 0.6f, new ConfigDescription("Sitting down for a break with a free chair, stool or bench in its area: how likely the Cogling hops up onto it (else it sits on the ground).", new AcceptableValueRange<float>(0f, 1f)));
+            DropWait = Synced.Bind("3 - Floor items", "Wait after a drop", 60f,
                 "Seconds a Cogling leaves an item alone after first seeing it on the floor (you may have dropped it on purpose).", new AcceptableValueRange<float>(0f, 600f));
-            MaxCarryWeight = Synced.Bind("6 - Floor items", "Heaviest it carries", 50f,
+            MaxCarryWeight = Synced.Bind("3 - Floor items", "Heaviest it carries", 50f,
                 "The most weight it carries in one trip: a heavier stack takes several trips, and a single item heavier than this (the dragon egg, 200) it leaves.", new AcceptableValueRange<float>(1f, 500f));
-            CollectColdEggs = Synced.Bind("6 - Floor items", "Collect cold eggs", true,
+            CollectColdEggs = Synced.Bind("3 - Floor items", "Collect cold eggs", true,
                 "Eggs warm enough to hatch (near a fire, under a roof) are always left alone. Cold eggs: collected once they've stayed cold a while.");
-            ColdEggWait = Synced.Bind("6 - Floor items", "Cold egg wait", 3f,
+            ColdEggWait = Synced.Bind("3 - Floor items", "Cold egg wait", 3f,
                 "Minutes an egg must stay cold before a Cogling collects it (time to move it somewhere warm).", new AcceptableValueRange<float>(0f, 60f));
-            ResortGroups = Synced.Bind("5 - Sorting", "Re-sort by groups", true,
+            ResortGroups = Synced.Bind("4 - Sorting", "Re-sort by groups", true,
                 "Besides gathering an item kept in several chests into the one with the most of it (always), move a lone stray (its only stack "
                 + "in a chest with nothing of its group) to the chest where its group lives. Off: it never moves your one-off stacks (only gathers the same item together).");
-            RepairBuildings = Synced.Bind("7 - Repairing", "Repair buildings", true,
+            RepairBuildings = Synced.Bind("5 - Repairs and tending", "Repair buildings", true,
                 "With nothing to fetch or tidy, it repairs damaged building pieces in its area (as the hammer does, free; only where you may build).");
-            RepairBelow = Synced.Bind("7 - Repairing", "Repair below", 90f,
+            RepairBelow = Synced.Bind("5 - Repairs and tending", "Repair below", 90f,
                 "A piece is repaired once its health is below this percent.", new AcceptableValueRange<float>(10f, 99f));
-            RepairGear = Synced.Bind("7 - Repairing", "Repair gear", true,
+            RepairGear = Synced.Bind("5 - Repairs and tending", "Repair gear", true,
                 "It takes worn tools and gear from its chests to their crafting station (when the station stands in its area, at the level the item needs), mends them, and puts them back.");
-            TendFires = Synced.Bind("9 - Tending", "Tend fires", true,
+            TendFires = Synced.Bind("5 - Repairs and tending", "Tend fires", true,
                 "It keeps fires, braziers and torches in its area burning: one burning below half gets fuel from its chests. One let go out stays out.");
-            TendSmelters = Synced.Bind("9 - Tending", "Tend smelters", true,
+            TendSmelters = Synced.Bind("5 - Repairs and tending", "Tend smelters", true,
                 "It keeps smelters, kilns and furnaces in its area going: one already working gets more of what it's working on, and fuel, from its chests. It never starts one, and feeds a kiln only while a smelter burning its coal works and the chests have no coal left (so a kiln doesn't turn all your wood into coal). The bars and coal they make are taken to the chests like anything on the floor.");
             Sorting.Bind(Config);
+            MoveOldSettings();
             Config.SaveOnConfigSet = true;
             Config.Save();
             Cost.SettingChanged += (s, e) => CoglingPrefab.ApplyCost();
