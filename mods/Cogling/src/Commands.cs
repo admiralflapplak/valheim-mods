@@ -47,6 +47,12 @@ namespace Cogling
                 Plugin.Log.LogInfo("Cogling strays: " + line);
             }
             if (!remove) { t.AddString($"{strays.Count} stray(s). `cogling strays remove` takes them out of the world."); return; }
+            // (removing is a cheat: single player, the host, or devcommands on, however the command was run)
+            if (ZNet.instance != null && !ZNet.instance.IsServer() && (Console.instance == null || !Console.instance.IsCheatsEnabled()))
+            {
+                t.AddString("Only the host (or with devcommands) can remove them.");
+                return;
+            }
             foreach (ZDO z in strays)
             {
                 z.SetOwner(ZDOMan.GetSessionID());
