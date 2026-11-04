@@ -558,7 +558,12 @@ namespace Cogling
                 if (!dance && !_forced && Random.value >= 0.1f + t.Sociability * 0.4f) continue;
                 if (s._ai.JoinDance(this, dance, came)) came++;
             }
-            if (came > 0) _ai.Log($"{came} came to the dance");
+            if (came > 0)
+            {
+                // (an audience takes a while to get there: the dance goes on longer, so they have one too)
+                _until = Mathf.Max(_until, Time.time + Random.Range(25f, 40f) * (0.8f + Me.Playfulness * 0.4f));
+                _ai.Log($"{came} came to the dance: dancing till {_until - Time.time:F0} s from now");
+            }
         }
 
         /// <summary>Come to another's dance (his brain has said yes): beside him dancing the same, or in front of him cheering.</summary>
