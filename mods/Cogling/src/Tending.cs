@@ -22,6 +22,7 @@ namespace Cogling
             internal bool Ore;
             internal Container Chest;
             internal ItemDrop.ItemData Stack;   // (in that chest)
+            internal string[] Makes;            // (a kiln: the fuel it makes; fed only while the chests have none of it)
             internal string Name => Station != null ? Station.GetComponent<Piece>()?.m_name ?? "" : "";
         }
 
@@ -60,7 +61,8 @@ namespace Cogling
                     {
                         string[] made = s.m_conversion.Where(c => c?.m_to != null).Select(c => c.m_to.name).Distinct().ToArray();
                         if (!made.Any(burning.Contains)) continue;
-                        if (chests.Any(c => c.GetInventory()?.GetAllItems().Any(i => i.m_dropPrefab != null && made.Contains(i.m_dropPrefab.name)) == true)) continue;
+                        // (every chest of the area: one open, or one he may not use, still has it; the player's open box counted as empty before)
+                        if (Chests.Stored(network).Any(c => c.GetInventory()?.GetAllItems().Any(i => i.m_dropPrefab != null && made.Contains(i.m_dropPrefab.name)) == true)) continue;
                     }
                     if (s.m_fuelItem != null)
                     {
@@ -72,7 +74,8 @@ namespace Cogling
                         // more of what it's working on (the most of it in its queue)
                         string ore = Enumerable.Range(0, queued).Select(i => zdo.GetString("item" + i)).Where(n => n.Length > 0)
                             .GroupBy(n => n).OrderByDescending(g => g.Count()).Select(g => g.Key).FirstOrDefault();
-                        if (ore != null) wants.Add(new Feed { Station = s, View = v, Item = ore, Wants = s.m_maxOre - queued, Ore = true });
+                        if (ore != null) wants.Add(new Feed { Station = s, View = v, Item = ore, Wants = s.m_maxOre - queued, Ore = true,
+                                                              Makes = makesFuel ? s.m_conversion.Where(c => c?.m_to != null).Select(c => c.m_to.name).Distinct().ToArray() : null });
                     }
                 }
             foreach (Feed f in wants.OrderBy(w => Vector3.Distance(from, w.Station.transform.position)))
@@ -91,6 +94,11 @@ namespace Cogling
             }
             return null;
         }
+
+        /// <summary>Still to be fed: a kiln only while the area's chests have none of the fuel it makes (it may have come back meanwhile).</summary>
+        internal static bool StillWanted(Feed f, List<Antenna> network) =>
+            f.Makes == null || network == null
+            || !Chests.Stored(network).Any(c => c.GetInventory()?.GetAllItems().Any(i => i.m_dropPrefab != null && f.Makes.Contains(i.m_dropPrefab.name)) == true);
 
         /// <summary>The station's count of what he feeds it (fuel, or ore queued): it goes up when it takes one.</summary>
         internal static float Level(Feed f)

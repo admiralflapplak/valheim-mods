@@ -420,6 +420,7 @@ namespace Cogling
                     }
                     if (Time.time < _nextFeed) return State.Working;
                     if (!Tending.Room(_feed)) return Leftover("the station is full");
+                    if (!Tending.StillWanted(_feed, _network)) return Leftover("the chests have its coal again: the kiln can wait");
                     _before = Tending.Level(_feed);
                     Tending.Add(_feed);
                     _pendingSince = Time.time;

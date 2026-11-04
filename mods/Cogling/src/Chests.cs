@@ -27,6 +27,13 @@ namespace Cogling
         internal static void Forget() => All.Clear();
 
         /// <summary>The chests in the area of these antennas that he may use now.</summary>
+        /// <summary>Every storage chest in the area, open or not, warded or not (for "is there any of it left?", never for taking).</summary>
+        internal static List<Container> Stored(List<Antenna> network)
+        {
+            All.RemoveAll(c => c == null);
+            return All.Where(c => Antenna.InArea(network, c.transform.position) && ContainerAccess.IsStorage(c)).ToList();
+        }
+
         internal static List<Container> Usable(List<Antenna> network)
         {
             All.RemoveAll(c => c == null);

@@ -345,6 +345,7 @@ namespace Cogling
             Hammering();
             Look();
             Hold();
+            FishingLine();
         }
 
         // ---- standing still: his own idle (reference/Idle.fbx), eased in when he stops and out when he walks (the Fuling walk)
@@ -368,8 +369,9 @@ namespace Cogling
             // he stops, and that showed for a moment), gently; out quickly, back to the live walk, when he moves again
             _stillFor = _speed < 0.25f ? _stillFor + dt : 0f;
             // (seated or getting up: still, whatever nudges his body gets, else the Fuling animation showed through)
-            // (sneaking: his sneak in place of the walk, moving or not)
-            bool idle = _stillFor > 0.1f || _sleepWeight > 0f || Time.time < _greetUntil || _sitStart >= 0f || (_standStart >= 0f && _speed < 0.5f) || _slack == (int)CoglingSlack.Activity.Sneak;
+            // (sneaking: his sneak in place of the walk, moving or not; swimming: the game's own swim, treading water when he stops,
+            // never his standing idle)
+            bool idle = !Swimming && (_stillFor > 0.1f || _sleepWeight > 0f || Time.time < _greetUntil || _sitStart >= 0f || (_standStart >= 0f && _speed < 0.5f) || _slack == (int)CoglingSlack.Activity.Sneak);
             if (idle && !_snapped && _pose.muscles != null)
             {
                 _walkSnap = new HumanPose { bodyPosition = _pose.bodyPosition, bodyRotation = _pose.bodyRotation, muscles = (float[])_pose.muscles.Clone() };
@@ -546,6 +548,11 @@ namespace Cogling
             if (_slack == (int)CoglingSlack.Activity.Fiddle) return Clip("rig_working_a");
             if (_slack == CoglingSlack.PoseWork2) return Clip("rig_working_b");
             if (_slack == CoglingSlack.PoseWork3) return Clip("rig_working_c");
+            if (_slack == (int)CoglingSlack.Activity.Fishing) return Clip("rig_fishing_idle");
+            if (_slack == CoglingSlack.PoseFishCast) return Clip("rig_fishing_cast");
+            if (_slack == CoglingSlack.PoseFishTug) return Clip("rig_fishing_tug");
+            if (_slack == CoglingSlack.PoseFishReel) return Clip("rig_fishing_reeling");
+            if (_slack == CoglingSlack.PoseFishCatch) return Clip("rig_fishing_catch");
             return null;
         }
 
@@ -815,10 +822,20 @@ namespace Cogling
         /// floating), and the walk carries him at its own height. The lower ankle is kept at its standing height above the ground (his
         /// body's origin), every frame.
         /// </summary>
+        /// <summary>He's in the water, swimming (his feet aren't on anything: no pinning them down).</summary>
+        private bool Swimming
+        {
+            get
+            {
+                if (_character == null) _character = GetComponentInParent<Character>();
+                return _character != null && _character.IsSwimming();
+            }
+        }
+
         private void Ground()
         {
             // always, walking too, and smoothed: easing it out as he started walking let the walk's own height pop back (a little hop)
-            if (_hips == null || _leftFoot == null || _rightFoot == null) return;
+            if (_hips == null || _leftFoot == null || _rightFoot == null || Swimming) return;
             float ankle = Mathf.Min(_leftFoot.position.y, _rightFoot.position.y);
             float off = (transform.position.y + _footRest) - ankle;
             // (exactly, every frame: smoothing it lagged behind the pose, and the body rose and settled as he straightened into the idle)
@@ -942,6 +959,122 @@ namespace Cogling
             _tool.transform.localScale = Vector3.one * Plugin.HammerSize.Value;
         }
 
+        private GameObject _rod;
+
+        // ---- fishing: his float on the water (a look-only copy of the game's) and the line from the rod's tip to it, as the game draws
+        // them; the cast throws it out, it bobs while he waits, dips at a bite, and is drawn in as he reels
+
+        private GameObject _float;
+        private LineRenderer _line;
+        private Transform _rodTip;
+        private Vector3 _floatAt, _floatNow;
+        private int _floatPose = -1;
+        private float _floatSince;
+        private const int LinePoints = 12;
+
+        private void FishingLine()
+        {
+            bool fishing = CoglingSlack.Fishes(_slack) && _rod != null && _rod.activeSelf;
+            if (!fishing || _slack == CoglingSlack.PoseFishCatch) { if (_float != null && _float.activeSelf) _float.SetActive(false); _floatPose = -1; return; }
+            if (_float == null && !MakeFloat()) return;
+            if (_slack != _floatPose) { _floatPose = _slack; _floatSince = Time.time; }
+            float t = Time.time - _floatSince;
+            Vector3 tip = _rodTip != null ? _rodTip.position : _rod.transform.position;
+            Vector3 water = OnWaves(_floatAt);
+            bool show = true;
+            if (_slack == CoglingSlack.PoseFishCast)
+            {
+                // (out with the cast: from the tip, in an arc, onto the water late in the swing)
+                float length = ClipLength("rig_fishing_cast"), throwAt = length * 0.45f, landAt = length * 0.75f;
+                if (t < throwAt) { show = false; _floatNow = tip; }
+                else
+                {
+                    float k = Mathf.Clamp01(Mathf.InverseLerp(throwAt, landAt, t));
+                    _floatNow = Vector3.Lerp(tip, water, k) + Vector3.up * Mathf.Sin(k * Mathf.PI) * 1.2f;
+                }
+            }
+            else if (_slack == CoglingSlack.PoseFishReel)
+            {
+                // (drawn in toward the shore as he reels)
+                float k = Mathf.Clamp01(t / (ClipLength("rig_fishing_reeling") * 2f));
+                Vector3 shore = transform.position + transform.forward * 0.6f;
+                _floatNow = OnWaves(Vector3.Lerp(water, shore, k)) + Vector3.up * Mathf.Sin(Time.time * 9f) * 0.02f;
+            }
+            else if (_slack == CoglingSlack.PoseFishTug)
+                _floatNow = water + Vector3.down * (0.06f + Mathf.Abs(Mathf.Sin(Time.time * 7f)) * 0.08f);   // (a bite: tugged under)
+            else
+                _floatNow = water + Vector3.up * Mathf.Sin(Time.time * 1.8f) * 0.025f;   // (bobbing)
+            if (_float.activeSelf != show) _float.SetActive(show);
+            if (!show) return;
+            _float.transform.position = _floatNow;
+            // the line: tip to float, sagging a little in the middle
+            float sag = Mathf.Clamp(Vector3.Distance(tip, _floatNow) * 0.08f, 0.05f, 0.4f);
+            for (int i = 0; i < LinePoints; i++)
+            {
+                float k = i / (float)(LinePoints - 1);
+                _line.SetPosition(i, Vector3.Lerp(tip, _floatNow, k) + Vector3.down * Mathf.Sin(k * Mathf.PI) * sag);
+            }
+        }
+
+        /// <summary>A point on the water's surface there, waves and all (as the game's floating things ride it); as it was if no water.</summary>
+        private static Vector3 OnWaves(Vector3 p)
+        {
+            float level = Floating.GetLiquidLevel(p);
+            if (level > -1000f) p.y = level;
+            return p;
+        }
+
+        private bool MakeFloat()
+        {
+            GameObject source = ZNetScene.instance?.GetPrefab("FishingRodFloat");
+            if (source == null) return false;
+            _rodTip = _rod.transform.Find("_RodTop");
+            _float = new GameObject("cogling_float") { layer = gameObject.layer };
+            foreach (string part in new[] { "default", "polySurface20" })
+                if (source.transform.Find(part) is Transform look)
+                {
+                    GameObject copy = Instantiate(look.gameObject, _float.transform, false);
+                    foreach (Collider c in copy.GetComponentsInChildren<Collider>(true)) Destroy(c);
+                }
+            // the game's own line (its look: material, width), drawn here from his rod's tip
+            LineRenderer like = source.transform.Find("RodLine")?.GetComponent<LineRenderer>();
+            var lineObject = new GameObject("cogling_line") { layer = gameObject.layer };
+            lineObject.transform.SetParent(_float.transform, false);
+            _line = lineObject.AddComponent<LineRenderer>();
+            _line.useWorldSpace = true;
+            _line.positionCount = LinePoints;
+            if (like != null)
+            {
+                _line.sharedMaterials = like.sharedMaterials;
+                _line.widthMultiplier = like.widthMultiplier;
+                _line.widthCurve = like.widthCurve;
+                _line.colorGradient = like.colorGradient;
+                _line.textureMode = like.textureMode;
+            }
+            else _line.widthMultiplier = 0.01f;
+            _line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            return true;
+        }
+
+        /// <summary>Fishing: the game's fishing rod in his right hand (placed as the hammer is, to start with).</summary>
+        private void ShowRod(bool show)
+        {
+            if (!show) { if (_rod != null && _rod.activeSelf) _rod.SetActive(false); return; }
+            if (_rod == null)
+            {
+                Transform attach = ZNetScene.instance?.GetPrefab("FishingRod")?.transform.Find("attach");
+                if (attach == null || _rightHand == null) return;
+                _rod = Instantiate(attach.gameObject, _rightHand, false);
+                _rod.name = "cogling_rod";
+                foreach (Collider c in _rod.GetComponentsInChildren<Collider>(true)) Destroy(c);
+                foreach (Transform t in _rod.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = gameObject.layer;
+            }
+            if (!_rod.activeSelf) _rod.SetActive(true);
+            _rod.transform.localPosition = new Vector3(Plugin.RodX.Value, Plugin.RodY.Value, Plugin.RodZ.Value) / 100f;
+            _rod.transform.localRotation = Quaternion.Euler(Plugin.RodTurnX.Value, Plugin.RodTurnY.Value, Plugin.RodTurnZ.Value);
+            _rod.transform.localScale = Vector3.one * Plugin.RodSize.Value;
+        }
+
         /// <summary>The hammer's knock (the game's own building sound), played here on this game only.</summary>
         private void Knock(float volume = 1f)
         {
@@ -987,6 +1120,7 @@ namespace Cogling
                     if (slack != _slack) SlackChanged(slack);
                     if (Chatting) _chatWith = zdo.GetVec3(CoglingSlack.LookKey, transform.position + transform.forward * 3f);
                     _watchId = Looking ? zdo.GetZDOID(CoglingSlack.WatchKey) : ZDOID.None;
+                    if (CoglingSlack.Fishes(_slack)) _floatAt = zdo.GetVec3(CoglingSlack.FloatKey, transform.position + transform.forward * 4f);
                     SetAsleep(!zdo.GetBool(Carried.AwakeKey));
                     int mood = zdo.GetInt(Carried.MoodKey);
                     if (mood != _mood)
@@ -1009,6 +1143,7 @@ namespace Cogling
             bool hammering = _act == Carried.ActHammer || Plugin.HammerPreview.Value;
             _hammer = Mathf.MoveTowards(_hammer, hammering ? 1f : 0f, dt * 4f);
             ShowTool(hammering);
+            ShowRod(CoglingSlack.Fishes(_slack));
             if (_act == Carried.ActHammer && !Plugin.SwingFreeze.Value && Time.time >= _nextKnock) { _nextKnock = Time.time + Mathf.Max(0.1f, Plugin.SwingTime.Value); Knock(); }
             if (Tinkering && Time.time >= _nextKnock) { _nextKnock = Time.time + Random.Range(0.8f, 1.6f); Knock(0.35f); }   // (tinkering: a soft knock now and then)
             if (Plugin.BendPreview.Value) _bend = 1f;
@@ -1086,6 +1221,7 @@ namespace Cogling
         private void OnDestroy()
         {
             Live.Remove(this);
+            if (_float != null) Destroy(_float);   // (his fishing float: not his child, it sits on the water)
             _from?.Dispose();
             _idle?.Dispose();
             _happy?.Dispose();

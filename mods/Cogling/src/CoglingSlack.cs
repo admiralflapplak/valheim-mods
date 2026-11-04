@@ -22,12 +22,15 @@ namespace Cogling
     internal sealed class CoglingSlack
     {
         // (Watch and Chair: numbers of their own, past the poses below; saved as they are)
-        internal enum Activity { None = 0, Stare = 1, LookAround = 2, Bored = 3, Dance = 4, Sit = 5, Chat = 6, Watch = 14, Chair = 15, Cheer = 16, Nap = 19, Exercise = 20, Tag = 22, Follow = 23, Animal = 24, Sneak = 25, Treasure = 26, Fiddle = 27, Shelter = 28, Inspect = 29 }
+        internal enum Activity { None = 0, Stare = 1, LookAround = 2, Bored = 3, Dance = 4, Sit = 5, Chat = 6, Watch = 14, Chair = 15, Cheer = 16, Nap = 19, Exercise = 20, Tag = 22, Follow = 23, Animal = 24, Sneak = 25, Treasure = 26, Fiddle = 27, Shelter = 28, Inspect = 29, Fishing = 32 }
         // (cheering on a dancer: clapping is Activity.Cheer; these two are cheering)
         internal const int PoseCheer2 = 17, PoseCheer3 = 18;
         // (21 was sit-ups: taken out, they looked wonky on him)
         // (tinkering: Working_A is Activity.Fiddle; these are Working_B and C)
         internal const int PoseWork2 = 30, PoseWork3 = 31;
+        // (fishing: waiting with the line out is Activity.Fishing; these are casting, a bite, reeling in and the catch)
+        internal const int PoseFishCast = 33, PoseFishTug = 34, PoseFishReel = 35, PoseFishCatch = 36;
+        internal static bool Fishes(int pose) => pose == (int)Activity.Fishing || (pose >= PoseFishCast && pose <= PoseFishCatch);
         private int _workPose;
         private static readonly int[] CheerPoses = { (int)Activity.Cheer, PoseCheer2, PoseCheer3 };
         internal static string CheerClip(int pose) =>
@@ -44,7 +47,8 @@ namespace Cogling
         internal static string TalkClip(int pose) =>
             pose == PoseTalk ? "social_talk01" : pose == PoseTalk2 ? "social_talk02" : pose == PoseTalk3 ? "social_talk03"
             : pose == PoseQuestion ? "social_question01" : pose == PoseQuestion2 ? "social_question02" : null;
-        internal const string TreasureKey = "cogling_treasure";   // (what he admires: shown in his hands, never taken from the chest)
+        internal const string TreasureKey = "cogling_treasure";
+        internal const string FloatKey = "cogling_float";          // (fishing: where his float sits on the water)   // (what he admires: shown in his hands, never taken from the chest)
         internal const string SlackKey = "cogling_slack", TraitsKey = "cogling_traits", LookKey = "cogling_look", SeatKey = "cogling_seat", WatchKey = "cogling_watch";
 
         /// <summary>His personality: each from 0 to 1.</summary>
@@ -86,6 +90,11 @@ namespace Cogling
         private int _phase;              //   0 to the chest, 1 taking it out, 2 off to admire it, 3 admiring, 4 back, 5 putting it back
         private float _phaseUntil;
         private Piece _inspected;        // inspecting: the piece a player built
+        private Vector3 _water;          // fishing: where the line goes in
+        private bool _catches;           //   and whether he lands one this time
+        private int _fishPhase;
+        private float _fishUntil, _shoreLooked = -999f;
+        private Vector3? _shoreSpot;
         private Vector3 _animalWas;
         private CoglingSlack _dancer;    // dancing along or cheering: whose dance
         private float _nextCheerPose;
@@ -109,6 +118,7 @@ namespace Cogling
             _nextRoll = Time.time + Random.Range(20f, 40f);
             Write(0);   // (a break saved as his area unloaded: over)
             if (Owner && !string.IsNullOrEmpty(Zdo?.GetString(TreasureKey))) Zdo.Set(TreasureKey, "");   // (and a treasure he was holding: back)
+            if (Owner && Zdo != null && !Zdo.GetZDOID(WatchKey).IsNone()) Zdo.Set(WatchKey, ZDOID.None);   // (and who he was looking at)
             All.Add(this);
         }
 
@@ -153,9 +163,10 @@ namespace Cogling
 
         // ---- deciding
 
-        /// <summary>Every few seconds a chance of a break (more for a lazy one, less while working). True: he's on a break now.</summary>
         /// <summary>Never power down: nothing to do, so a break now (whichever his personality picks). False if none could be had.</summary>
         internal bool Idle(List<Antenna> network) => Plugin.Slacking.Value && Start(Choose(network), network);
+
+        /// <summary>Every few seconds a chance of a break (more for a lazy one, less while working). True: he's on a break now.</summary>
 
         internal bool Roll(bool working, List<Antenna> network)
         {
@@ -193,6 +204,8 @@ namespace Cogling
             if (Shiny(network, out _, out _)) weights.Add((Activity.Treasure, 0.1f + (t.Curiosity + t.Dreaminess) * 0.35f));
             weights.Add((Activity.Fiddle, 0.1f + t.Diligence * 0.5f));
             if (Fresh(network) != null) weights.Add((Activity.Inspect, 0.6f + t.Curiosity * 1.8f));
+            // gone fishing: rare, and only with a shore in his area (dreamers and restful ones a little more)
+            if (Shore(network) != null) weights.Add((Activity.Fishing, 0.06f + t.Dreaminess * 0.2f + t.Restfulness * 0.1f));
             // raining and out in it: under a roof, mostly
             if (EnvMan.IsWet() && !UnderRoof(_ai.transform.position)) weights.Add((Activity.Shelter, 4f + weights.Sum(w => w.Item2)));
             // a nap (restful ones; more at night), exercise (hard workers: even their breaks are work)
@@ -348,6 +361,19 @@ namespace Cogling
                     go = Floor(at + Flat(here - at) * 2f);
                     _face = at;
                     duration = Random.Range(6f, 10f);
+                    break;
+                }
+                case Activity.Fishing:
+                {
+                    // to the water's edge, rod out, for a while; now and then he lands one (the biome's fish: home to a chest with it)
+                    _shoreLooked = -999f;
+                    Vector3? shore = Shore(network);
+                    if (shore == null) return false;
+                    go = shore;
+                    _face = _water;
+                    _fishPhase = 0;
+                    _catches = Plugin.FishingCatches.Value && Random.value < 0.35f;
+                    duration = Random.Range(30f, 60f) * (0.7f + t.Restfulness * 0.6f);
                     break;
                 }
                 case Activity.Nap:
@@ -524,6 +550,7 @@ namespace Cogling
                     if (Doing == Activity.Follow) return Follow(dt);
                     if (Doing == Activity.Sneak) return Sneak(dt);
                     if (Doing == Activity.Treasure) return Treasure(dt);
+                    if (Doing == Activity.Fishing) return Fishing(dt);
                     if (Doing == Activity.Shelter && !EnvMan.IsWet() && Time.time > _until - 20f) { End(); return false; }   // (the rain's over)
                     if (Doing == Activity.Animal && !Animal(dt)) return false;
                     _ai.Stop();
@@ -586,6 +613,8 @@ namespace Cogling
         {
             // (what a break showed on him, taken off: the hammer, the treasure in his hands)
             if (Doing == Activity.Treasure && Owner) Zdo?.Set(TreasureKey, "");
+            // (who he looked at: an id the game renumbers at every world load, so never left in the save)
+            if ((Doing == Activity.Watch || Doing == Activity.Follow || Doing == Activity.Animal || Doing == Activity.Inspect) && Owner) Zdo?.Set(WatchKey, ZDOID.None);
             if (Doing != Activity.None) Write(0);
             Doing = Activity.None;
             _partner = null;
@@ -855,11 +884,15 @@ namespace Cogling
                 {
                     Vector3 spot = me + Quaternion.Euler(0f, Random.Range(-70f, 70f) + (i >= 3 ? 90f * (i - 2) : 0f), 0f) * away * Random.Range(4f, 6f);
                     if (_network != null && !Antenna.InArea(_network, spot)) continue;
+                    if (Wet(Floor(spot))) continue;
                     if (_nav.SetTarget(Floor(spot))) break;
                 }
             }
             return true;
         }
+
+        /// <summary>Under water (a lake or the sea in his area): no place to run to or stand about in.</summary>
+        private static bool Wet(Vector3 floor) => ZoneSystem.instance != null && floor.y < ZoneSystem.instance.m_waterLevel + 0.1f;
 
         /// <summary>Tagging along: a few steps behind the player, stopping to look when close; not out of his area (he waits at its edge).</summary>
         private bool Follow(float dt)
@@ -952,6 +985,7 @@ namespace Cogling
                     {
                         Vector3 spot = me + Quaternion.Euler(0f, Random.Range(0f, 360f), 0f) * Vector3.forward * Random.Range(3f, 5f);
                         if (_network != null && !Antenna.InArea(_network, spot)) continue;
+                        if (Wet(Floor(spot))) continue;
                         if (_nav.SetTarget(Floor(spot))) break;
                     }
                     _phase = 2;
@@ -983,6 +1017,129 @@ namespace Cogling
             }
             void Done() { if (Owner) Zdo?.Set(TreasureKey, ""); End(); }
         }
+
+        /// <summary>
+        /// Fishing, step by step: casting, waiting with the line out, and (when he lands one) a bite, reeling in and the catch: the
+        /// biome's fish in his hands, taken to a chest after (his job carries on with it, as with anything he holds).
+        /// </summary>
+        private bool Fishing(float dt)
+        {
+            _ai.Stop();
+            _ai.Face(_water);
+            if (Time.time < _fishUntil) return true;
+            float Length(string clip) => CoglingBody.ClipLength(clip);
+            float landing = Length("rig_fishing_tug") + Length("rig_fishing_reeling") * 2f + Length("rig_fishing_catch");
+            switch (_fishPhase)
+            {
+                case 0:
+                    if (Owner) Zdo?.Set(FloatKey, _water);
+                    Write(PoseFishCast);
+                    _fishUntil = Time.time + Length("rig_fishing_cast") - 0.1f;
+                    break;
+                case 1:
+                    Write((int)Activity.Fishing);
+                    _fishUntil = Mathf.Max(Time.time + 5f, _until - (_catches ? landing : 0f));
+                    break;
+                case 2:
+                    if (!_catches) { End(); return false; }
+                    Write(PoseFishTug);
+                    _ai.Say(CoglingVoice.Line.Excited);
+                    _fishUntil = Time.time + Length("rig_fishing_tug") - 0.1f;
+                    break;
+                case 3:
+                    Write(PoseFishReel);
+                    _fishUntil = Time.time + Length("rig_fishing_reeling") * 2f - 0.1f;
+                    break;
+                case 4:
+                    Write(PoseFishCatch);
+                    _fishUntil = Time.time + Length("rig_fishing_catch") * 0.6f;
+                    break;
+                case 5:
+                {
+                    // landed: in his hands (saved on him first: the catch is never lost), then the rest of the catch clip
+                    ItemDrop.ItemData fish = Fish(_water);
+                    if (fish != null && Owner && !_job.Carrying) { Carried.Write(Zdo, fish); _ai.Log($"caught {fish.m_dropPrefab.name}"); }
+                    _ai.Say(CoglingVoice.Line.Laugh);
+                    _fishUntil = Time.time + Length("rig_fishing_catch") * 0.4f;
+                    break;
+                }
+                default:
+                    End();
+                    return false;
+            }
+            _fishPhase++;
+            return true;
+        }
+
+        /// <summary>The fish of the water's biome (as a catch there), one.</summary>
+        private static ItemDrop.ItemData Fish(Vector3 at)
+        {
+            Heightmap.Biome biome = WorldGenerator.instance != null ? WorldGenerator.instance.GetBiome(at) : Heightmap.Biome.Meadows;
+            string name;
+            switch (biome)
+            {
+                case Heightmap.Biome.BlackForest: name = "Fish2"; break;   // pike
+                case Heightmap.Biome.Swamp: name = "Fish5"; break;         // trollfish
+                case Heightmap.Biome.Plains: name = "Fish7"; break;        // grouper
+                case Heightmap.Biome.Ocean: name = "Fish3"; break;         // tuna
+                case Heightmap.Biome.Mistlands: name = "Fish9"; break;     // anglerfish
+                case Heightmap.Biome.DeepNorth: name = "Fish10"; break;    // northern salmon
+                case Heightmap.Biome.AshLands: name = "Fish11"; break;     // magmafish
+                default: name = "Fish1"; break;                            // perch
+            }
+            GameObject prefab = ZNetScene.instance?.GetPrefab(name) ?? ZNetScene.instance?.GetPrefab("Fish1");
+            ItemDrop drop = prefab != null ? prefab.GetComponent<ItemDrop>() : null;
+            if (drop == null) return null;
+            ItemDrop.ItemData fish = drop.m_itemData.Clone();
+            fish.m_dropPrefab = prefab;
+            fish.m_stack = 1;
+            fish.m_quality = 1;
+            return fish;
+        }
+
+        /// <summary>
+        /// A spot at the water's edge in his area (dry ground just above the water, with water a couple of metres on), within 30 m, and
+        /// where the water is (in _water); null if none. Looked for at most every 30 s (it samples the ground).
+        /// </summary>
+        private Vector3? Shore(List<Antenna> network)
+        {
+            if (Time.time - _shoreLooked < 30f) return _shoreSpot;
+            _shoreLooked = Time.time;
+            _shoreSpot = null;
+            if (ZoneSystem.instance == null) return null;
+            float sea = ZoneSystem.instance.m_waterLevel;
+            Vector3 here = _ai.transform.position;
+            float bestDistance = float.MaxValue;
+            int dry = 0, seen = 0, inArea = 0;
+            // (rings every 2 m out to 30 m, every 15 degrees: a narrow strip of shore was missed by a few random tries)
+            for (int i = 0; i < 14 * 24; i++)
+            {
+                Vector3 p = here + Quaternion.Euler(0f, (i % 24) * 15f, 0f) * Vector3.forward * (3f + 2f * (i / 24));
+                if (!Antenna.InArea(network, p)) continue;
+                inArea++;
+                float ground = ZoneSystem.instance.GetGroundHeight(p);
+                if (ground < sea + 0.05f || ground > sea + 3f) continue;
+                dry++;
+                for (int d = 0; d < 8; d++)
+                {
+                    // (water a little way out: a gentle beach is still shallow at 2.5 m, so anywhere from 1.5 to 6 m)
+                    Vector3 dir = Quaternion.Euler(0f, d * 45f, 0f) * Vector3.forward;
+                    if (!new[] { 1.5f, 2.5f, 4f, 6f }.Any(r => ZoneSystem.instance.GetGroundHeight(p + dir * r) < sea - 0.2f)) continue;
+                    seen++;
+                    float distance = Vector3.Distance(here, p);
+                    if (distance >= bestDistance) break;
+                    bestDistance = distance;
+                    _shoreSpot = new Vector3(p.x, ground, p.z);
+                    _water = new Vector3(p.x, sea, p.z) + dir * 4f;
+                    break;
+                }
+            }
+            FishWhy = $"{inArea} spots looked at in its area, {dry} at the water's height, {seen} by the water (water level {sea:F1})";
+            return _shoreSpot;
+        }
+
+        /// <summary>What the last shore search found (for `cogling slack fishing`).</summary>
+        internal static string FishWhy = "";
 
         private static readonly HashSet<string> ShinyNames = new HashSet<string>
         {
@@ -1193,6 +1350,7 @@ namespace Cogling
                 case Activity.Nap: return ("cogling_task_slack_nap", "", "");
                 case Activity.Tag: return ("cogling_task_slack_tag", "", "");
                 case Activity.Treasure: return ("cogling_task_slack_treasure", "", "");
+                case Activity.Fishing: return ("cogling_task_slack_fishing", "", "");
                 case Activity.Fiddle: return ("cogling_task_slack_fiddle", "", "");
                 case Activity.Shelter: return ("cogling_task_slack_shelter", "", "");
                 case Activity.Inspect: return ("cogling_task_slack_inspect", "", "");
@@ -1305,6 +1463,7 @@ namespace Cogling
                 outward = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f) * Vector3.forward;
                 Vector3 p = a.transform.position + outward * Antenna.Radius * 0.85f;
                 if (!ZoneSystem.instance.GetSolidHeight(p, out float height)) continue;
+                if (height < ZoneSystem.instance.m_waterLevel + 0.1f) continue;   // (under water: a lake in his area; he swam out to stare)
                 p.y = height;
                 if (Antenna.InArea(network, p)) return p;
             }

@@ -12,7 +12,7 @@ namespace Cogling
     internal static class Commands
     {
         private const string Command = "cogling";
-        private const string Usage = "cogling slack [stare|look|bored|dance|sit|chair|watch|chat|nap|exercise|tag|follow|animal|sneak|treasure|fiddle|shelter|inspect] | cogling status";
+        private const string Usage = "cogling slack [stare|look|bored|dance|sit|chair|watch|chat|nap|exercise|tag|follow|animal|sneak|treasure|fiddle|shelter|inspect|fishing] | cogling status";
 
         private static readonly AccessTools.FieldRef<Dictionary<string, Terminal.ConsoleCommand>> TerminalCommands =
             AccessTools.StaticFieldRefAccess<Dictionary<string, Terminal.ConsoleCommand>>(AccessTools.Field(typeof(Terminal), "commands"));
@@ -47,9 +47,11 @@ namespace Cogling
                     : w == "bored" ? CoglingSlack.Activity.Bored : w == "dance" ? CoglingSlack.Activity.Dance : w == "sit" ? CoglingSlack.Activity.Sit : w == "chair" ? CoglingSlack.Activity.Chair : w == "watch" ? CoglingSlack.Activity.Watch : w == "chat" ? CoglingSlack.Activity.Chat
                     : w == "nap" ? CoglingSlack.Activity.Nap : w == "exercise" ? CoglingSlack.Activity.Exercise
                     : w == "tag" ? CoglingSlack.Activity.Tag : w == "follow" ? CoglingSlack.Activity.Follow : w == "animal" ? CoglingSlack.Activity.Animal : w == "sneak" ? CoglingSlack.Activity.Sneak
-                    : w == "treasure" ? CoglingSlack.Activity.Treasure : w == "fiddle" ? CoglingSlack.Activity.Fiddle : w == "shelter" ? CoglingSlack.Activity.Shelter : w == "inspect" ? CoglingSlack.Activity.Inspect : (CoglingSlack.Activity?)null;
+                    : w == "treasure" ? CoglingSlack.Activity.Treasure : w == "fiddle" ? CoglingSlack.Activity.Fiddle : w == "shelter" ? CoglingSlack.Activity.Shelter : w == "inspect" ? CoglingSlack.Activity.Inspect
+                    : w == "fishing" ? CoglingSlack.Activity.Fishing : (CoglingSlack.Activity?)null;
                 bool took = cog.SlackNow(what);
                 if (!took && what == CoglingSlack.Activity.Chair) { t.AddString($"No chair for it: {CoglingSlack.ChairWhy}."); return; }
+                if (!took && what == CoglingSlack.Activity.Fishing) { t.AddString($"No shore for it: {CoglingSlack.FishWhy}."); return; }
                 t.AddString(took ? $"Taking a break{(what.HasValue ? $" ({what})" : "")}." : "It can't take that break here (a chat needs another Cogling near, free; a chair, a free chair in its area; watching, you near).");
                 return;
             }

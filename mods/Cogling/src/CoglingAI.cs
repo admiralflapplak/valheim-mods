@@ -267,7 +267,9 @@ namespace Cogling
         // ---- chatting (CoglingSlack): asked by another Cogling
 
         /// <summary>Free to be asked for a chat: not frightened or wary, not on a break or greeted, in his area.</summary>
-        internal bool CanChat => _danger != null && !_danger.Afraid && !_danger.Wary && _mode != Mode.Slacking && _mode != Mode.Returning && Time.time >= _greetUntil && !Plugin.Paused.Value;
+        // (not while waiting at the antenna after a call: asked then, he said yes but never came)
+        internal bool CanChat => _danger != null && !_danger.Afraid && !_danger.Wary && _mode != Mode.Slacking && _mode != Mode.Returning && Time.time >= _greetUntil
+                                 && Time.time >= _calledUntil && !Plugin.Paused.Value;
         internal bool IsWorking => _mode == Mode.Working;
         internal bool CanBeStartled => _danger != null && !_danger.Afraid && !_danger.Wary && PoweredUp;
 

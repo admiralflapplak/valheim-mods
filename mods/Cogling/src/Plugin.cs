@@ -16,7 +16,7 @@ namespace Cogling
     {
         public const string Guid = "nick.Cogling";
         public const string Name = "Cogling";
-        public const string Version = "0.32.2";
+        public const string Version = "0.35.4";
 
         internal static BepInEx.Logging.ManualLogSource Log;
         internal static ServerSettings Synced;
@@ -104,7 +104,10 @@ namespace Cogling
         internal static ConfigEntry<float> RepairBelow;
         internal static ConfigEntry<bool> NeverPowerDown;
         
-        internal static ConfigEntry<bool> DanceAudience, Slacking;
+        internal static ConfigEntry<bool> DanceAudience, FishingCatches, Slacking;
+        // the rod in his hand, placed by eye (the user's values)
+        internal static readonly Fixed<float> RodX = new Fixed<float>(-5.808f), RodY = new Fixed<float>(3.816f), RodZ = new Fixed<float>(-8.272f),
+            RodTurnX = new Fixed<float>(58.602f), RodTurnY = new Fixed<float>(-109.528f), RodTurnZ = new Fixed<float>(-180f), RodSize = new Fixed<float>(0.5f);
         internal static ConfigEntry<float> ChairChance, SlackEvery;
         
         internal static ConfigEntry<float> HappyIdleChance, PowerDownAfter;
@@ -178,6 +181,7 @@ namespace Cogling
             PowerDownAfter = Synced.Bind("1 - Building", "Power down after", 10f, "Seconds with nothing to do at its antenna before it powers down (it boots up when there's work).", new AcceptableValueRange<float>(2f, 600f));
             Slacking = Config.Bind("8 - Slacking off", "Slacking off", true, "Now and then a Cogling takes a break, even with work to do: stares into the distance, looks around, is bored, dances, or sits on the ground for a while. Each has its own personality: some slack more than others. Never while frightened.");
             SlackEvery = Config.Bind("8 - Slacking off", "Every (minutes)", 4f, new ConfigDescription("How often an average Cogling takes a break, about (a lazy one more often, a hard worker less).", new AcceptableValueRange<float>(0.5f, 30f)));
+            FishingCatches = Synced.Bind("8 - Slacking off", "Fishing catches", true, "Now and then a Cogling with water in its area goes fishing for a break; about a third of the time it lands a fish (the biome's) and puts it in a chest. Off: it fishes, but never catches anything.");
             DanceAudience = Config.Bind("8 - Slacking off", "Dance audience", true, "When a Cogling dances, others near may come over: a playful one to dance along, a sociable one to clap and cheer.");
             ChairChance = Config.Bind("8 - Slacking off", "Sit on chairs", 0.6f, new ConfigDescription("Sitting down for a break with a free chair, stool or bench in its area: how likely the Cogling hops up onto it (else it sits on the ground).", new AcceptableValueRange<float>(0f, 1f)));
             DropWait = Synced.Bind("6 - Floor items", "Wait after a drop", 60f,
