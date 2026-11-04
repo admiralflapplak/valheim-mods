@@ -17,6 +17,9 @@ namespace Cogling
     {
         internal const string Key = "cogling_rebuilds", AddRpc = "cogling_rebuild_add";
 
+        /// <summary>Testing (`cogling break`): the next breakdown is rebuilt after this many seconds instead of Rebuild minutes (0: off).</summary>
+        internal static float QuickSeconds;
+
         /// <summary>The rebuilds an antenna has waiting: when each is due (world ticks), and who built that Cogling.</summary>
         internal static List<(long due, long creator)> Pending(Antenna a)
         {
@@ -84,9 +87,12 @@ namespace Cogling
             List<Antenna> network = Antenna.NetworkAt(__instance.transform.position);
             Antenna nearest = network.Where(a => a != null).OrderBy(a => Vector3.Distance(a.transform.position, __instance.transform.position)).FirstOrDefault();
             if (nearest == null) return true;   // (no antenna to rebuild him: his cost, so nothing is lost)
-            long due = ZNet.instance.GetTime().AddSeconds(Plugin.RebuildMinutes.Value * 60.0).Ticks;
+            // (`cogling break`, testing: this breakdown's rebuild in a few seconds)
+            double seconds = Rebuilds.QuickSeconds > 0f ? Rebuilds.QuickSeconds : Plugin.RebuildMinutes.Value * 60.0;
+            Rebuilds.QuickSeconds = 0f;
+            long due = ZNet.instance.GetTime().AddSeconds(seconds).Ticks;
             nearest.GetComponent<ZNetView>().InvokeRPC(Rebuilds.AddRpc, due, __instance.GetCreator());
-            Plugin.Log.LogInfo($"Cogling broke down: the antenna at {nearest.transform.position:F1} rebuilds him in {Plugin.RebuildMinutes.Value:F0} min");
+            Plugin.Log.LogInfo($"Cogling broke down: the antenna at {nearest.transform.position:F1} rebuilds him in {seconds:F0} s");
             return false;
         }
     }

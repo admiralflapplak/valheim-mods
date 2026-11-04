@@ -112,11 +112,16 @@ namespace Cogling
             var dummyCharacter = dummy.GetComponent<Character>();
             if (dummyCharacter != null)
             {
-                // wood, not blood: TWIG's hits, and TWIG's breaking (wood chips, smoke, its sound) when he's taken down or broken
+                // wood, not blood: TWIG's hits, and TWIG's breaking sound when he's taken down or broken
                 human.m_hitEffects = dummyCharacter.m_hitEffects;
                 human.m_critHitEffects = dummyCharacter.m_critHitEffects;
                 human.m_backstabHitEffects = dummyCharacter.m_backstabHitEffects;
-                human.m_deathEffects = dummyCharacter.m_deathEffects;
+                // (its sound only: TWIG's breaking dust, made for a full-size dummy, hid him and his falling apart in a cloud)
+                human.m_deathEffects = new EffectList
+                {
+                    m_effectPrefabs = (dummyCharacter.m_deathEffects?.m_effectPrefabs ?? new EffectList.EffectData[0])
+                        .Where(e => e?.m_prefab != null && e.m_prefab.GetComponentInChildren<ParticleSystem>(true) == null).ToArray(),
+                };
             }
             else human.m_deathEffects = new EffectList();
             // ...and he falls apart (CoglingCollapse), instead of the Dverger's blood and ragdoll

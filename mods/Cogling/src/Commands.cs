@@ -12,7 +12,7 @@ namespace Cogling
     internal static class Commands
     {
         private const string Command = "cogling";
-        private const string Usage = "cogling goto [x y z] | cogling home | cogling items | cogling tidy | cogling status | cogling slack [stare|look|bored|dance|sit|chair|watch|chat] | cogling emotes";
+        private const string Usage = "cogling goto [x y z] | cogling home | cogling items | cogling tidy | cogling status | cogling slack [stare|look|bored|dance|sit|chair|watch|chat] | cogling emotes | cogling break [seconds]";
 
         private static readonly AccessTools.FieldRef<Dictionary<string, Terminal.ConsoleCommand>> TerminalCommands =
             AccessTools.StaticFieldRefAccess<Dictionary<string, Terminal.ConsoleCommand>>(AccessTools.Field(typeof(Terminal), "commands"));
@@ -25,7 +25,7 @@ namespace Cogling
         {
             Player p = Player.m_localPlayer;
             string sub = a.Length > 1 ? a[1].ToLowerInvariant() : "";
-            if (p == null || (sub != "goto" && sub != "home" && sub != "items" && sub != "tidy" && sub != "status" && sub != "slack" && sub != "emotes" && sub != "antenna")) { t.AddString(Usage); return; }
+            if (p == null || (sub != "goto" && sub != "home" && sub != "items" && sub != "tidy" && sub != "status" && sub != "slack" && sub != "emotes" && sub != "antenna" && sub != "break")) { t.AddString(Usage); return; }
             if (sub == "antenna")
             {
                 // (testing: the nearest antenna's parts, where each is, and the lamp seen from the dish)
@@ -89,6 +89,20 @@ namespace Cogling
                 .OrderBy(c => Vector3.Distance(c.transform.position, p.transform.position)).FirstOrDefault();
             if (cog == null) { t.AddString("No Cogling near that this game runs."); return; }
             if (sub == "home") { cog.GoHome(); t.AddString("Going home."); return; }
+            if (sub == "break")
+            {
+                // (testing: he breaks down as if wrecked, and the antenna rebuilds him in a few seconds)
+                float seconds = 10f;
+                if (a.Length > 2) float.TryParse(a[2], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out seconds);
+                if (Antenna.NetworkAt(cog.transform.position).Count == 0) { t.AddString("He's outside any antenna's area: nothing would rebuild him."); return; }
+                Character body = cog.GetComponent<Character>();
+                Rebuilds.QuickSeconds = Mathf.Max(1f, seconds);
+                var blow = new HitData { m_point = body.GetCenterPoint(), m_dir = -body.transform.forward };
+                blow.m_damage.m_blunt = body.GetMaxHealth() * 10f;
+                body.Damage(blow);
+                t.AddString($"Breaking him down: the antenna rebuilds him in {Rebuilds.QuickSeconds:F0} s (it checks every 5 s).");
+                return;
+            }
             if (sub == "slack")
             {
                 string w = a.Length > 2 ? a[2].ToLowerInvariant() : "";
