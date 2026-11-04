@@ -84,6 +84,7 @@ namespace Cogling
         {
             if (_turn == null || _dish == null) { Find(); if (_turn == null || _dish == null) return; }
             Move();
+            Twitch();
             Lamp();
         }
 
@@ -126,6 +127,26 @@ namespace Cogling
             }
             _turn.localRotation = Quaternion.Euler(0f, yaw, 0f);
             _dish.localRotation = Quaternion.Euler(Plugin.DishTilt.Value + tip, 0f, 0f);
+        }
+
+        // a Cogling tinkering with it: the dish twitches now and then (on top of its moves), with a little creak sometimes
+        private float _nextTwitch, _twitchYaw, _twitchTip, _toYaw, _toTip;
+
+        private void Twitch()
+        {
+            if (Time.time >= _nextTwitch)
+            {
+                _nextTwitch = Time.time + Random.Range(0.5f, 0.9f);
+                bool fiddled = CoglingBody.FiddlingNear(transform.position, 2.2f);
+                _toYaw = fiddled ? Random.Range(-6f, 6f) : 0f;
+                _toTip = fiddled ? Random.Range(-4f, 4f) : 0f;
+                if (fiddled && Random.value < 0.3f) Creak();
+            }
+            _twitchYaw = Mathf.MoveTowards(_twitchYaw, _toYaw, Time.deltaTime * 60f);
+            _twitchTip = Mathf.MoveTowards(_twitchTip, _toTip, Time.deltaTime * 40f);
+            if (_twitchYaw == 0f && _twitchTip == 0f) return;
+            _turn.localRotation *= Quaternion.Euler(0f, _twitchYaw, 0f);
+            _dish.localRotation *= Quaternion.Euler(_twitchTip, 0f, 0f);
         }
 
         private static float Ease(float x) => x < 0.5f ? 4f * x * x * x : 1f - Mathf.Pow(-2f * x + 2f, 3f) / 2f;

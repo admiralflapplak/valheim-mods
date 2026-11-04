@@ -543,7 +543,9 @@ namespace Cogling
             if (_slack == (int)CoglingSlack.Activity.Watch) return _idle;
             if (_slack == (int)CoglingSlack.Activity.Exercise) return Clip("rig_push_ups");
             if (_slack == (int)CoglingSlack.Activity.Sneak) return Clip("rig_sneaking");
-            if (_slack == CoglingSlack.PoseSitUps) return Clip("rig_sit_ups");   // (watching you: his usual idle, never the happy one)
+            if (_slack == (int)CoglingSlack.Activity.Fiddle) return Clip("rig_working_a");
+            if (_slack == CoglingSlack.PoseWork2) return Clip("rig_working_b");
+            if (_slack == CoglingSlack.PoseWork3) return Clip("rig_working_c");
             return null;
         }
 
@@ -708,7 +710,12 @@ namespace Cogling
         private bool Chatting => CoglingSlack.Talking(_slack) || _slack == CoglingSlack.PoseListen;
         private ZDOID _watchId = ZDOID.None;
         /// <summary>Breaks where his head follows someone (saved on him: cogling_watch): watching or tagging along after a player, a tame animal.</summary>
-        private bool Looking => _slack == (int)CoglingSlack.Activity.Watch || _slack == (int)CoglingSlack.Activity.Follow || _slack == (int)CoglingSlack.Activity.Animal;
+        private bool Looking => _slack == (int)CoglingSlack.Activity.Watch || _slack == (int)CoglingSlack.Activity.Follow || _slack == (int)CoglingSlack.Activity.Animal
+                                || _slack == (int)CoglingSlack.Activity.Inspect;
+        /// <summary>Fiddling with the antenna (CoglingSlack): near it, AntennaLife twitches its dish.</summary>
+        internal static bool FiddlingNear(Vector3 at, float within) =>
+            Live.Any(b => b != null && b.Tinkering && Vector3.Distance(b.transform.position, at) < within);
+        private bool Tinkering => _slack == (int)CoglingSlack.Activity.Fiddle || _slack == CoglingSlack.PoseWork2 || _slack == CoglingSlack.PoseWork3;
         private float _lookWeight;
         private Vector3 _lookPoint, _lookVel;
 
@@ -717,12 +724,18 @@ namespace Cogling
         {
             if (_head == null) return null;
             if (Chatting) return _chatWith + Vector3.up * Plugin.Height.Value * 0.8f;   // (at the other one's face)
+            if (_slack == (int)CoglingSlack.Activity.Treasure && _held != null) return _held.transform.position;   // (admiring his treasure)
             if (Looking && !_watchId.IsNone())
             {
                 // watching you: his eyes on yours, wherever you go
                 GameObject who = ZNetScene.instance != null ? ZNetScene.instance.FindInstance(_watchId) : null;
                 Character c = who != null ? who.GetComponent<Character>() : null;
-                return c != null ? c.GetHeadPoint() : (Vector3?)null;
+                if (c != null) return c.GetHeadPoint();
+                // (a building piece: its middle, his gaze running up and down it)
+                Collider shape = who != null ? who.GetComponentInChildren<Collider>() : null;
+                if (shape == null) return null;
+                Bounds b = shape.bounds;
+                return b.center + Vector3.up * Mathf.Sin((Time.time - _slackStart) * 1.2f) * Mathf.Max(0.3f, b.extents.y * 0.8f);
             }
             if (_slack != (int)CoglingSlack.Activity.Stare) return null;
             float t = Time.time - _slackStart;
@@ -930,12 +943,17 @@ namespace Cogling
         }
 
         /// <summary>The hammer's knock (the game's own building sound), played here on this game only.</summary>
-        private void Knock()
+        private void Knock(float volume = 1f)
         {
             if (_knockSound == null) _knockSound = ZNetScene.instance?.GetPrefab("sfx_build_hammer_wood");
             if (_knockSound == null) return;
             ZNetView.m_forceDisableInit = true;
-            try { Destroy(Instantiate(_knockSound, transform.position + transform.forward * 0.4f + Vector3.up * 0.4f, Quaternion.identity), 3f); }
+            try
+            {
+                GameObject knock = Instantiate(_knockSound, transform.position + transform.forward * 0.4f + Vector3.up * 0.4f, Quaternion.identity);
+                if (volume < 1f && knock.GetComponent<ZSFX>() is ZSFX sfx) { sfx.m_minVol *= volume; sfx.m_maxVol *= volume; }
+                Destroy(knock, 3f);
+            }
             finally { ZNetView.m_forceDisableInit = false; }
         }
         private int _act;
@@ -979,6 +997,7 @@ namespace Cogling
                         SetEyes(mood == Carried.MoodScared ? new Color(1f, 0.12f, 0.08f) : mood == Carried.MoodWary ? new Color(1f, 0.82f, 0.1f) : (Color?)null);
                     }
                     name = zdo.GetString(Carried.PrefabKey);
+                    if (string.IsNullOrEmpty(name)) name = zdo.GetString(CoglingSlack.TreasureKey);   // (a treasure he's admiring)
                 }
                 if (Plugin.CarryPreview.Value && string.IsNullOrEmpty(name)) name = "Wood";   // (testing: the carry pose on every Cogling)
                 if (name != _heldName) { _heldName = name; ShowHeld(name); }
@@ -991,6 +1010,7 @@ namespace Cogling
             _hammer = Mathf.MoveTowards(_hammer, hammering ? 1f : 0f, dt * 4f);
             ShowTool(hammering);
             if (_act == Carried.ActHammer && !Plugin.SwingFreeze.Value && Time.time >= _nextKnock) { _nextKnock = Time.time + Mathf.Max(0.1f, Plugin.SwingTime.Value); Knock(); }
+            if (Tinkering && Time.time >= _nextKnock) { _nextKnock = Time.time + Random.Range(0.8f, 1.6f); Knock(0.35f); }   // (tinkering: a soft knock now and then)
             if (Plugin.BendPreview.Value) _bend = 1f;
             if ((_carry <= 0f && _bend <= 0f && _hammer <= 0f) || _pose.muscles == null) return;
             int[] m = Muscles();

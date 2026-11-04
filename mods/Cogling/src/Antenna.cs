@@ -245,6 +245,7 @@ namespace Cogling
         // (where the mesh is cut: in the gap between them. Cut at the pivot, the bottom of the dish's hub stayed on the post and stood
         // still while the dish turned: the lamp, on the dish, looked to wander about the hub)
         private const float CutAt = 1.06f;
+        private const float PostWidth = 0.3f;   // (its box across, in the antenna's own size: the post and its foot, with a little to spare)
         private static Mesh _post, _dish;
         private static Vector3 _pivot;
 
@@ -296,6 +297,8 @@ namespace Cogling
                 if (stand.GetComponent<MeshFilter>() is MeshFilter post) post.sharedMesh = _post;
                 if (dish.GetComponent<MeshFilter>() is MeshFilter bowl) bowl.sharedMesh = _dish;
             }
+            // its box fitted to the post (the wisp light's stand had a box near a metre across: a Cogling stopped well short of it)
+            if (stand.GetComponent<BoxCollider>() is BoxCollider fit) fit.size = new Vector3(PostWidth, fit.size.y, PostWidth);
             dish.localRotation = Quaternion.Euler(Plugin.DishTilt.Value, 0f, 0f);   // (its face toward the antenna's front)
             Transform old = turn.Find("cogling_hinge");
             if (old != null && old.childCount != 4) { old.gameObject.SetActive(false); Destroy(old.gameObject); old = null; }   // (an older hinge)

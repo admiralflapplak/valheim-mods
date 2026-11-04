@@ -22,12 +22,13 @@ namespace Cogling
     internal sealed class CoglingSlack
     {
         // (Watch and Chair: numbers of their own, past the poses below; saved as they are)
-        internal enum Activity { None = 0, Stare = 1, LookAround = 2, Bored = 3, Dance = 4, Sit = 5, Chat = 6, Watch = 14, Chair = 15, Cheer = 16, Nap = 19, Exercise = 20, Tag = 22, Follow = 23, Animal = 24, Sneak = 25 }
+        internal enum Activity { None = 0, Stare = 1, LookAround = 2, Bored = 3, Dance = 4, Sit = 5, Chat = 6, Watch = 14, Chair = 15, Cheer = 16, Nap = 19, Exercise = 20, Tag = 22, Follow = 23, Animal = 24, Sneak = 25, Treasure = 26, Fiddle = 27, Shelter = 28, Inspect = 29 }
         // (cheering on a dancer: clapping is Activity.Cheer; these two are cheering)
         internal const int PoseCheer2 = 17, PoseCheer3 = 18;
-        // (exercising: push-ups are Activity.Exercise; this is sit-ups)
-        internal const int PoseSitUps = 21;
-        private int _exercisePose;
+        // (21 was sit-ups: taken out, they looked wonky on him)
+        // (tinkering: Working_A is Activity.Fiddle; these are Working_B and C)
+        internal const int PoseWork2 = 30, PoseWork3 = 31;
+        private int _workPose;
         private static readonly int[] CheerPoses = { (int)Activity.Cheer, PoseCheer2, PoseCheer3 };
         internal static string CheerClip(int pose) =>
             pose == (int)Activity.Cheer ? "social_handclap01" : pose == PoseCheer2 ? "social_cheer01" : pose == PoseCheer3 ? "social_cheer02" : null;
@@ -43,6 +44,7 @@ namespace Cogling
         internal static string TalkClip(int pose) =>
             pose == PoseTalk ? "social_talk01" : pose == PoseTalk2 ? "social_talk02" : pose == PoseTalk3 ? "social_talk03"
             : pose == PoseQuestion ? "social_question01" : pose == PoseQuestion2 ? "social_question02" : null;
+        internal const string TreasureKey = "cogling_treasure";   // (what he admires: shown in his hands, never taken from the chest)
         internal const string SlackKey = "cogling_slack", TraitsKey = "cogling_traits", LookKey = "cogling_look", SeatKey = "cogling_seat", WatchKey = "cogling_watch";
 
         /// <summary>His personality: each from 0 to 1.</summary>
@@ -79,6 +81,11 @@ namespace Cogling
         private bool _it;                // tag: he's "it" (he chases)
         private float _graceUntil, _nextAim, _outsideSince, _booAt = -1f;
         private Character _animal;       // visiting a tame animal: which
+        private Container _chest;        // treasure: the chest it's from
+        private string _treasure;        //   and what (a prefab name)
+        private int _phase;              //   0 to the chest, 1 taking it out, 2 off to admire it, 3 admiring, 4 back, 5 putting it back
+        private float _phaseUntil;
+        private Piece _inspected;        // inspecting: the piece a player built
         private Vector3 _animalWas;
         private CoglingSlack _dancer;    // dancing along or cheering: whose dance
         private float _nextCheerPose;
@@ -101,6 +108,7 @@ namespace Cogling
             _job = job;
             _nextRoll = Time.time + Random.Range(20f, 40f);
             Write(0);   // (a break saved as his area unloaded: over)
+            if (Owner && !string.IsNullOrEmpty(Zdo?.GetString(TreasureKey))) Zdo.Set(TreasureKey, "");   // (and a treasure he was holding: back)
             All.Add(this);
         }
 
@@ -181,6 +189,12 @@ namespace Cogling
             }
             if (near != null && Antenna.InArea(network, near.transform.position)) weights.Add((Activity.Follow, 0.15f + t.Curiosity * 0.7f));
             if (TameNear(network) != null) weights.Add((Activity.Animal, 0.2f + t.Curiosity * 0.6f + t.Sociability * 0.3f));
+            // treasure (curious dreamers), tinkering with the antenna (hard workers), a player's new building (curious ones)
+            if (Shiny(network, out _, out _)) weights.Add((Activity.Treasure, 0.1f + (t.Curiosity + t.Dreaminess) * 0.35f));
+            weights.Add((Activity.Fiddle, 0.1f + t.Diligence * 0.5f));
+            if (Fresh(network) != null) weights.Add((Activity.Inspect, 0.6f + t.Curiosity * 1.8f));
+            // raining and out in it: under a roof, mostly
+            if (EnvMan.IsWet() && !UnderRoof(_ai.transform.position)) weights.Add((Activity.Shelter, 4f + weights.Sum(w => w.Item2)));
             // a nap (restful ones; more at night), exercise (hard workers: even their breaks are work)
             weights.Add((Activity.Nap, (0.15f + t.Restfulness * 1.2f) * (EnvMan.IsNight() ? 2.5f : 1f)));
             weights.Add((Activity.Exercise, t.Diligence < 0.3f ? 0.03f : 0.1f + t.Diligence * 0.9f));
@@ -291,6 +305,51 @@ namespace Cogling
                     duration = 25f;   // (gives up after that)
                     break;
                 }
+                case Activity.Treasure:
+                {
+                    // something shiny from a chest of his area (a gem, a trophy...): out, off to admire it, and back (only shown in his
+                    // hands: it never leaves the chest, so nothing can be lost)
+                    if (!Shiny(network, out _chest, out _treasure)) return false;
+                    go = Floor(_chest.transform.position + Flat(here - _chest.transform.position) * 1.0f);
+                    _face = _chest.transform.position;
+                    _phase = 0;
+                    duration = 120f;   // (it ends when it's back in the chest)
+                    break;
+                }
+                case Activity.Fiddle:
+                {
+                    // tinkering with his antenna: one of Rig_Medium's working clips (the dish twitches: AntennaLife)
+                    _workPose = Random.Range(0, 3) == 0 ? (int)Activity.Fiddle : Random.value < 0.5f ? PoseWork2 : PoseWork3;
+                    Antenna a = network.Where(x => x != null).OrderBy(x => Vector3.Distance(x.transform.position, here)).FirstOrDefault();
+                    if (a == null) return false;
+                    go = Floor(a.transform.position + Flat(here - a.transform.position) * 0.55f);
+                    _spot = go.Value;   // (the last steps there exactly: Step.Stepping)
+                    _face = a.transform.position;
+                    duration = Random.Range(8f, 15f) * (0.7f + t.Diligence * 0.6f);
+                    break;
+                }
+                case Activity.Shelter:
+                {
+                    // out of the rain: the nearest spot under a roof in his area (else, nothing)
+                    Vector3? dry = Dry(network);
+                    if (!dry.HasValue) return false;
+                    go = dry;
+                    _face = dry.Value + Quaternion.Euler(0f, Random.Range(0f, 360f), 0f) * Vector3.forward * 5f;
+                    duration = Random.Range(30f, 60f);
+                    break;
+                }
+                case Activity.Inspect:
+                {
+                    // a player's new building: over to it, to look it up and down
+                    _inspected = Fresh(network);
+                    if (_inspected == null) return false;
+                    Seen.Add(_inspected.transform.position);
+                    Vector3 at = _inspected.transform.position;
+                    go = Floor(at + Flat(here - at) * 2f);
+                    _face = at;
+                    duration = Random.Range(6f, 10f);
+                    break;
+                }
                 case Activity.Nap:
                 {
                     // lying down for a recharge: at the edge of his area, or where he is
@@ -302,8 +361,7 @@ namespace Cogling
                     break;
                 }
                 case Activity.Exercise:
-                    // push-ups or sit-ups, where he is (a hard worker keeps at it longer)
-                    _exercisePose = Random.value < 0.5f ? (int)Activity.Exercise : PoseSitUps;
+                    // push-ups, where he is (a hard worker keeps at it longer)
                     duration = Random.Range(10f, 20f) * (0.7f + t.Diligence * 0.6f);
                     _face = here + _ai.transform.forward * 5f;
                     break;
@@ -381,7 +439,7 @@ namespace Cogling
                     var r = _nav.Update(dt);
                     if (r == CoglingNavigator.Result.Moving) return true;
                     _ai.Stop();
-                    if (Doing == Activity.Chair) { _step = Step.Stepping; _stepGiveUp = Time.time + 3f; return true; }
+                    if (Doing == Activity.Chair || Doing == Activity.Fiddle) { _step = Step.Stepping; _stepGiveUp = Time.time + 3f; return true; }
                     _step = Step.Facing;
                     _stepUntil = Time.time + 0.8f;
                     return true;
@@ -408,6 +466,7 @@ namespace Cogling
                     if (Doing == Activity.Follow && _watched != null) _face = _watched.transform.position;
                     if ((Doing == Activity.Tag || Doing == Activity.Sneak) && _other != null && _other._ai != null) _face = _other._ai.transform.position;
                     if (Doing == Activity.Animal && _animal != null) _face = _animal.transform.position;
+                    if (Doing == Activity.Inspect && _inspected != null) _face = _inspected.transform.position;
                     if (_dancer != null)
                     {
                         if (_dancer._ai == null || _dancer.Doing != Activity.Dance) { End(); return false; }
@@ -449,9 +508,12 @@ namespace Cogling
                     {
                         if ((Doing == Activity.Watch || Doing == Activity.Follow) && Owner) Zdo?.Set(WatchKey, _watched.GetZDOID());
                         if (Doing == Activity.Animal && Owner && _animal != null) Zdo?.Set(WatchKey, _animal.GetZDOID());
+                        if (Doing == Activity.Inspect && Owner && _inspected != null && _inspected.GetComponent<ZNetView>() is ZNetView pv && pv.IsValid()) Zdo?.Set(WatchKey, pv.GetZDO().m_uid);
+
                         if (Doing == Activity.Tag || Doing == Activity.Sneak) _ai.Running = Doing == Activity.Tag;
                         if (Doing == Activity.Sneak) _ai.WalkScale = 0.33f;   // (slow: to his sneak's steps)
-                        Write(Doing == Activity.Dance ? _dancePose : Doing == Activity.Exercise ? _exercisePose : (int)Doing);
+                        // (sheltering: as staring, his gaze drifting)
+                        Write(Doing == Activity.Dance ? _dancePose : Doing == Activity.Shelter ? (int)Activity.Stare : Doing == Activity.Fiddle ? _workPose : (int)Doing);
                         if (Doing == Activity.Dance && _dancer == null) Invite();
                     }
                     if (_dancer != null) _until = Time.time + Mathf.Max(5f, _dancer._until - Time.time);   // (till the dancer stops, about)
@@ -461,6 +523,8 @@ namespace Cogling
                     if (Doing == Activity.Tag) return Tag(dt);
                     if (Doing == Activity.Follow) return Follow(dt);
                     if (Doing == Activity.Sneak) return Sneak(dt);
+                    if (Doing == Activity.Treasure) return Treasure(dt);
+                    if (Doing == Activity.Shelter && !EnvMan.IsWet() && Time.time > _until - 20f) { End(); return false; }   // (the rain's over)
                     if (Doing == Activity.Animal && !Animal(dt)) return false;
                     _ai.Stop();
                     if (Doing == Activity.Chat)
@@ -490,6 +554,7 @@ namespace Cogling
                     // (in a chat, the one who asked ends it; the other goes on till then, or a minute and a half at most)
                     if (Doing == Activity.Chat && !_host && Time.time < _until + 90f) return true;
                     if (Time.time < _until && Plugin.Slacking.Value) return true;
+                    if (Doing == Activity.Inspect) _ai.Say(CoglingVoice.Line.Nod);   // (looked it over: a nod)
                     if (GetsUp)
                     {
                         // standing up takes a while: he's still on his break till he's up
@@ -519,6 +584,8 @@ namespace Cogling
         /// <summary>The break ends now (danger, or another one starts): he's up at once.</summary>
         internal void Stop()
         {
+            // (what a break showed on him, taken off: the hammer, the treasure in his hands)
+            if (Doing == Activity.Treasure && Owner) Zdo?.Set(TreasureKey, "");
             if (Doing != Activity.None) Write(0);
             Doing = Activity.None;
             _partner = null;
@@ -529,6 +596,8 @@ namespace Cogling
             _lastTalker = null;
             _watched = null;
             _catchingUp = false;
+            _chest = null;
+            _inspected = null;
             _other = null;
             _it = false;
             _animal = null;
@@ -854,6 +923,138 @@ namespace Cogling
             return true;
         }
 
+        /// <summary>
+        /// Treasure, step by step: at the chest a moment (taking it out: shown in his hands), off a few steps to admire it, back to the chest
+        /// a moment (putting it back: gone from his hands). The chest gone or emptied of it: it's put away at once.
+        /// </summary>
+        private bool Treasure(float dt)
+        {
+            if (_chest == null || !_chest) { Done(); return false; }
+            Vector3 me = _ai.transform.position, chest = _chest.transform.position;
+            switch (_phase)
+            {
+                case 0:   // taking it out
+                    _ai.Stop();
+                    _ai.Face(chest);
+                    _phase = 1;
+                    _phaseUntil = Time.time + 1.2f;
+                    return true;
+                case 1:
+                    _ai.Stop();
+                    _ai.Face(chest);
+                    if (Time.time < _phaseUntil) return true;
+                    if (Owner) Zdo?.Set(TreasureKey, _treasure);
+                    _ai.Say(CoglingVoice.Line.Excited);
+                    for (int i = 0; i < 6; i++)
+                    {
+                        Vector3 spot = me + Quaternion.Euler(0f, Random.Range(0f, 360f), 0f) * Vector3.forward * Random.Range(3f, 5f);
+                        if (_network != null && !Antenna.InArea(_network, spot)) continue;
+                        if (_nav.SetTarget(Floor(spot))) break;
+                    }
+                    _phase = 2;
+                    return true;
+                case 2:   // off to admire it
+                    if (_nav.Update(dt) == CoglingNavigator.Result.Moving) return true;
+                    _ai.Stop();
+                    _phase = 3;
+                    _phaseUntil = Time.time + Random.Range(6f, 10f);
+                    return true;
+                case 3:   // admiring it (his head bowed to it: CoglingBody)
+                    _ai.Stop();
+                    if (Time.time < _phaseUntil) return true;
+                    _nav.SetTarget(Floor(chest + Flat(me - chest) * 1.0f));
+                    _phase = 4;
+                    return true;
+                case 4:   // back to the chest
+                    if (_nav.Update(dt) == CoglingNavigator.Result.Moving) return true;
+                    _ai.Stop();
+                    _phase = 5;
+                    _phaseUntil = Time.time + 1.0f;
+                    return true;
+                default:  // putting it back
+                    _ai.Stop();
+                    _ai.Face(chest);
+                    if (Time.time < _phaseUntil) return true;
+                    Done();
+                    return false;
+            }
+            void Done() { if (Owner) Zdo?.Set(TreasureKey, ""); End(); }
+        }
+
+        private static readonly HashSet<string> ShinyNames = new HashSet<string>
+        {
+            "Ruby", "Amber", "AmberPearl", "SilverNecklace", "Coins", "Thunderstone", "Crystal", "GemstoneRed", "GemstoneBlue", "GemstoneGreen",
+        };
+
+        /// <summary>A chest of his area within 25 m with something shiny in it (a gem, a trophy, coins...), and which (picked at random).</summary>
+        private bool Shiny(List<Antenna> network, out Container chest, out string what)
+        {
+            chest = null;
+            what = null;
+            Vector3 here = _ai.transform.position;
+            var found = new List<(Container, string)>();
+            foreach (Container c in Chests.Usable(network))
+            {
+                if (c == null || Vector3.Distance(here, c.transform.position) > 25f || c.GetInventory() == null) continue;
+                foreach (ItemDrop.ItemData item in c.GetInventory().GetAllItems())
+                {
+                    if (item?.m_dropPrefab == null) continue;
+                    if (item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Trophy || ShinyNames.Contains(item.m_dropPrefab.name))
+                        found.Add((c, item.m_dropPrefab.name));
+                }
+            }
+            if (found.Count == 0) return false;
+            (chest, what) = found[Random.Range(0, found.Count)];
+            return true;
+        }
+
+        /// <summary>Under cover: a roof, or a tree or rock overhead (the game's own check; the user likes them under trees too).</summary>
+        private static bool UnderRoof(Vector3 floor) => Cover.IsUnderRoof(floor + Vector3.up * 0.5f);
+
+        /// <summary>The nearest spot under a roof in his area (within 18 m, he can walk to), or null.</summary>
+        private Vector3? Dry(List<Antenna> network)
+        {
+            Vector3 here = _ai.transform.position;
+            Vector3? best = null;
+            float bestDistance = float.MaxValue;
+            for (int i = 0; i < 40; i++)
+            {
+                Vector3 p = here + Quaternion.Euler(0f, Random.Range(0f, 360f), 0f) * Vector3.forward * Random.Range(1f, 18f);
+                if (!Antenna.InArea(network, p)) continue;
+                Vector3 floor = Floor(p + Vector3.up * 1.5f);
+                if (!UnderRoof(floor)) continue;
+                float d = Vector3.Distance(here, floor);
+                if (d < bestDistance) { best = floor; bestDistance = d; }
+            }
+            return best;
+        }
+
+        // ---- a player's new building (Piece.SetCreator: on the game of the player who placed it)
+
+        private static readonly List<(Piece piece, float at)> Placed = new List<(Piece, float)>();
+        private static readonly List<Vector3> Seen = new List<Vector3>();
+        private const float FreshFor = 300f;   // (five minutes)
+
+        internal static void Built(Piece p)
+        {
+            if (p == null || p.GetComponent<Character>() != null) return;   // (not a Cogling)
+            Placed.RemoveAll(x => x.piece == null || Time.time - x.at > FreshFor);
+            Placed.Add((p, Time.time));
+        }
+
+        /// <summary>A piece a player built in his area in the last five minutes, not near one a Cogling has looked at already, or null.</summary>
+        private Piece Fresh(List<Antenna> network)
+        {
+            Seen.RemoveAll(s => Placed.All(x => x.piece == null || Vector3.Distance(x.piece.transform.position, s) > 4f));
+            foreach (var (piece, at) in Placed.AsEnumerable().Reverse())
+            {
+                if (piece == null || Time.time - at > FreshFor || !Antenna.InArea(network, piece.transform.position)) continue;
+                if (Seen.Any(s => Vector3.Distance(s, piece.transform.position) < 4f)) continue;
+                return piece;
+            }
+            return null;
+        }
+
         /// <summary>Asked to play tag by another: he runs off first (the other is "it", and counts a moment).</summary>
         internal bool JoinTag(CoglingSlack host)
         {
@@ -988,6 +1189,10 @@ namespace Cogling
                 case Activity.LookAround: return ("cogling_task_slack_look", "", "");
                 case Activity.Nap: return ("cogling_task_slack_nap", "", "");
                 case Activity.Tag: return ("cogling_task_slack_tag", "", "");
+                case Activity.Treasure: return ("cogling_task_slack_treasure", "", "");
+                case Activity.Fiddle: return ("cogling_task_slack_fiddle", "", "");
+                case Activity.Shelter: return ("cogling_task_slack_shelter", "", "");
+                case Activity.Inspect: return ("cogling_task_slack_inspect", "", "");
                 case Activity.Follow: return ("cogling_task_slack_follow", "", "");
                 case Activity.Animal: return ("cogling_task_slack_animal", "", "");
                 case Activity.Sneak: return ("cogling_task_slack_sneak", "", "");
@@ -1118,6 +1323,6 @@ namespace Cogling
             return p;
         }
 
-        internal static void Forget() { All.Clear(); Taken.Clear(); }
+        internal static void Forget() { All.Clear(); Taken.Clear(); Placed.Clear(); Seen.Clear(); }
     }
 }
