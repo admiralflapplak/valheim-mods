@@ -391,24 +391,50 @@ namespace Cogling
 
         // ---- a player coming home: he waves (once a player has been away a while)
 
-        private float _playerLastNear = -1f, _nextPlayerLook;
+        private float _nextPlayerLook;
 
+        /// <summary>
+        /// A player home after a while away (90 s, no player within 30 m): welcomed when he comes close. When a player was last near is
+        /// saved on him (world time), so a long trip counts: far away, his area unloads and he's made again when the player is back.
+        /// Powered down, he boots up for it (and powers down again later, as ever).
+        /// </summary>
         private void LookForPlayers()
         {
-            if (Time.time < _nextPlayerLook) return;
+            if (Time.time < _nextPlayerLook || m_nview == null || !m_nview.IsValid() || !m_nview.IsOwner() || ZNet.instance == null) return;
             _nextPlayerLook = Time.time + 1f;
-            if (_playerLastNear < 0f) _playerLastNear = Time.time;   // (just loaded: no welcome for whoever is there already)
-            if (Player.GetClosestPlayer(transform.position, 30f) == null) return;
-            bool away = Time.time - _playerLastNear > 90f;
-            _playerLastNear = Time.time;
-            Player close = Player.GetClosestPlayer(transform.position, 12f);
-            if (away && close != null && PoweredUp && (_slack == null || !_slack.Seated) && (_danger == null || (!_danger.Afraid && !_danger.Wary)))
+            if (_welcomeAfterBoot)
             {
-                LookAt(close.transform.position);
-                Say(CoglingVoice.Line.Welcome);
+                // (booted up to say it)
+                if (Time.time < _bootUntil) return;
+                _welcomeAfterBoot = false;
+                Player p = Player.GetClosestPlayer(transform.position, 15f);
+                if (p != null) { LookAt(p.transform.position); Say(CoglingVoice.Line.Welcome); }
+                return;
             }
-            else if (away && close == null) _playerLastNear = Time.time - 91f;   // (seen far off: still to be welcomed when he comes close)
+            if (Player.GetClosestPlayer(transform.position, 30f) == null) return;
+            ZDO zdo = m_nview.GetZDO();
+            long now = ZNet.instance.GetTime().Ticks, last = zdo.GetLong(SeenKey, 0L);
+            bool away = last != 0L && (now - last) / (double)System.TimeSpan.TicksPerSecond > 90.0;
+            Player close = Player.GetClosestPlayer(transform.position, 12f);
+            if (away && close == null) return;   // (seen far off: still to be welcomed when he comes close)
+            if (away || Time.time >= _nextSeenWrite) { zdo.Set(SeenKey, now); _nextSeenWrite = Time.time + 5f; }
+            if (!away || (_slack != null && _slack.Seated) || (_danger != null && (_danger.Afraid || _danger.Wary))) return;
+            if (!PoweredUp)
+            {
+                if (_mode != Mode.Resting) return;
+                Wake();
+                _restingSince = Time.time;   // (up a while before he powers down again)
+                _welcomeAfterBoot = true;
+                Log("booting up to welcome a player home");
+                return;
+            }
+            LookAt(close.transform.position);
+            Say(CoglingVoice.Line.Welcome);
         }
+
+        private const string SeenKey = "cogling_seen";
+        private bool _welcomeAfterBoot;
+        private float _nextSeenWrite;
 
         // ---- powered down / up (saved on him, so every player's game shows it: his body plays it, CoglingBody)
 
