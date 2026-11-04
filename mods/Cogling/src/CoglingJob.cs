@@ -49,7 +49,7 @@ namespace Cogling
     internal sealed class CoglingJob
     {
         internal enum State { Working, Done }
-        private enum Phase { ToItem, Picking, ToChest, Opening, Closing, ToSource, Taking, TakenClosing, ToPiece, Hammering, ToStation, FixingGear }
+        private enum Phase { ToItem, Picking, ToChest, Opening, Closing, ToSource, Taking, TakenClosing, ToPiece, Hammering, ToStation, FixingGear, ToFeed, Feeding }
 
         private readonly CoglingAI _ai;
         private readonly CoglingNavigator _nav;
@@ -64,6 +64,9 @@ namespace Cogling
         private CraftingStation _station;    // repairing gear: the station it's mended at
         private bool _gear;                  // (this trip from a chest is a repair, back to the same chest)
         private int _takeQuality;
+        private Tending.Feed _feed;          // tending: the fire or smelter he feeds, and how many he took for it (0: a whole stack)
+        private int _takeCount;
+        private float _pendingSince = -1f, _before, _nextFeed;
         private float _until;
         private List<Antenna> _network;
         private float _nextSearchLog;
@@ -92,8 +95,12 @@ namespace Cogling
                 case Phase.ToStation:
                 case Phase.FixingGear:
                     return ("cogling_task_mending", carried != null ? carried.m_shared.m_name : "", _station != null ? _station.m_name : "");
+                case Phase.ToFeed:
+                case Phase.Feeding:
+                    return ("cogling_task_tending", "", _feed?.Name ?? "");
                 case Phase.ToSource:
                 case Phase.Taking:
+                    if (_feed != null) return ("cogling_task_tending", "", _feed.Name);
                     if (_gear) return ("cogling_task_mending", _takeName ?? "", _station != null ? _station.m_name : "");
                     return ("cogling_task_tidying", "", "$item_" + (_takeName ?? "").Replace("$item_", ""));
                 default:
@@ -182,6 +189,27 @@ namespace Cogling
             _takeQuality = item.m_quality;
             _phase = Phase.ToSource;
             _ai.Log($"mending {Localization.instance.Localize(item.m_shared.m_name)} ({item.m_durability / item.GetMaxDurability() * 100f:F0}%) at the {Localization.instance.Localize(station.m_name)}");
+            return true;
+        }
+
+        /// <summary>A fire burning low or a working smelter in the area, and its fuel or ore in a chest: off to fetch it. False: none.</summary>
+        internal bool TryStartFeed(List<Antenna> network)
+        {
+            if (!Plugin.TendFires.Value && !Plugin.TendSmelters.Value) return false;
+            _network = network;
+            Tending.Feed feed = Tending.Next(network, _ai.transform.position, Chests.Usable(network));
+            if (feed == null || !_nav.SetTarget(ChestSpot(feed.Chest))) return false;
+            // as many as it can take, from that one stack, as much as he can carry
+            int most = Mathf.Max(1, Mathf.FloorToInt(Plugin.MaxCarryWeight.Value / Mathf.Max(0.0001f, feed.Stack.m_shared.m_weight)));
+            _takeCount = Mathf.Max(1, Mathf.Min(feed.Wants, feed.Stack.m_stack, most));
+            _feed = feed;
+            Tending.Claimed.Add(feed.Station.GetInstanceID());
+            _source = feed.Chest;
+            _goal = null;
+            _takeName = feed.Stack.m_shared.m_name;
+            _takeQuality = feed.Stack.m_quality;
+            _phase = Phase.ToSource;
+            _ai.Log($"tending: {_takeCount} {Localization.instance.Localize(_takeName)} for the {Localization.instance.Localize(feed.Name)} at {feed.Station.transform.position:F1}");
             return true;
         }
 
@@ -351,6 +379,52 @@ namespace Cogling
                     }
                     return item != null && ToAChest(item) ? State.Working : State.Done;
                 }
+                case Phase.ToFeed:
+                {
+                    if (_feed?.Station == null || !_feed.View.IsValid()) return Leftover("the station is gone");
+                    float d = Utils.DistanceXZ(_ai.transform.position, Edge(_feed.Station, _ai.transform.position));
+                    var r = _nav.Update(dt);
+                    if (d < 0.9f || (r != CoglingNavigator.Result.Moving && d < 1.6f))
+                    {
+                        _ai.Stop();
+                        _phase = Phase.Feeding;
+                        _pendingSince = -1f;
+                        _nextFeed = Time.time + 0.5f;
+                        Act(Carried.ActDeposit);
+                        return State.Working;
+                    }
+                    if (r == CoglingNavigator.Result.GaveUp) return Leftover("can't reach the station");
+                    if (r == CoglingNavigator.Result.Arrived) _nav.SetTarget(FeedSpot());
+                    return State.Working;
+                }
+                case Phase.Feeding:
+                {
+                    // one at a time, each counted as used only once the station's own count goes up (its owner may refuse or be gone)
+                    _ai.Stop();
+                    if (_feed?.Station == null || !_feed.View.IsValid()) return Leftover("the station is gone");
+                    _ai.Face(_feed.Station.transform.position);
+                    ItemDrop.ItemData item = Carried.Read(Zdo);
+                    if (item == null) return Fed();
+                    if (_pendingSince >= 0f)
+                    {
+                        if (Tending.Level(_feed) >= _before + 0.5f)
+                        {
+                            item.m_stack--;
+                            Carried.Write(Zdo, item.m_stack > 0 ? item : null);
+                            _pendingSince = -1f;
+                            _nextFeed = Time.time + 0.45f;
+                            return State.Working;
+                        }
+                        if (Time.time - _pendingSince > 2.5f) return Leftover("the station didn't take it");
+                        return State.Working;
+                    }
+                    if (Time.time < _nextFeed) return State.Working;
+                    if (!Tending.Room(_feed)) return Leftover("the station is full");
+                    _before = Tending.Level(_feed);
+                    Tending.Add(_feed);
+                    _pendingSince = Time.time;
+                    return State.Working;
+                }
                 case Phase.ToSource:
                 {
                     if (_source == null || !ContainerAccess.IsStorage(_source)) return Finish("the chest to tidy is gone");
@@ -371,10 +445,21 @@ namespace Cogling
                     var matching = inv.GetAllItems().Where(i => i.m_shared.m_name == _takeName && i.m_quality == _takeQuality);
                     ItemDrop.ItemData stack = _gear ? matching.OrderBy(i => i.m_durability / Mathf.Max(0.01f, i.GetMaxDurability())).FirstOrDefault()
                                                     : matching.OrderBy(i => i.m_stack).FirstOrDefault();
+                    if (_feed != null) stack = matching.OrderByDescending(i => i.m_stack).FirstOrDefault();
                     if (stack == null) { _source.SetInUse(false); return Finish("it was taken meanwhile"); }
                     ItemDrop.ItemData carried = stack.Clone();
-                    Carried.Write(Zdo, carried);
-                    inv.RemoveItem(stack);
+                    if (_feed != null && _takeCount > 0 && _takeCount < stack.m_stack)
+                    {
+                        // (tending: only what the station takes; the rest stays)
+                        carried.m_stack = _takeCount;
+                        Carried.Write(Zdo, carried);
+                        inv.RemoveItem(stack, _takeCount);
+                    }
+                    else
+                    {
+                        Carried.Write(Zdo, carried);
+                        inv.RemoveItem(stack);
+                    }
                     _ai.Log($"took {carried.m_stack} {Sorting.Short(carried)} from the chest at {_source.transform.position:F1}");
                     _phase = Phase.TakenClosing;
                     _until = Time.time + 0.4f;
@@ -390,6 +475,12 @@ namespace Cogling
                     Act(Carried.ActNone);
                     ItemDrop.ItemData item = Carried.Read(Zdo);
                     if (item == null) return Finish("nothing in his hands");
+                    if (_feed != null)
+                    {
+                        _phase = Phase.ToFeed;
+                        _nav.SetTarget(FeedSpot());
+                        return State.Working;
+                    }
                     if (_gear && _station != null)
                     {
                         _phase = Phase.ToStation;
@@ -468,8 +559,55 @@ namespace Cogling
         /// <summary>The piece or tidying move he had claimed, free again.</summary>
         private void Release()
         {
+            if (_feed?.Station != null) Tending.Claimed.Remove(_feed.Station.GetInstanceID());
             if (_piece != null) Repairs.Claimed.Remove(Repairs.Id(_piece));
             if (_tidyKey != null) { Tidy.Claimed.Remove(_tidyKey); _tidyKey = null; }
+        }
+
+        /// <summary>Fed: all of it went in.</summary>
+        private State Fed()
+        {
+            _ai.Log($"fed the {Localization.instance.Localize(_feed?.Name ?? "")}");
+            _ai.Say(CoglingVoice.Line.Stored);
+            Act(Carried.ActNone);
+            Release();
+            _feed = null;
+            return State.Done;
+        }
+
+        /// <summary>The station took no more (full, gone, no answer): what's left goes back to a chest.</summary>
+        private State Leftover(string why)
+        {
+            _ai.Log(why);
+            Act(Carried.ActNone);
+            Release();
+            _feed = null;
+            ItemDrop.ItemData item = Carried.Read(Zdo);
+            return item != null && ToAChest(item) ? State.Working : State.Done;
+        }
+
+        /// <summary>Where he stands to feed a station: just outside its nearest edge, on his side (a smelter is big: its middle was out of reach).</summary>
+        private Vector3 FeedSpot()
+        {
+            Vector3 edge = Edge(_feed.Station, _ai.transform.position), toward = _ai.transform.position - edge;
+            toward.y = 0f;
+            return edge + (toward.sqrMagnitude > 0.01f ? toward.normalized : Vector3.forward) * 0.5f;
+        }
+
+        /// <summary>The point of a station's solid body nearest a spot (its colliders'), at the spot's height; its middle if it has none.</summary>
+        private static Vector3 Edge(MonoBehaviour station, Vector3 from)
+        {
+            Vector3 best = station.transform.position;
+            float bestDistance = float.MaxValue;
+            foreach (Collider c in station.GetComponentsInChildren<Collider>())
+            {
+                if (c == null || !c.enabled || c.isTrigger) continue;
+                Vector3 p = c is MeshCollider m && !m.convex ? c.bounds.ClosestPoint(from) : c.ClosestPoint(from);
+                float d = Utils.DistanceXZ(p, from);
+                if (d < bestDistance) { best = p; bestDistance = d; }
+            }
+            best.y = from.y;
+            return best;
         }
 
         private Vector3 _hammerAt;
@@ -572,12 +710,15 @@ namespace Cogling
         internal void Abandon()
         {
             Release();
+            Act(Carried.ActNone);   // (a break or the bell mid-chore: his arms down, the hammer away)
             if (_source != null && _source.GetComponent<ZNetView>()?.IsOwner() == true) _source.SetInUse(false);
             _source = null;
             _goal = null;
             _piece = null;
             _station = null;
             _gear = false;
+            _feed = null;
+            _takeCount = 0;
             if (_itemId != ZDOID.None) FloorItems.Claimed.Remove(_itemId);
             if (_chest != null && _chest.GetComponent<ZNetView>()?.IsOwner() == true) _chest.SetInUse(false);
             _chest = null;

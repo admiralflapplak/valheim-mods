@@ -13,7 +13,7 @@ namespace Cogling
     /// (Dish tilt), and the ward's area circle. Its radius is a Cogling's working area; antennas whose areas overlap link into one area
     /// (a network). A Cogling can only be built inside an area. Registered through PieceReload, as the Cogling is.
     /// </summary>
-    internal sealed class Antenna : MonoBehaviour, Hoverable
+    internal sealed class Antenna : MonoBehaviour, Hoverable, Interactable
     {
         // ---- looking at it: its name, with how many Coglings its network powers, who they are, rebuilds waiting and its range (grey)
 
@@ -37,10 +37,32 @@ namespace Cogling
             if (names.Count > 0) lines.Add(string.Join(", ", names));
             foreach (float m in waits) lines.Add(Nick.Shared.Translations.T("cogling_antenna_rebuilding", Mathf.CeilToInt(m)));
             lines.Add(Nick.Shared.Translations.T("cogling_antenna_range", Radius.ToString("0")));
-            return GetHoverName() + "\n<color=#bdb7a9>" + string.Join("\n", lines) + "</color>";
+            return GetHoverName() + "\n<color=#bdb7a9>" + string.Join("\n", lines) + "</color>"
+                   + Localization.instance.Localize("\n[<color=yellow><b>$KEY_Use</b></color>] $cogling_antenna_bell");
         }
 
         internal const string Name = "cogling_antenna";
+
+        // ---- calling them: E on the antenna calls every Cogling in its area (its linked antennas' too) to come and wait in front of it
+
+        private float _nextRing;
+
+        public bool Interact(Humanoid user, bool hold, bool alt)
+        {
+            if (hold || alt || Time.time < _nextRing || _view == null || !_view.IsValid() || !(user is Player)) return false;
+            _nextRing = Time.time + 3f;
+            List<Antenna> network = NetworkAt(transform.position);
+            if (network.Count == 0) network = new List<Antenna> { this };
+            var coglings = Character.GetAllCharacters().Where(c => CoglingStance.IsCogling(c) && !c.IsDead() && c.GetComponent<ZNetView>()?.GetZDO() != null
+                                                                   && InArea(network, c.transform.position))
+                .OrderBy(c => Vector3.SignedAngle(user.transform.position - transform.position, c.transform.position - transform.position, Vector3.up)).ToList();
+            for (int i = 0; i < coglings.Count; i++)
+                coglings[i].GetComponent<ZNetView>().InvokeRPC(CoglingVoice.CalledRpc, transform.position, user.transform.position, i * 100 + Mathf.Min(99, coglings.Count));
+            return true;
+        }
+
+        public bool UseItem(Humanoid user, ItemDrop.ItemData item) => false;
+
 
         // ---- the antennas standing (loaded) in the world: our own list, never a scene search
 

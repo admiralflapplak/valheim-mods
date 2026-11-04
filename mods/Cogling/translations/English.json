@@ -18,6 +18,8 @@
   "cogling_task_hiding": "Hiding from {0}!",
   "cogling_task_watching": "Keeping an eye on {0}",
   "cogling_task_repairing": "Repairing the {1}",
+  "cogling_antenna_bell": "Call the Coglings",
+  "cogling_task_tending": "Tending the {1}",
   "cogling_task_mending": "Mending the {0} at the {1}",
   "cogling_antenna_powers": "Powers {0} of {1} Coglings",
   "cogling_antenna_powers_linked": "Powers {0} of {1} Coglings ({2} antennas linked)",

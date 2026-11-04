@@ -51,7 +51,7 @@ namespace Cogling
         /// <summary>The gestures by number (the RPC sends the number).</summary>
         internal static readonly string[] Gestures = Specs.Values.Where(s => s.Gestures != null).SelectMany(s => s.Gestures).Distinct().ToArray();
 
-        internal const string SayRpc = "cogling_say", WavedRpc = "cogling_waved";
+        internal const string SayRpc = "cogling_say", WavedRpc = "cogling_waved", CalledRpc = "cogling_called";
         private static readonly Dictionary<string, AudioClip[]> Sets = new Dictionary<string, AudioClip[]>();
         private static AudioClip[] _idle, _alerted;
         private static UnityEngine.Audio.AudioMixerGroup _mixer;
@@ -69,6 +69,8 @@ namespace Cogling
             view.Unregister(SayRpc);
             view.Register<int, int>(SayRpc, RPC_Say);
             view.Unregister(WavedRpc);
+            view.Unregister(CalledRpc);
+            view.Register<Vector3, Vector3, int>(CalledRpc, (sender, antenna, ringer, place) => GetComponent<CoglingAI>()?.Called(antenna, ringer, place / 100, place % 100));
             view.Register<Vector3>(WavedRpc, (sender, at) => GetComponent<CoglingAI>()?.WavedAt(at));
             _view = view;
             if (SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null) { enabled = false; return; }
@@ -104,7 +106,7 @@ namespace Cogling
 
         private void OnDestroy()
         {
-            if (_view != null && _view.IsValid()) { _view.Unregister(SayRpc); _view.Unregister(WavedRpc); }
+            if (_view != null && _view.IsValid()) { _view.Unregister(SayRpc); _view.Unregister(WavedRpc); _view.Unregister(CalledRpc); }
             Live.Remove(this);
             if (_source != null) Destroy(_source.gameObject);   // (a hot reload gives him the new copy's voice: one mouth, not two)
         }

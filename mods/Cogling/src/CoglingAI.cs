@@ -150,11 +150,14 @@ namespace Cogling
             }
             if (_mode == Mode.Returning) { _mode = Mode.GoingHome; _haveHome = false; }
             if (!_haveHome || !Antenna.InArea(network, _home) || Time.time > _nextHomeCheck) PickHome(network);
-            if (_haveHome && _mode == Mode.GoingHome && _nav.Target != _home && !_homeAfterFright && Utils.DistanceXZ(_nav.Target, _home) > 0.5f && _job != null && !_job.Carrying) _nav.SetTarget(_home);
+            if (_haveHome && _mode == Mode.GoingHome && Time.time >= _calledUntil && _nav.Target != _home && !_homeAfterFright && Utils.DistanceXZ(_nav.Target, _home) > 0.5f && _job != null && !_job.Carrying) _nav.SetTarget(_home);
             if (!PoweredUp && _mode != Mode.Resting) { Log($"awake: not resting ({_mode})"); Wake(); }   // (built or loaded powered down, but not resting at home: up, and home)
             if (!PoweredUp && _mode == Mode.Resting && Utils.DistanceXZ(transform.position, _home) > 2.5f) { Log($"awake: {Utils.DistanceXZ(transform.position, _home):F1} m from home"); Wake(); _mode = Mode.GoingHome; _nav.SetTarget(_home); }
 
             if (_homeAfterFright) { _homeAfterFright = false; _nav.SetTarget(_home); _nextJobLook = 0f; }
+
+            // called by the antenna's bell: there, in the arc in front of it, facing the one who rang, a while (no breaks, no work)
+            if (Time.time < _calledUntil) { Gathered(dt); return true; }
 
             // on a break (CoglingSlack): it goes on till it's over, then home and work again
             if (_mode == Mode.Slacking)
@@ -175,7 +178,7 @@ namespace Cogling
                 {
                     // nothing on the floor: the chests, now and then (it reads every chest of the area)
                     _nextTidy = Time.time + 8f;
-                    if (_job.TryStartTidy(network) || _job.TryStartRepair(network) || _job.TryStartGear(network)) { _mode = Mode.Working; Wake(); }
+                    if (_job.TryStartFeed(network) || _job.TryStartTidy(network) || _job.TryStartRepair(network) || _job.TryStartGear(network)) { _mode = Mode.Working; Wake(); }
                 }
             }
 
@@ -481,6 +484,51 @@ namespace Cogling
             Say(CoglingVoice.Line.WaveBack);
         }
 
+        // ---- the antenna's bell (Antenna.Interact): every Cogling in its area comes and waits in front of it
+
+        private float _calledUntil;
+        private Vector3 _callSpot, _caller;
+        private bool _gathered;
+
+        /// <summary>On his owner's game: the bell rang. His place: in an arc in front of the antenna, toward the one who rang.</summary>
+        internal void Called(Vector3 antenna, Vector3 ringer, int place, int of)
+        {
+            if (m_nview == null || !m_nview.IsValid() || !m_nview.IsOwner() || (_danger != null && _danger.Afraid)) return;
+            Vector3 toward = ringer - antenna;
+            toward.y = 0f;
+            toward = toward.sqrMagnitude > 0.01f ? toward.normalized : Vector3.forward;
+            float angle = (place - (of - 1) / 2f) * 26f;
+            Vector3 spot = antenna + Quaternion.Euler(0f, angle, 0f) * toward * (1.4f + 0.15f * of);
+            if (ZoneSystem.instance != null && ZoneSystem.instance.GetSolidHeight(spot, out float height)) spot.y = height;
+            if (_mode == Mode.Slacking) _slack.Stop();
+            if (_mode == Mode.Working) _job.Abandon();   // (what he carries stays his: to a chest afterwards)
+            Wake();
+            _callSpot = spot;
+            _caller = ringer;
+            _calledUntil = Time.time + 45f;
+            _gathered = false;
+            _mode = Mode.GoingHome;
+            _nav.SetTarget(spot);
+            LookAt(ringer);
+            Say(CoglingVoice.Line.Oops);   // (a chirp: coming!)
+            Log($"called to the antenna: to {spot:F1}");
+        }
+
+        private void Gathered(float dt)
+        {
+            if (!_gathered)
+            {
+                var r = _nav.Update(dt);
+                if (r == CoglingNavigator.Result.Moving && Utils.DistanceXZ(transform.position, _callSpot) > 0.4f) return;
+                _gathered = true;
+                StopMoving();
+                Say(CoglingVoice.Line.Welcome);
+            }
+            StopMoving();
+            LookAt(_caller);
+            if (Time.time >= _calledUntil - 0.1f) { _mode = Mode.GoingHome; _nav.SetTarget(_home); _nextJobLook = 0f; Log("the bell's wait is over"); }
+        }
+
         private const string SeenKey = "cogling_seen";
         private bool _welcomeAfterBoot;
         private float _nextSeenWrite;
@@ -506,7 +554,35 @@ namespace Cogling
         }
 
         // ---- BaseAI's helpers for the navigator (protected there)
-        internal void Walk(Vector3 dir) => MoveTowards(dir, run: Running);
+        internal void Walk(Vector3 dir) => MoveTowards(Avoid(dir), run: Running);
+
+        /// <summary>Who he means to reach (tag, creeping up): not walked around.</summary>
+        internal Character Going;
+
+        /// <summary>
+        /// Round players and other Coglings in his way instead of shoving through them: anyone close ahead bends his way to one side
+        /// (always passing them on the same side, so two coming at each other don't dance), the closer the more.
+        /// </summary>
+        private Vector3 Avoid(Vector3 dir)
+        {
+            dir.y = 0f;
+            if (dir.sqrMagnitude < 0.0001f) return dir;
+            dir.Normalize();
+            Vector3 me = transform.position, right = Vector3.Cross(Vector3.up, dir), steer = Vector3.zero;
+            foreach (Character c in Character.GetAllCharacters())
+            {
+                if (c == null || c == m_character || c == Going || c.IsDead() || (!c.IsPlayer() && !CoglingStance.IsCogling(c))) continue;
+                Vector3 to = c.transform.position - me;
+                to.y = 0f;
+                float d = to.magnitude;
+                if (d > 1.2f || d < 0.01f) continue;
+                float ahead = Vector3.Dot(to / d, dir);
+                if (ahead < 0.25f) continue;   // (beside or behind him: in nobody's way)
+                float side = Vector3.Dot(to, right) > 0.1f ? -1f : 1f;   // (they're on his right: left round them; else right)
+                steer += right * side * (1.2f - d) / 1.2f * ahead * 1.6f;
+            }
+            return steer == Vector3.zero ? dir : (dir + steer).normalized;
+        }
 
         private bool _homeAfterFright;
 

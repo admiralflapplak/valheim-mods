@@ -602,6 +602,7 @@ namespace Cogling
             _it = false;
             _animal = null;
             _ai.Running = false;
+            _ai.Going = null;
             _ai.WalkScale = 1f;
             _ai.RunScale = 1f;
             _booAt = -1f;
@@ -825,6 +826,7 @@ namespace Cogling
             if (_other == null || _other._ai == null || _other.Doing != Activity.Tag || _other._other != this) { End(); return false; }
             if (Time.time >= _until && (_host || Time.time >= _until + 60f)) { _ai.Say(CoglingVoice.Line.Laugh); End(); return false; }
             Vector3 me = _ai.transform.position, them = _other._ai.transform.position;
+            _ai.Going = _other._ai.GetComponent<Character>();
             if (Time.time < _graceUntil) { _ai.Stop(); _ai.Face(them); return true; }   // (counting)
             _ai.RunScale = _it ? 1f : 0.75f;
             if (_it)
@@ -902,6 +904,7 @@ namespace Cogling
         {
             if (_other == null || _other._ai == null || Time.time >= _until || !_other.Startlable) { End(); return false; }   // (sat down, lay down...)
             Transform victim = _other._ai.transform;
+            _ai.Going = _other._ai.GetComponent<Character>();
             Vector3 behind = victim.position - Flat(victim.forward) * 0.7f;
             // there (the navigator stops within 0.6 m of the spot: near enough): a moment's pause behind him, then boo
             bool there = Utils.DistanceXZ(_ai.transform.position, behind) < 0.7f || Utils.DistanceXZ(_ai.transform.position, victim.position) < 1.0f;

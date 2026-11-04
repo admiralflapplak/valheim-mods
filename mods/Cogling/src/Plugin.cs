@@ -16,7 +16,7 @@ namespace Cogling
     {
         public const string Guid = "nick.Cogling";
         public const string Name = "Cogling";
-        public const string Version = "0.29.7";
+        public const string Version = "0.32.2";
 
         internal static BepInEx.Logging.ManualLogSource Log;
         internal static ServerSettings Synced;
@@ -100,7 +100,7 @@ namespace Cogling
 
         // 6 - Floor items (the server's: the owner of a Cogling decides what he takes)
         internal static ConfigEntry<float> DropWait, MaxCarryWeight, ColdEggWait;
-        internal static ConfigEntry<bool> CollectColdEggs, ResortGroups, RepairBuildings, RepairGear;
+        internal static ConfigEntry<bool> CollectColdEggs, ResortGroups, RepairBuildings, RepairGear, TendFires, TendSmelters;
         internal static ConfigEntry<float> RepairBelow;
         internal static ConfigEntry<bool> NeverPowerDown;
         
@@ -197,6 +197,10 @@ namespace Cogling
                 "A piece is repaired once its health is below this percent.", new AcceptableValueRange<float>(10f, 99f));
             RepairGear = Synced.Bind("7 - Repairing", "Repair gear", true,
                 "It takes worn tools and gear from its chests to their crafting station (when the station stands in its area, at the level the item needs), mends them, and puts them back.");
+            TendFires = Synced.Bind("9 - Tending", "Tend fires", true,
+                "It keeps fires, braziers and torches in its area burning: one burning below half gets fuel from its chests. One let go out stays out.");
+            TendSmelters = Synced.Bind("9 - Tending", "Tend smelters", true,
+                "It keeps smelters, kilns and furnaces in its area going: one already working gets more of what it's working on, and fuel, from its chests. It never starts one, and feeds a kiln only while a smelter burning its coal works and the chests have no coal left (so a kiln doesn't turn all your wood into coal). The bars and coal they make are taken to the chests like anything on the floor.");
             Sorting.Bind(Config);
             Config.SaveOnConfigSet = true;
             Config.Save();
@@ -231,6 +235,7 @@ namespace Cogling
             FloorItems.Forget();
             Repairs.Forget();
             CoglingSlack.Forget();
+            Tending.Forget();
             CoglingPrefab.Unregister();
             Antenna.Unregister();
             CoglingCollapse.Forget();
