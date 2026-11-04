@@ -78,6 +78,8 @@ them, and every player sees the same: what they carry, their breaks, their chats
 - `cogling slack [what]`: sends the nearest Cogling on a break (any one, or a named one: stare, look, bored, dance, sit, chair, nap,
   exercise, watch, follow, tag, sneak, animal, treasure, fiddle, inspect, shelter, fishing, chat).
 - `cogling status`: what every Cogling is doing, and its personality.
+- `cogling strays`: lists Coglings outside every antenna's area, anywhere in the world (one whose antenna was taken down, far
+  from any other); `cogling strays remove` takes them out of the world. On a server, run it on the host.
 
 ## Credits
 
