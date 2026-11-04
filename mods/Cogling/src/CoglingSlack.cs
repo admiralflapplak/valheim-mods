@@ -22,7 +22,7 @@ namespace Cogling
     internal sealed class CoglingSlack
     {
         // (Watch and Chair: numbers of their own, past the poses below; saved as they are)
-        internal enum Activity { None = 0, Stare = 1, LookAround = 2, Bored = 3, Dance = 4, Sit = 5, Chat = 6, Watch = 14, Chair = 15, Cheer = 16, Nap = 19, Exercise = 20 }
+        internal enum Activity { None = 0, Stare = 1, LookAround = 2, Bored = 3, Dance = 4, Sit = 5, Chat = 6, Watch = 14, Chair = 15, Cheer = 16, Nap = 19, Exercise = 20, Tag = 22, Follow = 23, Animal = 24, Sneak = 25 }
         // (cheering on a dancer: clapping is Activity.Cheer; these two are cheering)
         internal const int PoseCheer2 = 17, PoseCheer3 = 18;
         // (exercising: push-ups are Activity.Exercise; this is sit-ups)
@@ -75,6 +75,11 @@ namespace Cogling
         private float _stepGiveUp;
         private Player _watched;         // watching a player: who
         private bool _catchingUp;        // (watching: his body turning to catch up with his head)
+        private CoglingSlack _other;     // tag: who he plays with; sneaking: who he creeps up on
+        private bool _it;                // tag: he's "it" (he chases)
+        private float _graceUntil, _nextAim, _outsideSince, _booAt = -1f;
+        private Character _animal;       // visiting a tame animal: which
+        private Vector3 _animalWas;
         private CoglingSlack _dancer;    // dancing along or cheering: whose dance
         private float _nextCheerPose;
         private List<Antenna> _network;
@@ -167,11 +172,19 @@ namespace Cogling
                 (Activity.Dance, t.Playfulness < 0.15f ? 0.05f : 0.2f + t.Playfulness * 2f),   // (some never dance)
             };
             weights.Add((Activity.Sit, 0.4f + t.Restfulness * 1.8f));
+            Player near = Player.GetClosestPlayer(_ai.transform.position, 18f);
+            // tag (playful ones, with another free one near), tagging along after a player (curious ones), a tame animal, creeping up
+            if (Partner(network, false) != null)
+            {
+                weights.Add((Activity.Tag, t.Playfulness < 0.2f ? 0.03f : 0.1f + t.Playfulness * 1.2f));
+                weights.Add((Activity.Sneak, t.Playfulness < 0.5f ? 0.02f : 0.1f + t.Playfulness * 0.5f));
+            }
+            if (near != null && Antenna.InArea(network, near.transform.position)) weights.Add((Activity.Follow, 0.15f + t.Curiosity * 0.7f));
+            if (TameNear(network) != null) weights.Add((Activity.Animal, 0.2f + t.Curiosity * 0.6f + t.Sociability * 0.3f));
             // a nap (restful ones; more at night), exercise (hard workers: even their breaks are work)
             weights.Add((Activity.Nap, (0.15f + t.Restfulness * 1.2f) * (EnvMan.IsNight() ? 2.5f : 1f)));
             weights.Add((Activity.Exercise, t.Diligence < 0.3f ? 0.03f : 0.1f + t.Diligence * 0.9f));
             // watching a player, a bit too closely (a curious one more)
-            Player near = Player.GetClosestPlayer(_ai.transform.position, 18f);
             if (near != null && Antenna.InArea(network, near.transform.position)) weights.Add((Activity.Watch, 0.25f + t.Curiosity * 0.9f));
             if (Partner(network, false) != null) weights.Add((Activity.Chat, 0.3f + t.Sociability * 2f));
             float total = weights.Sum(w => w.Item2), pick = Random.value * total;
@@ -231,6 +244,53 @@ namespace Cogling
                     if (edge.HasValue) { go = edge; _face = edge.Value + outward * 10f; }
                     else _face = here + Quaternion.Euler(0f, Random.Range(0f, 360f), 0f) * Vector3.forward * 10f;
                     break;
+                case Activity.Tag:
+                {
+                    // a game of tag with another free one near (who may say no: yes more likely the more playful he is); he's "it" first
+                    CoglingSlack other = Partner(network, false);
+                    if (other == null) return false;
+                    if (!force && Random.value >= 0.2f + other.Me.Playfulness * 0.8f) { _ai.Log("asked another Cogling to play tag: no"); return false; }
+                    if (!other._ai.JoinTag(this)) return false;
+                    _other = other;
+                    _host = true;   // (he ends the game)
+                    _it = true;
+                    _graceUntil = 0f;
+                    _face = other._ai.transform.position;
+                    duration = Random.Range(20f, 35f) * (0.7f + (t.Playfulness + other.Me.Playfulness) / 3f);
+                    break;
+                }
+                case Activity.Follow:
+                {
+                    // tagging along after a player near, a few steps behind, for a while
+                    Player them = Player.GetClosestPlayer(here, 18f);
+                    if (them == null) return false;
+                    _watched = them;
+                    _face = them.transform.position;
+                    _outsideSince = -1f;
+                    duration = Random.Range(20f, 40f) * (0.7f + t.Curiosity * 0.6f);
+                    break;
+                }
+                case Activity.Animal:
+                {
+                    // over to a tame animal in his area, to stand and watch it
+                    _animal = TameNear(network);
+                    if (_animal == null) return false;
+                    _animalWas = _animal.transform.position;
+                    go = Floor(_animalWas + Flat(here - _animalWas) * 1.8f);
+                    _face = _animalWas;
+                    duration = Random.Range(15f, 30f) * (0.7f + t.Curiosity * 0.6f);
+                    break;
+                }
+                case Activity.Sneak:
+                {
+                    // creeping up behind another Cogling near, to give him a fright
+                    CoglingSlack victim = Victim(network);
+                    if (victim == null) return false;
+                    _other = victim;
+                    _face = victim._ai.transform.position;
+                    duration = 25f;   // (gives up after that)
+                    break;
+                }
                 case Activity.Nap:
                 {
                     // lying down for a recharge: at the edge of his area, or where he is
@@ -345,6 +405,9 @@ namespace Cogling
                         _face = Centre;
                     }
                     if (Doing == Activity.Watch) { if (!Watching) { End(); return false; } _face = _watched.transform.position; }
+                    if (Doing == Activity.Follow && _watched != null) _face = _watched.transform.position;
+                    if ((Doing == Activity.Tag || Doing == Activity.Sneak) && _other != null && _other._ai != null) _face = _other._ai.transform.position;
+                    if (Doing == Activity.Animal && _animal != null) _face = _animal.transform.position;
                     if (_dancer != null)
                     {
                         if (_dancer._ai == null || _dancer.Doing != Activity.Dance) { End(); return false; }
@@ -384,7 +447,10 @@ namespace Cogling
                     else if (Doing == Activity.Cheer) NextCheer();
                     else
                     {
-                        if (Doing == Activity.Watch && Owner) Zdo?.Set(WatchKey, _watched.GetZDOID());
+                        if ((Doing == Activity.Watch || Doing == Activity.Follow) && Owner) Zdo?.Set(WatchKey, _watched.GetZDOID());
+                        if (Doing == Activity.Animal && Owner && _animal != null) Zdo?.Set(WatchKey, _animal.GetZDOID());
+                        if (Doing == Activity.Tag || Doing == Activity.Sneak) _ai.Running = Doing == Activity.Tag;
+                        if (Doing == Activity.Sneak) _ai.WalkScale = 0.33f;   // (slow: to his sneak's steps)
                         Write(Doing == Activity.Dance ? _dancePose : Doing == Activity.Exercise ? _exercisePose : (int)Doing);
                         if (Doing == Activity.Dance && _dancer == null) Invite();
                     }
@@ -392,6 +458,10 @@ namespace Cogling
                     _nextCheer = Time.time + Random.Range(2f, 5f);
                     return true;
                 case Step.Doing:
+                    if (Doing == Activity.Tag) return Tag(dt);
+                    if (Doing == Activity.Follow) return Follow(dt);
+                    if (Doing == Activity.Sneak) return Sneak(dt);
+                    if (Doing == Activity.Animal && !Animal(dt)) return false;
                     _ai.Stop();
                     if (Doing == Activity.Chat)
                     {
@@ -459,6 +529,13 @@ namespace Cogling
             _lastTalker = null;
             _watched = null;
             _catchingUp = false;
+            _other = null;
+            _it = false;
+            _animal = null;
+            _ai.Running = false;
+            _ai.WalkScale = 1f;
+            _ai.RunScale = 1f;
+            _booAt = -1f;
             _dancer = null;
             Release();
         }
@@ -671,6 +748,165 @@ namespace Cogling
             _turnUntil = Time.time + CoglingBody.ClipLength(TalkClip(clip)) * (ask ? 1f : Random.value < 0.4f ? 2f : 1f) - 0.2f;
         }
 
+        // ---- tag, tagging along, a tame animal, creeping up
+
+        /// <summary>Tag: "it" chases the other; caught, they swap (the new "it" counts a moment first); the one who asked ends it.</summary>
+        private bool Tag(float dt)
+        {
+            if (_other == null || _other._ai == null || _other.Doing != Activity.Tag || _other._other != this) { End(); return false; }
+            if (Time.time >= _until && (_host || Time.time >= _until + 60f)) { _ai.Say(CoglingVoice.Line.Laugh); End(); return false; }
+            Vector3 me = _ai.transform.position, them = _other._ai.transform.position;
+            if (Time.time < _graceUntil) { _ai.Stop(); _ai.Face(them); return true; }   // (counting)
+            _ai.RunScale = _it ? 1f : 0.75f;
+            if (_it)
+            {
+                if (Time.time >= _nextAim) { _nextAim = Time.time + 0.4f; _nav.SetTarget(them); }
+                _nav.Update(dt);
+                if (Vector3.Distance(me, them) < 1.1f)
+                {
+                    // caught: the other is "it" now
+                    _it = false;
+                    _other._it = true;
+                    _other._graceUntil = Time.time + 1.2f;
+                    _nextAim = 0f;
+                    _ai.Say(CoglingVoice.Line.Laugh);
+                    _other._ai.Say(CoglingVoice.Line.Excited);
+                    _ai.Log("tag: caught him");
+                }
+                return true;
+            }
+            // running away: a spot a few metres off, away from "it" (a little to one side), in his area
+            if (Time.time >= _nextAim || _nav.Update(dt) != CoglingNavigator.Result.Moving)
+            {
+                _nextAim = Time.time + 1.2f;
+                Vector3 away = Flat(me - them);
+                for (int i = 0; i < 6; i++)
+                {
+                    Vector3 spot = me + Quaternion.Euler(0f, Random.Range(-70f, 70f) + (i >= 3 ? 90f * (i - 2) : 0f), 0f) * away * Random.Range(4f, 6f);
+                    if (_network != null && !Antenna.InArea(_network, spot)) continue;
+                    if (_nav.SetTarget(Floor(spot))) break;
+                }
+            }
+            return true;
+        }
+
+        /// <summary>Tagging along: a few steps behind the player, stopping to look when close; not out of his area (he waits at its edge).</summary>
+        private bool Follow(float dt)
+        {
+            if (_watched == null || !_watched || _watched.IsDead() || Vector3.Distance(_watched.transform.position, _ai.transform.position) > 30f) { End(); return false; }
+            if (Time.time >= _until) { End(); return false; }
+            Vector3 me = _ai.transform.position, them = _watched.transform.position;
+            if (_network != null && !Antenna.InArea(_network, them))
+            {
+                // (out of his area: he waits, looking after them, and gives up after a little while)
+                if (_outsideSince < 0f) _outsideSince = Time.time;
+                _ai.Stop();
+                _ai.Face(them);
+                if (Time.time - _outsideSince > 6f) { End(); return false; }
+                return true;
+            }
+            _outsideSince = -1f;
+            if (Vector3.Distance(me, them) > 3.5f)
+            {
+                if (Time.time >= _nextAim) { _nextAim = Time.time + 0.5f; _nav.SetTarget(Floor(them + Flat(me - them) * 2.2f)); }
+                _nav.Update(dt);
+            }
+            else { _ai.Stop(); _ai.Face(them); }
+            return true;
+        }
+
+        /// <summary>Watching a tame animal: if it wanders off, he goes after it. False: it's gone (the break is over).</summary>
+        private bool Animal(float dt)
+        {
+            if (_animal == null || !_animal || _animal.IsDead()) { End(); return false; }
+            _face = _animal.transform.position;
+            if (Vector3.Distance(_animal.transform.position, _animalWas) > 3f)
+            {
+                _animalWas = _animal.transform.position;
+                if (_nav.SetTarget(Floor(_animalWas + Flat(_ai.transform.position - _animalWas) * 1.8f))) { _step = Step.Going; }
+            }
+            return true;
+        }
+
+        /// <summary>Creeping up behind another Cogling, slowly; close behind him, he jumps (and the sneak laughs). Given up after a while.</summary>
+        private bool Sneak(float dt)
+        {
+            if (_other == null || _other._ai == null || Time.time >= _until || !_other.Startlable) { End(); return false; }   // (sat down, lay down...)
+            Transform victim = _other._ai.transform;
+            Vector3 behind = victim.position - Flat(victim.forward) * 0.7f;
+            // there (the navigator stops within 0.6 m of the spot: near enough): a moment's pause behind him, then boo
+            bool there = Utils.DistanceXZ(_ai.transform.position, behind) < 0.7f || Utils.DistanceXZ(_ai.transform.position, victim.position) < 1.0f;
+            if (there && _booAt < 0f) _booAt = Time.time + Random.Range(0.4f, 0.8f);
+            if (_booAt >= 0f)
+            {
+                _ai.Stop();
+                _ai.Face(victim.position);
+                if (Time.time < _booAt) return true;
+                _other._ai.Startled(_ai.transform.position);
+                _ai.Face(victim.position);
+                _ai.Say(CoglingVoice.Line.Laugh);
+                _ai.Log("crept up on another Cogling: boo");
+                End();
+                return false;
+            }
+            if (Time.time >= _nextAim) { _nextAim = Time.time + 0.5f; _nav.SetTarget(Floor(behind)); }
+            _nav.Update(dt);
+            return true;
+        }
+
+        /// <summary>Asked to play tag by another: he runs off first (the other is "it", and counts a moment).</summary>
+        internal bool JoinTag(CoglingSlack host)
+        {
+            Stop();
+            if (_job.Carrying) _job.Drop(); else _job.Abandon();
+            Doing = Activity.Tag;
+            _other = host;
+            _host = false;
+            _it = false;
+            _network = host._network;
+            _face = host._ai.transform.position;
+            _until = 0f;
+            _step = Step.Facing;
+            _stepUntil = Time.time + 0.5f;
+            host._graceUntil = Time.time + 2f;   // (the one who's "it" counts first)
+            _ai.Log($"playing tag ({Me})");
+            return true;
+        }
+
+        /// <summary>A tame animal in his area within 25 m (a wolf, a boar, a lox...), the nearest, or null.</summary>
+        private Character TameNear(List<Antenna> network)
+        {
+            Vector3 here = _ai.transform.position;
+            Character best = null;
+            float bestDistance = 25f;
+            foreach (Character c in Character.GetAllCharacters())
+            {
+                if (c == null || c.IsPlayer() || c.IsDead() || !c.IsTamed() || CoglingStance.IsCogling(c)) continue;
+                float d = Vector3.Distance(here, c.transform.position);
+                if (d < bestDistance && Antenna.InArea(network, c.transform.position)) { best = c; bestDistance = d; }
+            }
+            return best;
+        }
+
+        /// <summary>Standing about (working, or a break on his feet: staring, looking around, bored): one to creep up on. Not sitting,
+        /// lying, chatting or playing.</summary>
+        internal bool Startlable => Doing == Activity.None || Doing == Activity.Stare || Doing == Activity.LookAround || Doing == Activity.Bored;
+
+        /// <summary>Another Cogling near to creep up on (this game runs him, in the area, not frightened), the nearest, or null.</summary>
+        private CoglingSlack Victim(List<Antenna> network)
+        {
+            Vector3 here = _ai.transform.position;
+            CoglingSlack best = null;
+            float bestDistance = 20f;
+            foreach (CoglingSlack s in All)
+            {
+                if (s == this || s._ai == null || !s.Owner || !s.Startlable || !s._ai.CanBeStartled) continue;
+                float d = Vector3.Distance(here, s._ai.transform.position);
+                if (d < bestDistance && Antenna.InArea(network, s._ai.transform.position)) { best = s; bestDistance = d; }
+            }
+            return best;
+        }
+
         // ---- a dance's audience
 
         /// <summary>
@@ -751,6 +987,10 @@ namespace Cogling
                 case Activity.Stare: return ("cogling_task_slack_stare", "", "");
                 case Activity.LookAround: return ("cogling_task_slack_look", "", "");
                 case Activity.Nap: return ("cogling_task_slack_nap", "", "");
+                case Activity.Tag: return ("cogling_task_slack_tag", "", "");
+                case Activity.Follow: return ("cogling_task_slack_follow", "", "");
+                case Activity.Animal: return ("cogling_task_slack_animal", "", "");
+                case Activity.Sneak: return ("cogling_task_slack_sneak", "", "");
                 case Activity.Exercise: return ("cogling_task_slack_exercise", "", "");
                 case Activity.Bored: return ("cogling_task_slack_bored", "", "");
                 case Activity.Dance: return ("cogling_task_slack_dance", "", "");

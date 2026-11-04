@@ -368,7 +368,8 @@ namespace Cogling
             // he stops, and that showed for a moment), gently; out quickly, back to the live walk, when he moves again
             _stillFor = _speed < 0.25f ? _stillFor + dt : 0f;
             // (seated or getting up: still, whatever nudges his body gets, else the Fuling animation showed through)
-            bool idle = _stillFor > 0.1f || _sleepWeight > 0f || Time.time < _greetUntil || _sitStart >= 0f || (_standStart >= 0f && _speed < 0.5f);
+            // (sneaking: his sneak in place of the walk, moving or not)
+            bool idle = _stillFor > 0.1f || _sleepWeight > 0f || Time.time < _greetUntil || _sitStart >= 0f || (_standStart >= 0f && _speed < 0.5f) || _slack == (int)CoglingSlack.Activity.Sneak;
             if (idle && !_snapped && _pose.muscles != null)
             {
                 _walkSnap = new HumanPose { bodyPosition = _pose.bodyPosition, bodyRotation = _pose.bodyRotation, muscles = (float[])_pose.muscles.Clone() };
@@ -393,6 +394,7 @@ namespace Cogling
             if (idle && Time.time >= _greetUntil) { if (_variant == null || Time.time >= _variantEnds) PickVariant(); }
             ClipPlayer playing = idle && _variant != null ? _variant : _idle;
             float at = Time.time - (playing == _variant ? _variantStart : _idleStart);
+            if (_slack == (int)CoglingSlack.Activity.Sneak && playing == _variant) at = SneakTime(dt, playing.Length);
             if (_scared && idle && _sad != null) { playing = _sad; at = Time.time; }   // (frightened, standing: cowering)
             playing.Pose(at, ref _idlePose);
             if (_idlePose.muscles == null) return;
@@ -540,6 +542,7 @@ namespace Cogling
             if (talk != null) return Clip(talk);
             if (_slack == (int)CoglingSlack.Activity.Watch) return _idle;
             if (_slack == (int)CoglingSlack.Activity.Exercise) return Clip("rig_push_ups");
+            if (_slack == (int)CoglingSlack.Activity.Sneak) return Clip("rig_sneaking");
             if (_slack == CoglingSlack.PoseSitUps) return Clip("rig_sit_ups");   // (watching you: his usual idle, never the happy one)
             return null;
         }
@@ -617,6 +620,21 @@ namespace Cogling
 
         private bool _onChair, _lying;
 
+        // sneaking: the sneak walk while he moves; stopped, it plays on to the next moment his legs are level (frame 22 or 54: a
+        // crouch) and holds there (the pack has no crouched idle: its Crouching is a walk too)
+        private float _sneakT;
+        private static readonly float[] Crouches = { 22f / 30f, 54f / 30f };
+
+        private float SneakTime(float dt, float length)
+        {
+            if (_speed > 0.15f) { _sneakT = (_sneakT + dt) % length; return _sneakT; }
+            foreach (float c in Crouches) if (Mathf.Abs(_sneakT - c) < 0.02f) return _sneakT;   // (holding)
+            float next = Crouches.Where(c => c > _sneakT).DefaultIfEmpty(Crouches[0] + length).First();
+            _sneakT = Mathf.MoveTowards(_sneakT, next, dt);
+            if (_sneakT >= length) _sneakT -= length;
+            return _sneakT;
+        }
+
         /// <summary>Napping (lain down, not yet getting up): his eyes dim, as if recharging.</summary>
         private bool Recharging => _lying && _sitStart >= 0f && Time.time - _sitStart > ClipLength("rig_lie_down") * 0.7f;
         internal static float LieUpSeconds => ClipLength("rig_lie_standup");
@@ -689,6 +707,8 @@ namespace Cogling
         private Vector3 _chatWith;
         private bool Chatting => CoglingSlack.Talking(_slack) || _slack == CoglingSlack.PoseListen;
         private ZDOID _watchId = ZDOID.None;
+        /// <summary>Breaks where his head follows someone (saved on him: cogling_watch): watching or tagging along after a player, a tame animal.</summary>
+        private bool Looking => _slack == (int)CoglingSlack.Activity.Watch || _slack == (int)CoglingSlack.Activity.Follow || _slack == (int)CoglingSlack.Activity.Animal;
         private float _lookWeight;
         private Vector3 _lookPoint, _lookVel;
 
@@ -697,7 +717,7 @@ namespace Cogling
         {
             if (_head == null) return null;
             if (Chatting) return _chatWith + Vector3.up * Plugin.Height.Value * 0.8f;   // (at the other one's face)
-            if (_slack == (int)CoglingSlack.Activity.Watch && !_watchId.IsNone())
+            if (Looking && !_watchId.IsNone())
             {
                 // watching you: his eyes on yours, wherever you go
                 GameObject who = ZNetScene.instance != null ? ZNetScene.instance.FindInstance(_watchId) : null;
@@ -948,7 +968,7 @@ namespace Cogling
                     int slack = zdo.GetInt(CoglingSlack.SlackKey);
                     if (slack != _slack) SlackChanged(slack);
                     if (Chatting) _chatWith = zdo.GetVec3(CoglingSlack.LookKey, transform.position + transform.forward * 3f);
-                    _watchId = _slack == (int)CoglingSlack.Activity.Watch ? zdo.GetZDOID(CoglingSlack.WatchKey) : ZDOID.None;
+                    _watchId = Looking ? zdo.GetZDOID(CoglingSlack.WatchKey) : ZDOID.None;
                     SetAsleep(!zdo.GetBool(Carried.AwakeKey));
                     int mood = zdo.GetInt(Carried.MoodKey);
                     if (mood != _mood)

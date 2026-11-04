@@ -22,6 +22,7 @@ namespace Cogling
         private CoglingDanger _danger;
         private CoglingSlack _slack;
         internal bool Running;
+        internal float WalkScale = 1f, RunScale = 1f;   // (sneaking: slower; running from "it" in tag: a little slower, to be caught now and then)
         private float _nextJobLook, _nextTidy;
         private Mode _mode = Mode.GoingHome;
         private float _nextStroll;
@@ -99,8 +100,8 @@ namespace Cogling
             if (FinishStuckDeath()) return true;
             UpdateTask();
             if (Time.time < _greetUntil) { StopMoving(); if (_greeter != Vector3.zero && !_slack.Seated) LookAt(_greeter); return true; }   // (greeted: a moment for you)
-            m_character.m_walkSpeed = Plugin.WalkSpeed.Value;
-            m_character.m_runSpeed = Plugin.RunSpeed.Value;
+            m_character.m_walkSpeed = Plugin.WalkSpeed.Value * WalkScale;
+            m_character.m_runSpeed = Plugin.RunSpeed.Value * RunScale;
             if (Plugin.Paused.Value)
             {
                 // testing: he stands still and faces the nearest player (to look at a pose); what he was doing waits
@@ -265,6 +266,7 @@ namespace Cogling
         /// <summary>Free to be asked for a chat: not frightened or wary, not on a break or greeted, in his area.</summary>
         internal bool CanChat => _danger != null && !_danger.Afraid && !_danger.Wary && _mode != Mode.Slacking && _mode != Mode.Returning && Time.time >= _greetUntil && !Plugin.Paused.Value;
         internal bool IsWorking => _mode == Mode.Working;
+        internal bool CanBeStartled => _danger != null && !_danger.Afraid && !_danger.Wary && PoweredUp;
 
         /// <summary>Another Cogling asks for a chat (he has already said yes): what he was doing waits, and off he goes.</summary>
         internal bool JoinChat(CoglingSlack host, Vector3 spot)
@@ -275,6 +277,25 @@ namespace Cogling
             Wake();
             _mode = Mode.Slacking;
             return true;
+        }
+
+        /// <summary>Asked to a game of tag by another (his brain has said yes).</summary>
+        internal bool JoinTag(CoglingSlack host)
+        {
+            if (!CanChat) return false;
+            if (_mode == Mode.Working) _job.Abandon();
+            if (!_slack.JoinTag(host)) return false;
+            Wake();
+            _mode = Mode.Slacking;
+            return true;
+        }
+
+        /// <summary>Another Cogling crept up behind him: he jumps, and turns to look (on his owner's game).</summary>
+        internal void Startled(Vector3 from)
+        {
+            if (m_nview == null || !m_nview.IsValid() || !m_nview.IsOwner() || !CanBeStartled || (_slack != null && !_slack.Startlable)) return;
+            LookAt(from);
+            Say(CoglingVoice.Line.Startled);
         }
 
         /// <summary>Asked to another's dance (to dance along, or cheer): what he was doing waits.</summary>

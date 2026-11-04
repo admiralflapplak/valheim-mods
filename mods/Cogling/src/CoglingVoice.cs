@@ -13,7 +13,7 @@ namespace Cogling
     internal sealed class CoglingVoice : MonoBehaviour
     {
         /// <summary>What he says, and when (his brain decides: CoglingAI.Say; every player's game hears it, through an RPC).</summary>
-        internal enum Line { Pickup, Stored, Tidied, Grumble, Repaired, Nervous, Relieved, Hurt, PowerDown, BootUp, Welcome, Oops, Excited, Laugh, Point, Nod, Shake, WaveBack }
+        internal enum Line { Pickup, Stored, Tidied, Grumble, Repaired, Nervous, Relieved, Hurt, PowerDown, BootUp, Welcome, Oops, Excited, Laugh, Point, Nod, Shake, WaveBack, Startled }
 
         /// <summary>
         /// How each line sounds: the Dverger's voice set it comes from, its pitch (times his own) from start to end (a slide: a sigh
@@ -44,6 +44,7 @@ namespace Cogling
             { Line.Point,     new Spec { Set = null,      Chance = 1f,  Gestures = new[] { "Point" }, GestureChance = 1f } },   // (no longer said: chats use the Social pack)
             { Line.Nod,       new Spec { Set = null,      Chance = 1f,  Gestures = new[] { "social_headnod01" }, GestureChance = 1f } },
             { Line.WaveBack,  new Spec { Set = "idle",    From = 1.35f, To = 1.45f, Cut = 0.6f,  Chance = 1f,    Gestures = new[] { "rig_waving" }, GestureChance = 1f } },   // (a player waved: Rig_Medium's wave, the game's looked off on him)
+            { Line.Startled,  new Spec { Set = "alerted", From = 1.5f,  To = 1.4f,  Cut = 0.4f,  Chance = 1f,    Gestures = new[] { "rig_hit_a" }, GestureChance = 1f } },   // (crept up on: a flinch; the Social pack's fear looked wonky on him)
             { Line.Shake,     new Spec { Set = null,      Chance = 1f,  Gestures = new[] { "social_headshake01", "social_headshake02" }, GestureChance = 1f } },
         };
 
