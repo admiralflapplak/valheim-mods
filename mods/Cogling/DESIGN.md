@@ -172,9 +172,22 @@ The feel: peaceful, not fast. A little helper with a personality, pottering abou
   power down (sliding down), boot up (sliding up), welcome (a player home after 90 s away), oops (drops his load for a break),
   excited (dancing), laugh/point in a chat; his last words when he breaks (CoglingCollapse). Small lines more often from a sociable one.
 - Gestures: the player's own emotes played on his skeleton (a humanoid clip on a hidden copy, through a hand-evaluated animation
-  graph): only shrug (grumble) and laugh / point (chat). The user found the others too much and had them taken out: a wave
+  graph): only shrug (grumble) and laugh / point (chat) at first; see 0.20 below. The user found the others too much and had them taken out: a wave
   when greeted (the happy idle is better) or when a player comes home, thumbs up / cheer / flex after a repair or at a chest, no no no;
   dances: his robot dance, the players' Headbang and Dance. `cogling emotes` lists the player's animations.
+- 0.19-0.20: clips from other rigs ("ANI2", tools/convert_rig_anim.py: the clip with its own skeleton, retargeted at run time
+  through a humanoid avatar built from its T-pose; bone names in CoglingClip.RigHuman). Rig_Medium (the user's packs): the floor
+  sit down / stand up, and the chair sit. Social (a "B-" rig, one clip a file, its rest pose is the T-pose).
+- Chats revamped (0.20, the user found Mixamo's talking too human): the talker plays Social's Talk01-03 or, now and then,
+  Question01/02, one turn being the clip once (twice now and then: they don't loop). The listener idles and now and then nods,
+  shakes his head or laughs (Social's Laugh01); after a question, whoever talks next answers with a nod or a shake first.
+- Other moods: grumble is a shrug, now and then Social's Angry02 (a stamp) (Angry01 when hit was tried and taken out: he is frightened by then).
+- Watching you (0.20, the user's idea: "a bit on the creepy side"): a player near, he turns to them with his usual idle (never the
+  happy one) and his head follows their head closely; ends when they go 22 m off. Curious ones more.
+- Chairs again (0.20, with Rig_Medium's Sit_Chair_* clips): a free chair, stool or bench in his area (Sit on chairs chance): he stands
+  ~0.5 m in front of its seat, his back square to it, and hops up (his hips carried to the seat top, found by a ray down through
+  the attach point onto the chair's lowest collider top, with an arc: Chair: hop / height / back); down again the same way.
+  Seats above 0.9 of his height are left; chairs on ships too; one Cogling a chair.
 - Next: joining a dance, reacting to the player building; maybe the game's own emotes
   (the Fuling Heckler's stagger-swap trick works on his hidden Fuling body).
 

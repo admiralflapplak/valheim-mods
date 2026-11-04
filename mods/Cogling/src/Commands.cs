@@ -12,7 +12,7 @@ namespace Cogling
     internal static class Commands
     {
         private const string Command = "cogling";
-        private const string Usage = "cogling goto [x y z] | cogling home | cogling items | cogling tidy | cogling status | cogling slack [stare|look|bored|dance|sit|chat] | cogling emotes";
+        private const string Usage = "cogling goto [x y z] | cogling home | cogling items | cogling tidy | cogling status | cogling slack [stare|look|bored|dance|sit|chair|watch|chat] | cogling emotes";
 
         private static readonly AccessTools.FieldRef<Dictionary<string, Terminal.ConsoleCommand>> TerminalCommands =
             AccessTools.StaticFieldRefAccess<Dictionary<string, Terminal.ConsoleCommand>>(AccessTools.Field(typeof(Terminal), "commands"));
@@ -72,8 +72,10 @@ namespace Cogling
             {
                 string w = a.Length > 2 ? a[2].ToLowerInvariant() : "";
                 CoglingSlack.Activity? what = w == "stare" ? CoglingSlack.Activity.Stare : w == "look" ? CoglingSlack.Activity.LookAround
-                    : w == "bored" ? CoglingSlack.Activity.Bored : w == "dance" ? CoglingSlack.Activity.Dance : w == "sit" ? CoglingSlack.Activity.Sit : w == "chat" ? CoglingSlack.Activity.Chat : (CoglingSlack.Activity?)null;
-                t.AddString(cog.SlackNow(what) ? $"Taking a break{(what.HasValue ? $" ({what})" : "")}." : "He can't take that break here (a chat needs another Cogling near, free).");
+                    : w == "bored" ? CoglingSlack.Activity.Bored : w == "dance" ? CoglingSlack.Activity.Dance : w == "sit" ? CoglingSlack.Activity.Sit : w == "chair" ? CoglingSlack.Activity.Chair : w == "watch" ? CoglingSlack.Activity.Watch : w == "chat" ? CoglingSlack.Activity.Chat : (CoglingSlack.Activity?)null;
+                bool took = cog.SlackNow(what);
+                if (!took && what == CoglingSlack.Activity.Chair) { t.AddString($"No chair for him: {CoglingSlack.ChairWhy}."); return; }
+                t.AddString(took ? $"Taking a break{(what.HasValue ? $" ({what})" : "")}." : "He can't take that break here (a chat needs another Cogling near, free; a chair, a free chair in his area; watching, you near).");
                 return;
             }
             if (a.Length >= 5 && float.TryParse(a[2], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float x)

@@ -111,6 +111,16 @@ namespace Cogling
         }
     }
 
+    /// <summary>His health bar and name over his body, which a chair moves off his character (the bar sits on the character's top).</summary>
+    [HarmonyPatch(typeof(Character), nameof(Character.GetTopPoint))]
+    internal static class CoglingTopPoint
+    {
+        private static void Postfix(Character __instance, ref Vector3 __result)
+        {
+            if (CoglingBody.Shifted.Count > 0 && CoglingBody.Shifted.TryGetValue(__instance, out Vector3 by)) __result += by;
+        }
+    }
+
     [HarmonyPatch(typeof(Character), nameof(Character.GetHoverText))]
     internal static class CoglingHoverText
     {

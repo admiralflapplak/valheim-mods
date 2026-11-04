@@ -13,7 +13,7 @@ namespace Cogling
     internal sealed class CoglingVoice : MonoBehaviour
     {
         /// <summary>What he says, and when (his brain decides: CoglingAI.Say; every player's game hears it, through an RPC).</summary>
-        internal enum Line { Pickup, Stored, Tidied, Grumble, Repaired, Nervous, Relieved, Hurt, PowerDown, BootUp, Welcome, Oops, Excited, Laugh, Point }
+        internal enum Line { Pickup, Stored, Tidied, Grumble, Repaired, Nervous, Relieved, Hurt, PowerDown, BootUp, Welcome, Oops, Excited, Laugh, Point, Nod, Shake }
 
         /// <summary>
         /// How each line sounds: the Dverger's voice set it comes from, its pitch (times his own) from start to end (a slide: a sigh
@@ -30,18 +30,20 @@ namespace Cogling
             { Line.Pickup,    new Spec { Set = "idle",    From = 1.3f,  To = 1.35f, Cut = 0.45f, Chance = 0.35f } },
             { Line.Stored,    new Spec { Set = "idle",    From = 1.15f, To = 1.2f,  Cut = 0.8f,  Chance = 0.3f } },   // (no gesture: the user found one at every chest too much)
             { Line.Tidied,    new Spec { Set = "idle",    From = 1.2f,  To = 1.3f,  Cut = 1.0f,  Chance = 0.6f } },
-            { Line.Grumble,   new Spec { Set = "idle",    From = 0.75f, To = 0.7f,  Cut = 1.0f,  Chance = 0.8f,  Gestures = new[] { "Shrug" }, GestureChance = 0.6f } },
+            { Line.Grumble,   new Spec { Set = "idle",    From = 0.75f, To = 0.7f,  Cut = 1.0f,  Chance = 0.8f,  Gestures = new[] { "Shrug", "Shrug", "social_angry02" }, GestureChance = 0.6f } },   // (now and then cross: a stamp)
             { Line.Repaired,  new Spec { Set = "idle",    From = 1.2f,  To = 1.3f,  Cut = 1.0f,  Chance = 0.7f } },
             { Line.Nervous,   new Spec { Set = "alerted", From = 0.95f, To = 0.9f,  Cut = 0.5f,  Chance = 1f } },
             { Line.Relieved,  new Spec { Set = "idle",    From = 1.1f,  To = 0.85f, Cut = 1.2f,  Chance = 0.85f } },
-            { Line.Hurt,      new Spec { Set = "hurt",    From = 1.3f,  To = 1.3f,  Cut = 0f,    Chance = 1f } },
+            { Line.Hurt,      new Spec { Set = "hurt",    From = 1.3f,  To = 1.3f,  Cut = 0f,    Chance = 1f } },   // (no gesture: hit, he is frightened first, and the user had it taken out)
             { Line.PowerDown, new Spec { Set = "idle",    From = 1.0f,  To = 0.5f,  Cut = 1.4f,  Chance = 0.8f } },
             { Line.BootUp,    new Spec { Set = "idle",    From = 0.7f,  To = 1.3f,  Cut = 1.0f,  Chance = 0.8f } },
             { Line.Welcome,   new Spec { Set = "idle",    From = 1.3f,  To = 1.4f,  Cut = 1.1f,  Chance = 1f } },
             { Line.Oops,      new Spec { Set = "idle",    From = 1.45f, To = 1.3f,  Cut = 0.4f,  Chance = 0.9f } },
             { Line.Excited,   new Spec { Set = "attack",  From = 1.4f,  To = 1.5f,  Cut = 0.7f,  Chance = 1f } },
-            { Line.Laugh,     new Spec { Set = "idle",    From = 1.5f,  To = 1.6f,  Cut = 0.5f,  Chance = 1f,    Gestures = new[] { "Laugh 2" }, GestureChance = 1f } },
-            { Line.Point,     new Spec { Set = null,      Chance = 1f,  Gestures = new[] { "Point" }, GestureChance = 1f } },
+            { Line.Laugh,     new Spec { Set = "idle",    From = 1.5f,  To = 1.6f,  Cut = 0.5f,  Chance = 1f,    Gestures = new[] { "social_laugh01" }, GestureChance = 1f } },
+            { Line.Point,     new Spec { Set = null,      Chance = 1f,  Gestures = new[] { "Point" }, GestureChance = 1f } },   // (no longer said: chats use the Social pack)
+            { Line.Nod,       new Spec { Set = null,      Chance = 1f,  Gestures = new[] { "social_headnod01" }, GestureChance = 1f } },
+            { Line.Shake,     new Spec { Set = null,      Chance = 1f,  Gestures = new[] { "social_headshake01", "social_headshake02" }, GestureChance = 1f } },
         };
 
         /// <summary>The gestures by number (the RPC sends the number).</summary>
@@ -194,7 +196,7 @@ namespace Cogling
                 if (scared && !_scared && _alerted != null && _alerted.Length > 0) { Settings(); _source.Stop(); _source.PlayOneShot(_alerted[Random.Range(0, _alerted.Length)]); }
                 _scared = scared;
                 int slack = GetComponent<ZNetView>()?.GetZDO()?.GetInt(CoglingSlack.SlackKey) ?? 0;
-                bool talking = slack == CoglingSlack.PoseTalk || slack == CoglingSlack.PoseTalk2;
+                bool talking = CoglingSlack.Talking(slack);
                 if (talking && !_talking) _next = Time.time + Random.Range(0.1f, 0.4f);   // (his turn: he starts at once)
                 _talking = talking;
                 _listening = slack == CoglingSlack.PoseListen;

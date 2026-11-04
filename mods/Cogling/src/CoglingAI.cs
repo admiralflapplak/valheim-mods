@@ -373,7 +373,7 @@ namespace Cogling
             {
                 string name = spec.Gestures[Random.Range(0, spec.Gestures.Length)];
                 gesture = System.Array.IndexOf(CoglingVoice.Gestures, name);
-                if (gesture >= 0 && line != CoglingVoice.Line.Point) _holdUntil = Time.time + Mathf.Min(3f, CoglingBody.GameClipLength(name));
+                if (gesture >= 0 && _mode != Mode.Slacking) _holdUntil = Time.time + Mathf.Min(3f, CoglingBody.GestureLength(name));   // (on a break he stands anyway)
             }
             m_nview.InvokeRPC(ZNetView.Everybody, CoglingVoice.SayRpc, (int)line, gesture);
         }

@@ -16,7 +16,7 @@ namespace Cogling
     {
         public const string Guid = "nick.Cogling";
         public const string Name = "Cogling";
-        public const string Version = "0.18.4";
+        public const string Version = "0.20.6";
 
         internal static BepInEx.Logging.ManualLogSource Log;
         internal static ServerSettings Synced;
@@ -50,7 +50,7 @@ namespace Cogling
         internal static ConfigEntry<bool> LogAI;
         internal static ConfigEntry<float> CarryRaise, CarryOutward, CarryTwist, CarryElbow, CarryWrist, CarryOut, CarryHeight, CarryItemSize, CarryItemTurn;
         internal static ConfigEntry<bool> Slacking, SwingFreeze, CarryPreview, Paused, UseIdle, BendPreview, LogGround, PowerPreview, HammerPreview;
-        internal static ConfigEntry<float> SlackEvery, SitDownUntil, SitBlend, SitHeight, SitForward, SitStandSpeed, SwingFrozenAt, SwingRaise, SwingOut, SwingTwist, SwingHandTurn, SwingWristHigh, SwingWristLow, SwingLeftRaise, SwingLeftOut, SwingLeftElbow, SwingElbowHigh, SwingElbowLow, SwingTime;
+        internal static ConfigEntry<float> WatchTurnAfter, ChairBlendOut, ChairStandOff, ChairChance, ChairHeight, ChairBack, ChairHop, SlackEvery, SitDownUntil, SitBlend, SitHeight, SitForward, SitStandSpeed, SwingFrozenAt, SwingRaise, SwingOut, SwingTwist, SwingHandTurn, SwingWristHigh, SwingWristLow, SwingLeftRaise, SwingLeftOut, SwingLeftElbow, SwingElbowHigh, SwingElbowLow, SwingTime;
         internal static ConfigEntry<float> HammerX, HammerY, HammerZ, HammerTurnX, HammerTurnY, HammerTurnZ, HammerSize;
         internal static ConfigEntry<float> PowerFrame, HappyIdleChance, PowerDownAfter;
         internal static ConfigEntry<float> BendSpine, BendArms;
@@ -141,11 +141,18 @@ namespace Cogling
             HammerSize = Config.Bind("9 - Testing", "Hammer: size", 0.624f, new ConfigDescription("The hammer's size (1: a player's).", new AcceptableValueRange<float>(0.1f, 1.5f)));
             Slacking = Config.Bind("8 - Slacking off", "Slacking off", true, "Now and then a Cogling takes a break, even with work to do: stares into the distance, looks around, is bored, dances, or sits on the ground for a while. Each has his own personality: some slack more than others. Never while frightened.");
             SlackEvery = Config.Bind("8 - Slacking off", "Every (minutes)", 4f, new ConfigDescription("How often an average Cogling takes a break, about (a lazy one more often, a hard worker less).", new AcceptableValueRange<float>(0.5f, 30f)));
-            SitDownUntil = Config.Bind("9 - Testing", "Sit: down clip until", 0.6f, new ConfigDescription("Sitting down: how far into the sit-down clip he goes (seconds) before he is in the sitting pose.", new AcceptableValueRange<float>(0.2f, 2.3f)));
-            SitBlend = Config.Bind("9 - Testing", "Sit: blend", 0.4f, new ConfigDescription("Sitting down: how long the sit-down clip blends into the sitting pose, in seconds.", new AcceptableValueRange<float>(0.05f, 1.5f)));
+            ChairChance = Config.Bind("8 - Slacking off", "Sit on chairs", 0.6f, new ConfigDescription("Sitting down for a break with a free chair, stool or bench in his area: how likely he hops up onto it (else he sits on the ground).", new AcceptableValueRange<float>(0f, 1f)));
+            ChairStandOff = Config.Bind("9 - Testing", "Chair: stand off", 0.3f, new ConfigDescription("Sitting on a chair: how far in front of the seat's middle he stands before he hops up (and lands when he hops down), in metres.", new AcceptableValueRange<float>(0.1f, 0.8f)));
+            WatchTurnAfter = Config.Bind("9 - Testing", "Watch: turn after", 55f, new ConfigDescription("Watching you: how far off to one side you get (degrees) before his body turns to catch up with his head.", new AcceptableValueRange<float>(15f, 70f)));
+            ChairBlendOut = Config.Bind("9 - Testing", "Chair: blend out", 0.5f, new ConfigDescription("Hopping down: over how much of the end of the clip (seconds) he blends back into his idle.", new AcceptableValueRange<float>(0.1f, 0.8f)));
+            ChairHeight = Config.Bind("9 - Testing", "Chair: height", 0.05f, new ConfigDescription("On a chair: his hips above the seat, in metres (if he sinks into it or floats).", new AcceptableValueRange<float>(-0.4f, 0.6f)));
+            ChairBack = Config.Bind("9 - Testing", "Chair: back", 0.05f, new ConfigDescription("On a chair: his hips moved back (+) or forward (-) from the seat's middle, in metres.", new AcceptableValueRange<float>(-0.5f, 0.5f)));
+            ChairHop = Config.Bind("9 - Testing", "Chair: hop", 0.15f, new ConfigDescription("Hopping up onto a chair and down off it: how high the hop goes over the way there, in metres.", new AcceptableValueRange<float>(0f, 0.6f)));
+            SitDownUntil = Config.Bind("9 - Testing", "Sit: down clip until", 0.8f, new ConfigDescription("Sitting down: how far into the sit-down clip he goes (seconds) before he is in the sitting pose.", new AcceptableValueRange<float>(0.2f, 2.3f)));
+            SitBlend = Config.Bind("9 - Testing", "Sit: blend", 0.5f, new ConfigDescription("Sitting down: how long the sit-down clip blends into the sitting pose, in seconds.", new AcceptableValueRange<float>(0.05f, 1.5f)));
             SitHeight = Config.Bind("9 - Testing", "Sit: height", 0f, new ConfigDescription("Sitting: his body raised (+) or lowered (-), in metres (if he sinks into the ground or floats).", new AcceptableValueRange<float>(-0.6f, 0.6f)));
             SitForward = Config.Bind("9 - Testing", "Sit: forward", 0f, new ConfigDescription("Sitting: his body moved forward (+) or back (-), in metres.", new AcceptableValueRange<float>(-0.6f, 0.6f)));
-            SitStandSpeed = Config.Bind("9 - Testing", "Sit: stand up speed", 1.5f, new ConfigDescription("How fast he gets up (1: the clip as made).", new AcceptableValueRange<float>(0.5f, 3f)));
+            SitStandSpeed = Config.Bind("9 - Testing", "Sit: stand up speed", 1f, new ConfigDescription("How fast he gets up (1: the clip as made).", new AcceptableValueRange<float>(0.5f, 3f)));
             SwingFreeze = Config.Bind("9 - Testing", "Swing: freeze", false, "Hold the hammering swing still at one point (Swing: frozen at), to tune the arm there.");
             SwingFrozenAt = Config.Bind("9 - Testing", "Swing: frozen at", 1f, new ConfigDescription("Where the frozen swing stops: 1 is the top, 0 the knock, between them partway.", new AcceptableValueRange<float>(0f, 1f)));
             SwingRaise = Config.Bind("9 - Testing", "Swing: upper arm raise", 80f, new ConfigDescription("Hammering: his upper arm, held still: degrees up from hanging down (90: straight ahead, level).", new AcceptableValueRange<float>(0f, 180f)));

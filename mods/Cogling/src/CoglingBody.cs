@@ -433,7 +433,6 @@ namespace Cogling
         private float _slackStart, _sitStart = -1f, _standStart = -1f, _seatWeight;
         private HumanPose _sitPose, _sitPose2;
         private readonly Dictionary<string, ClipPlayer> _clips = new Dictionary<string, ClipPlayer>();
-        private static int[][] _mirror;
 
         /// <summary>One of his clips, made the first time it's needed (each plays on a hidden skeleton of its own).</summary>
         private ClipPlayer Clip(string name)
@@ -459,9 +458,13 @@ namespace Cogling
         private ClipPlayer _gesture;
         private float _gestureStart;
 
+        /// <summary>A gesture's clip: the Social pack's (social_...) or one of the player's emotes.</summary>
+        private ClipPlayer GestureClip(string name) => name.StartsWith("social_") ? Clip(name) : GameClip(name);
+        internal static float GestureLength(string name) => name.StartsWith("social_") ? ClipLength(name) : GameClipLength(name);
+
         internal void Gesture(string name)
         {
-            ClipPlayer g = GameClip(name);
+            ClipPlayer g = GestureClip(name);
             if (g == null) return;
             _gesture = g;
             _gestureStart = Time.time;
@@ -478,7 +481,9 @@ namespace Cogling
             if (!idle) w *= 0.5f;   // (walking: only half of it, over his walk)
             Mix(ref _idlePose, _otherPose, w);
         }
-        internal static float StandUpSeconds => ClipLength("standing_up") / Mathf.Max(0.1f, Plugin.SitStandSpeed.Value);
+        internal static float StandUpSeconds => ClipLength("sit_floor_standup") / Mathf.Max(0.1f, Plugin.SitStandSpeed.Value);
+        internal static float HopDownSeconds => ClipLength("sit_chair_standup") + HopDownOut + 0.35f;   // (his body reads his state every 0.2 s: a little margin)
+        private const float HopDownOut = 0f;   // (into his idle while the clip still plays: a frozen last frame after it hitched)
 
         /// <summary>The clip a break plays standing (in place of his idle), or null.</summary>
         private ClipPlayer SlackClip()
@@ -491,17 +496,24 @@ namespace Cogling
             }
             if (_slack == CoglingSlack.PoseHeadbang) return GameClip("Headbang");
             if (_slack == CoglingSlack.PoseVikingDance) return GameClip("Dance");
-            if (_slack == CoglingSlack.PoseTalk) return Clip("talking");
-            if (_slack == CoglingSlack.PoseTalk2) return Clip("talking2");
+            string talk = CoglingSlack.TalkClip(_slack);
+            if (talk != null) return Clip(talk);
+            if (_slack == (int)CoglingSlack.Activity.Watch) return _idle;   // (watching you: his usual idle, never the happy one)
             return null;
         }
 
         private void SlackChanged(int slack)
         {
-            bool wasSitting = _slack == (int)CoglingSlack.Activity.Sit;
+            bool wasSitting = _slack == (int)CoglingSlack.Activity.Sit || _slack == (int)CoglingSlack.Activity.Chair;
             _slack = slack;
             _slackStart = Time.time;
-            if (slack == (int)CoglingSlack.Activity.Sit) { _sitStart = Time.time; _standStart = -1f; }
+            if (slack == (int)CoglingSlack.Activity.Sit || slack == (int)CoglingSlack.Activity.Chair)
+            {
+                _sitStart = Time.time;
+                _standStart = -1f;
+                _onChair = slack == (int)CoglingSlack.Activity.Chair;
+                if (_onChair) _seat = _view != null && _view.IsValid() ? _view.GetZDO().GetVec3(CoglingSlack.SeatKey, transform.position) : transform.position;
+            }
             else if (wasSitting) { _sitStart = -1f; _standStart = Time.time; }
             // the clip changes at once (cross-faded), from its start
             if (_variant != null || SlackClip() != null) PickVariant();
@@ -509,25 +521,27 @@ namespace Cogling
         }
 
         /// <summary>
-        /// Sitting: the sit-down clip (reference "falling down", up to Sit: down clip until, then into the sitting pose), the sitting
-        /// pose, and getting up (the stand-up clip, at Sit: stand up speed), over his idle, on the ground (Ground keeps his feet there).
-        /// Walking off (fleeing) ends it at once. The sit-down clip came from another rig with no right arm: his left arm, mirrored.
+        /// Sitting: sitting down (Rig_Medium's Sit_Floor_Down, another rig's clip retargeted, up to Sit: down clip until, then into
+        /// his sitting pose), the sitting pose (Mixamo's), and getting up (Sit_Floor_StandUp, at Sit: stand up speed), over his idle,
+        /// on the ground (Ground keeps his feet there). Walking off (fleeing) ends it at once.
         /// </summary>
         private void Sitting(float dt)
         {
+            if (_onChair) { OnChair(dt); return; }
             float target = 0f;
             if (_sitStart >= 0f)
             {
                 float t = Time.time - _sitStart, cut = Plugin.SitDownUntil.Value, blend = Mathf.Max(0.05f, Plugin.SitBlend.Value);
-                ClipPlayer down = Clip("sitting_down"), sit = Clip("sitting");
+                ClipPlayer down = Clip("sit_floor_down"), sit = Clip("sitting");
                 if (down != null && sit != null)
                 {
-                    down.Pose(Mathf.Min(t, cut), ref _sitPose);
-                    if (_sitPose.muscles != null) MirrorLeftArm(ref _sitPose);
+                    down.Pose(Mathf.Min(t, cut, down.Length - 0.001f), ref _sitPose);
                     sit.Pose(0f, ref _sitPose2);
                     if (_sitPose.muscles != null && _sitPose2.muscles != null)
                     {
-                        Mix(ref _sitPose, _sitPose2, Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(cut - blend, cut, t)));
+                        // (eased out, not in: the sit-down slows to a stop at its end, and an eased-in blend on top of that paused him)
+                        float into = Mathf.InverseLerp(cut - blend, cut, t);
+                        Mix(ref _sitPose, _sitPose2, 1f - (1f - into) * (1f - into));
                         Mix(ref _idlePose, _sitPose, Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / 0.25f)));
                         // sat down: his head bobs along to his happy idle
                         HappyHead(Time.time - _sitStart, Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(cut, cut + 0.8f, t)));
@@ -538,7 +552,7 @@ namespace Cogling
             else if (_standStart >= 0f)
             {
                 float speed = Mathf.Max(0.1f, Plugin.SitStandSpeed.Value), s = (Time.time - _standStart) * speed;
-                ClipPlayer up = Clip("standing_up");
+                ClipPlayer up = Clip("sit_floor_standup");
                 if (up == null || s >= up.Length || _speed > 0.5f) _standStart = -1f;   // (up, or off and walking: his walk at once)
                 else
                 {
@@ -556,6 +570,56 @@ namespace Cogling
             _seatWeight = Mathf.MoveTowards(_seatWeight, target, dt * 3f);
         }
 
+        private bool _onChair;
+        private Vector3 _seat;
+        private float _hop;   // 0: on his feet in front of the chair, 1: on its seat
+        private float _leave = 1f;   // (walking off before the hop down has eased into his idle: what's left of it, faded out)
+
+        /// <summary>
+        /// On a chair (Rig_Medium's Sit_Chair_Down, Idle and StandUp, retargeted): he stands with his back to it and hops up, his
+        /// hips carried from where they stand to the seat (Ground) with a little hop over the way; down again the same way back.
+        /// </summary>
+        private void OnChair(float dt)
+        {
+            float hop = 0f;
+            if (_sitStart >= 0f)
+            {
+                float t = Time.time - _sitStart;
+                ClipPlayer down = Clip("sit_chair_down"), sit = Clip("sit_chair_idle");
+                if (down != null && sit != null)
+                {
+                    float length = down.Length;
+                    down.Pose(Mathf.Min(t, length - 0.001f), ref _sitPose);
+                    sit.Pose(Mathf.Max(0f, t - length), ref _sitPose2);
+                    if (_sitPose.muscles != null && _sitPose2.muscles != null)
+                    {
+                        float into = Mathf.InverseLerp(length - 0.25f, length, t);
+                        Mix(ref _sitPose, _sitPose2, 1f - (1f - into) * (1f - into));
+                        Mix(ref _idlePose, _sitPose, Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / 0.2f)));
+                    }
+                    hop = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(length * 0.1f, length * 0.85f, t));
+                }
+            }
+            else if (_standStart >= 0f)
+            {
+                float s = Time.time - _standStart;
+                ClipPlayer up = Clip("sit_chair_standup");
+                // (walking off early: what's left of the clip fades out quickly, not at once: that snapped)
+                if (_speed > 0.5f) _leave = Mathf.MoveTowards(_leave, 0f, dt * 4f);
+                if (up == null || s >= up.Length + HopDownOut || _leave <= 0f) { _standStart = -1f; _onChair = false; _leave = 1f; }
+                else
+                {
+                    up.Pose(Mathf.Min(s, up.Length - 0.001f), ref _sitPose);
+                    if (_sitPose.muscles != null)
+                        Mix(ref _idlePose, _sitPose, _leave * (1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(up.Length - Plugin.ChairBlendOut.Value, up.Length, s))));
+                    hop = _leave * (1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(up.Length * 0.1f, up.Length * 0.8f, s)));
+                }
+            }
+            else _onChair = false;
+            _hop = hop;
+            _seatWeight = 0f;
+        }
+
         private static int[] _headMuscles;
 
         /// <summary>His head and neck as in his happy idle (looping from a time), over the pose so far, by a weight.</summary>
@@ -570,24 +634,12 @@ namespace Cogling
                 if (i < _idlePose.muscles.Length && i < _otherPose.muscles.Length) _idlePose.muscles[i] = Mathf.Lerp(_idlePose.muscles[i], _otherPose.muscles[i], weight);
         }
 
-        private static void MirrorLeftArm(ref HumanPose pose)
-        {
-            if (_mirror == null)
-            {
-                string[] names = HumanTrait.MuscleName;
-                _mirror = names.Select((n, i) => (n, i))
-                    .Where(x => x.n.StartsWith("Left Shoulder") || x.n.StartsWith("Left Arm") || x.n.StartsWith("Left Forearm") || x.n.StartsWith("Left Hand"))
-                    .Select(x => new[] { x.i, System.Array.IndexOf(names, "Right" + x.n.Substring(4)) })
-                    .Where(p => p[1] >= 0).ToArray();
-            }
-            foreach (int[] p in _mirror) if (p[0] < pose.muscles.Length && p[1] < pose.muscles.Length) pose.muscles[p[1]] = pose.muscles[p[0]];
-        }
-
         // ---- where he looks (Good Tidings' Dagny: after the pose, his head turned toward a point, his upper spine a little)
 
         private Transform _head;
         private Vector3 _chatWith;
-        private bool Chatting => _slack == CoglingSlack.PoseTalk || _slack == CoglingSlack.PoseTalk2 || _slack == CoglingSlack.PoseListen;
+        private bool Chatting => CoglingSlack.Talking(_slack) || _slack == CoglingSlack.PoseListen;
+        private ZDOID _watchId = ZDOID.None;
         private float _lookWeight;
         private Vector3 _lookPoint, _lookVel;
 
@@ -596,6 +648,13 @@ namespace Cogling
         {
             if (_head == null) return null;
             if (Chatting) return _chatWith + Vector3.up * Plugin.Height.Value * 0.8f;   // (at the other one's face)
+            if (_slack == (int)CoglingSlack.Activity.Watch && !_watchId.IsNone())
+            {
+                // watching you: his eyes on yours, wherever you go
+                GameObject who = ZNetScene.instance != null ? ZNetScene.instance.FindInstance(_watchId) : null;
+                Character c = who != null ? who.GetComponent<Character>() : null;
+                return c != null ? c.GetHeadPoint() : (Vector3?)null;
+            }
             if (_slack != (int)CoglingSlack.Activity.Stare) return null;
             float t = Time.time - _slackStart;
             return _head.position + transform.forward * 10f + transform.right * (Mathf.Sin(t * 0.21f) * 2.5f + Mathf.Sin(t * 0.07f) * 1.5f)
@@ -609,7 +668,7 @@ namespace Cogling
             if (target is Vector3 p)
             {
                 if (_lookWeight <= 0.001f) _lookPoint = p;
-                _lookPoint = Vector3.SmoothDamp(_lookPoint, p, ref _lookVel, 0.8f);
+                _lookPoint = Vector3.SmoothDamp(_lookPoint, p, ref _lookVel, _slack == (int)CoglingSlack.Activity.Watch ? 0.25f : 0.8f);   // (watching: close behind)
             }
             _lookWeight = Mathf.MoveTowards(_lookWeight, target.HasValue ? 1f : 0f, Time.deltaTime * 1.2f);
             if (_lookWeight <= 0f) return;
@@ -685,10 +744,35 @@ namespace Cogling
             // sitting on the ground: the pose's feet are on the ground already; Sit: height / forward nudge him, eased on and off
             if (_seatWeight > 0f)
                 _hips.position += (Vector3.up * Plugin.SitHeight.Value + transform.forward * Plugin.SitForward.Value) * Mathf.SmoothStep(0f, 1f, _seatWeight);
+            // on a chair: his hips on its seat (Chair: height / back), hopped up to and down from (Chair: hop)
+            if (_onChair && _hop > 0f)
+            {
+                Vector3 seated = _seat + Vector3.up * Plugin.ChairHeight.Value - transform.forward * Plugin.ChairBack.Value;
+                Vector3 was = _hips.position;
+                _hips.position = Vector3.Lerp(_hips.position, seated, _hop) + Vector3.up * Mathf.Sin(Mathf.PI * _hop) * Plugin.ChairHop.Value;
+                Shift(_hips.position - was);
+            }
+            else Shift(Vector3.zero);
             if (Plugin.LogGround.Value && Time.time > _nextGroundLog) { _nextGroundLog = Time.time + 0.1f; Plugin.Log.LogInfo($"Cogling ground: idle {_idleWeight:F2} speed {_speed:F2} lift {off:F3} hips {_hips.position.y - transform.position.y:F3}"); }
         }
 
         private float _nextGroundLog;
+
+        // ---- his name and health bar over him wherever his body is (on a chair it's moved off his character: CoglingTopPoint)
+
+        /// <summary>Coglings whose body is moved off their character now, and by how much.</summary>
+        internal static readonly Dictionary<Character, Vector3> Shifted = new Dictionary<Character, Vector3>();
+        private Character _character;
+
+        private void Shift(Vector3 by)
+        {
+            if (_character == null) _character = GetComponentInParent<Character>();
+            if (_character == null) return;
+            if (by.sqrMagnitude < 0.0001f) Shifted.Remove(_character);
+            else Shifted[_character] = by;
+        }
+
+        private void OnDisable() { if (_character != null) Shifted.Remove(_character); }
 
         // ---- working: the carry pose, bending down, and the carried item in his hands, from his saved state (every player sees them)
 
@@ -815,6 +899,7 @@ namespace Cogling
                     int slack = zdo.GetInt(CoglingSlack.SlackKey);
                     if (slack != _slack) SlackChanged(slack);
                     if (Chatting) _chatWith = zdo.GetVec3(CoglingSlack.LookKey, transform.position + transform.forward * 3f);
+                    _watchId = _slack == (int)CoglingSlack.Activity.Watch ? zdo.GetZDOID(CoglingSlack.WatchKey) : ZDOID.None;
                     SetAsleep(!zdo.GetBool(Carried.AwakeKey));
                     int mood = zdo.GetInt(Carried.MoodKey);
                     if (mood != _mood)

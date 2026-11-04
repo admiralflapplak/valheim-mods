@@ -21,14 +21,21 @@ namespace Cogling
     /// </summary>
     internal sealed class CoglingSlack
     {
-        internal enum Activity { None = 0, Stare = 1, LookAround = 2, Bored = 3, Dance = 4, Sit = 5, Chat = 6 }
+        // (Watch and Chair: numbers of their own, past the poses below; saved as they are)
+        internal enum Activity { None = 0, Stare = 1, LookAround = 2, Bored = 3, Dance = 4, Sit = 5, Chat = 6, Watch = 14, Chair = 15 }
         // (the dance he does, saved for his body: his robot dance is Activity.Dance; these are the game's own)
         internal const int PoseHeadbang = 9, PoseVikingDance = 10;
         private int _dancePose;
         private float _nextCheer;
         // (saved for his body: a break's own number, but in a chat what he does in it: talking, with either clip, or listening)
-        internal const int PoseTalk = 6, PoseListen = 7, PoseTalk2 = 8;
-        internal const string SlackKey = "cogling_slack", TraitsKey = "cogling_traits", LookKey = "cogling_look";
+        // (the talker's clips are the Social pack's: three ways of talking, two of asking)
+        internal const int PoseTalk = 6, PoseListen = 7, PoseTalk2 = 8, PoseTalk3 = 11, PoseQuestion = 12, PoseQuestion2 = 13;
+        private static readonly int[] TalkPoses = { PoseTalk, PoseTalk2, PoseTalk3 }, AskPoses = { PoseQuestion, PoseQuestion2 };
+        internal static bool Talking(int pose) => System.Array.IndexOf(TalkPoses, pose) >= 0 || System.Array.IndexOf(AskPoses, pose) >= 0;
+        internal static string TalkClip(int pose) =>
+            pose == PoseTalk ? "social_talk01" : pose == PoseTalk2 ? "social_talk02" : pose == PoseTalk3 ? "social_talk03"
+            : pose == PoseQuestion ? "social_question01" : pose == PoseQuestion2 ? "social_question02" : null;
+        internal const string SlackKey = "cogling_slack", TraitsKey = "cogling_traits", LookKey = "cogling_look", SeatKey = "cogling_seat", WatchKey = "cogling_watch";
 
         /// <summary>His personality: each from 0 to 1.</summary>
         internal struct Traits
@@ -38,7 +45,7 @@ namespace Cogling
                 $"diligence {Diligence:F2}, curiosity {Curiosity:F2}, playfulness {Playfulness:F2}, restfulness {Restfulness:F2}, dreaminess {Dreaminess:F2}, sociability {Sociability:F2}";
         }
 
-        private enum Step { Going, Facing, Doing, StandingUp }
+        private enum Step { Going, Stepping, Facing, Doing, StandingUp }   // (Stepping: the last bit to a chair, exactly)
 
         private readonly CoglingAI _ai;
         private readonly CoglingNavigator _nav;
@@ -48,14 +55,21 @@ namespace Cogling
         private Vector3 _face;
         private Traits? _me;
         private CoglingSlack _partner;   // in a chat: the other one
-        private bool _host, _hostTalking;
+        private bool _host, _hostTalking, _asked;
         private float _turnUntil;
+        private Chair _chair;            // sitting on a chair: which, and the top of its seat
+        private Vector3 _seat, _spot;
+        private float _stepGiveUp;
+        private Player _watched;         // watching a player: who
+        private bool _catchingUp;        // (watching: his body turning to catch up with his head)
+        /// <summary>Chairs a Cogling on this game has taken (two never pick the same).</summary>
+        private static readonly HashSet<Chair> Taken = new HashSet<Chair>();
 
         /// <summary>Every Cogling brain on this game (a chat's partner is one of them).</summary>
         private static readonly List<CoglingSlack> All = new List<CoglingSlack>();
 
         internal Activity Doing { get; private set; }
-        internal bool Seated => Doing == Activity.Sit && (_step == Step.Doing || _step == Step.StandingUp);
+        internal bool Seated => (Doing == Activity.Sit || Doing == Activity.Chair) && (_step == Step.Doing || _step == Step.StandingUp);
 
         internal CoglingSlack(CoglingAI ai, CoglingNavigator nav, CoglingJob job)
         {
@@ -132,6 +146,9 @@ namespace Cogling
                 (Activity.Dance, t.Playfulness < 0.15f ? 0.05f : 0.2f + t.Playfulness * 2f),   // (some never dance)
             };
             weights.Add((Activity.Sit, 0.4f + t.Restfulness * 1.8f));
+            // watching a player, a bit too closely (a curious one more)
+            Player near = Player.GetClosestPlayer(_ai.transform.position, 18f);
+            if (near != null && Antenna.InArea(network, near.transform.position)) weights.Add((Activity.Watch, 0.25f + t.Curiosity * 0.9f));
             if (Partner(network, false) != null) weights.Add((Activity.Chat, 0.3f + t.Sociability * 2f));
             float total = weights.Sum(w => w.Item2), pick = Random.value * total;
             foreach ((Activity a, float w) in weights) { if (pick < w) return a; pick -= w; }
@@ -149,9 +166,24 @@ namespace Cogling
             switch (what)
             {
                 case Activity.Sit:
+                case Activity.Chair:
                 {
-                    // on the ground: by a fire burning in his area (facing it), else at the edge of his area looking out, or where he is
                     duration = Random.Range(20f, 50f) * (0.6f + t.Restfulness);
+                    // on a chair, stool or bench in his area, if there's a free one (and he feels like it): in front of it, his back to it
+                    Chair chair = what == Activity.Chair || Random.value < Plugin.ChairChance.Value ? FreeChair(network, out _seat) : null;
+                    if (chair != null)
+                    {
+                        Vector3 ahead = Flat(chair.m_attachPoint.forward);
+                        go = Floor(new Vector3(_seat.x, chair.m_attachPoint.position.y + 0.3f, _seat.z) + ahead * Plugin.ChairStandOff.Value);
+                        _spot = go.Value;
+                        _face = go.Value + ahead * 5f;
+                        _chair = chair;
+                        Taken.Add(chair);
+                        what = Activity.Chair;
+                        break;
+                    }
+                    if (what == Activity.Chair) return false;
+                    // on the ground: by a fire burning in his area (facing it), else at the edge of his area looking out, or where he is
                     Fireplace fire = Fire(network);
                     Vector3 away = Vector3.forward;
                     Vector3? rim = fire == null && Random.value < 0.5f ? Edge(network, out away) : null;
@@ -191,6 +223,16 @@ namespace Cogling
                     Player near = Player.GetClosestPlayer(here, 15f);   // (for an audience, if there is one)
                     _face = near != null ? near.transform.position : here + _ai.transform.forward * 5f;
                     break;
+                case Activity.Watch:
+                {
+                    // a player near: he turns to them and watches what they do, his head following them
+                    Player them = Player.GetClosestPlayer(here, 18f);
+                    if (them == null) return false;
+                    _watched = them;
+                    _face = them.transform.position;
+                    duration = Random.Range(10f, 22f) * (0.7f + t.Curiosity * 0.6f);
+                    break;
+                }
                 case Activity.Chat:
                 {
                     // halfway between them, a little apart, facing each other (the other one is asked first: he may say no)
@@ -233,6 +275,18 @@ namespace Cogling
                     var r = _nav.Update(dt);
                     if (r == CoglingNavigator.Result.Moving) return true;
                     _ai.Stop();
+                    if (Doing == Activity.Chair) { _step = Step.Stepping; _stepGiveUp = Time.time + 3f; return true; }
+                    _step = Step.Facing;
+                    _stepUntil = Time.time + 0.8f;
+                    return true;
+                }
+                case Step.Stepping:
+                {
+                    // (the navigator stops within 0.6 m: the last bit straight to the spot in front of the seat, a few small steps)
+                    Vector3 to = _spot - _ai.transform.position;
+                    to.y = 0f;
+                    if (to.magnitude > 0.08f && Time.time < _stepGiveUp) { _ai.Walk(to.normalized); return true; }
+                    _ai.Stop();
                     _step = Step.Facing;
                     _stepUntil = Time.time + 0.8f;
                     return true;
@@ -244,8 +298,22 @@ namespace Cogling
                         if (!PartnerHere) { End(); return false; }
                         _face = _partner._ai.transform.position;
                     }
-                    _ai.Face(_face);
+                    if (Doing == Activity.Watch) { if (!Watching) { End(); return false; } _face = _watched.transform.position; }
+                    if (Doing == Activity.Watch) WatchTurn(); else _ai.Face(_face);
                     if (Time.time < _stepUntil) return true;
+                    if (Doing == Activity.Chair)
+                    {
+                        // (his back square to the chair before he hops up, and near enough; else the ground)
+                        Vector3 want = Flat(_face - _ai.transform.position);
+                        if (Vector3.Angle(Flat(_ai.transform.forward), want) > 8f && Time.time < _stepUntil + 2f) return true;
+                        if (_chair == null || !_chair || Flat2(_ai.transform.position - _seat) > 1.3f || _chair.IsInUse())
+                        {
+                            _ai.Log("couldn't get onto the chair: on the ground");
+                            Release();
+                            Doing = Activity.Sit;
+                        }
+                        else WriteSeat(_seat);
+                    }
                     if (Doing == Activity.Chat && _partner._step < Step.Facing)
                     {
                         // (waiting for the other one to get there; too long, and the chat's off)
@@ -259,7 +327,11 @@ namespace Cogling
                         Write(PoseListen);
                         WriteLook(_partner._ai.transform.position);
                     }
-                    else Write(Doing == Activity.Dance ? _dancePose : (int)Doing);
+                    else
+                    {
+                        if (Doing == Activity.Watch && Owner) Zdo?.Set(WatchKey, _watched.GetZDOID());
+                        Write(Doing == Activity.Dance ? _dancePose : (int)Doing);
+                    }
                     _nextCheer = Time.time + Random.Range(2f, 5f);
                     return true;
                 case Step.Doing:
@@ -270,17 +342,23 @@ namespace Cogling
                         _face = _partner._ai.transform.position;
                         if (_host && Time.time >= _turnUntil) NextTurn();
                     }
-                    if (Doing != Activity.Sit) _ai.Face(_face);   // (seated, he stays as he sat)
+                    if (Doing == Activity.Watch)
+                    {
+                        if (!Watching) { End(); return false; }
+                        _face = _watched.transform.position;
+                        WatchTurn();
+                    }
+                    else if (Doing != Activity.Sit && Doing != Activity.Chair) _ai.Face(_face);   // (seated, he stays as he sat)
                     if (Doing == Activity.Dance && Time.time >= _nextCheer) { _nextCheer = Time.time + Random.Range(3f, 7f); _ai.Say(CoglingVoice.Line.Excited); }
                     // (in a chat, the one who asked ends it; the other goes on till then, or a minute and a half at most)
                     if (Doing == Activity.Chat && !_host && Time.time < _until + 90f) return true;
                     if (Time.time < _until && Plugin.Slacking.Value) return true;
-                    if (Doing == Activity.Sit)
+                    if (Doing == Activity.Sit || Doing == Activity.Chair)
                     {
                         // standing up takes a while: he's still on his break till he's up
                         Write(0);
                         _step = Step.StandingUp;
-                        _stepUntil = Time.time + CoglingBody.StandUpSeconds;
+                        _stepUntil = Time.time + (Doing == Activity.Chair ? CoglingBody.HopDownSeconds : CoglingBody.StandUpSeconds);
                         return true;
                     }
                     End();
@@ -308,13 +386,45 @@ namespace Cogling
             Doing = Activity.None;
             _partner = null;
             _host = false;
+            _asked = false;
+            _watched = null;
+            _catchingUp = false;
+            Release();
         }
+
+        private void Release()
+        {
+            if (_chair != null) Taken.Remove(_chair);
+            _chair = null;
+        }
+
+        /// <summary>
+        /// Watching: his head follows the player (his body: CoglingBody.Look); his body stays put till they're well off to one side
+        /// (Watch: turn after), then turns to catch up till he faces them again.
+        /// </summary>
+        private void WatchTurn()
+        {
+            Vector3 to = Flat(_face - _ai.transform.position);
+            float off = Vector3.Angle(Flat(_ai.transform.forward), to);
+            if (off > Plugin.WatchTurnAfter.Value) _catchingUp = true;
+            else if (off < 6f) _catchingUp = false;
+            if (_catchingUp) _ai.Face(_face);
+        }
+
+        /// <summary>The player he watches is still here, near, and not dead.</summary>
+        private bool Watching => _watched != null && _watched && !_watched.IsDead() && Vector3.Distance(_watched.transform.position, _ai.transform.position) < 22f;
 
         private void Write(int what)
         {
             ZDO zdo = Zdo;
             if (zdo == null || !Owner) return;
             if (zdo.GetInt(SlackKey) != what) zdo.Set(SlackKey, what);
+        }
+
+        private void WriteSeat(Vector3 at)
+        {
+            ZDO zdo = Zdo;
+            if (zdo != null && Owner) zdo.Set(SeatKey, at);
         }
 
         private void WriteLook(Vector3 at)
@@ -376,18 +486,28 @@ namespace Cogling
             float lean = (Me.Sociability - _partner.Me.Sociability) * 0.3f;
             bool hostTalks = _hostTalking ? Random.value < 0.3f + lean : Random.value < 0.8f + lean;
             if (_turnUntil == 0f) hostTalks = true;   // (the one who asked starts)
+            bool answer = _asked;   // (the last turn was a question: whoever talks now starts with a nod or a shake of the head)
             _hostTalking = hostTalks;
-            int clip = Random.value < 0.5f ? PoseTalk : PoseTalk2;
+            // talking mostly, now and then asking; a turn is the clip once through (they don't loop), a talk now and then twice
+            bool ask = Random.value < 0.25f;
+            int[] from = ask ? AskPoses : TalkPoses;
+            int clip = from[Random.Range(0, from.Length)];
+            _asked = ask;
             Write(hostTalks ? clip : PoseListen);
             _partner.Write(hostTalks ? PoseListen : clip);
-            // now and then the talker points, or the listener laughs
             CoglingAI talker = hostTalks ? _ai : _partner._ai, listener = hostTalks ? _partner._ai : _ai;
-            float r = Random.value;
-            if (r < 0.15f) talker.Say(CoglingVoice.Line.Point);
-            else if (r < 0.35f) listener.Say(CoglingVoice.Line.Laugh);
+            if (answer) talker.Say(Random.value < 0.65f ? CoglingVoice.Line.Nod : CoglingVoice.Line.Shake);
+            else
+            {
+                // the listener nods along, shakes his head, or laughs, now and then
+                float r = Random.value;
+                if (r < 0.25f) listener.Say(CoglingVoice.Line.Nod);
+                else if (r < 0.35f) listener.Say(CoglingVoice.Line.Shake);
+                else if (r < 0.5f) listener.Say(CoglingVoice.Line.Laugh);
+            }
             WriteLook(_partner._ai.transform.position);
             _partner.WriteLook(_ai.transform.position);
-            _turnUntil = Time.time + Random.Range(2.5f, 6f);
+            _turnUntil = Time.time + CoglingBody.ClipLength(TalkClip(clip)) * (ask ? 1f : Random.value < 0.4f ? 2f : 1f) - 0.2f;
         }
 
         internal (string key, string a, string b) Describe()
@@ -399,7 +519,9 @@ namespace Cogling
                 case Activity.LookAround: return ("cogling_task_slack_look", "", "");
                 case Activity.Bored: return ("cogling_task_slack_bored", "", "");
                 case Activity.Dance: return ("cogling_task_slack_dance", "", "");
-                case Activity.Sit: return ("cogling_task_slack_sit", "", "");
+                case Activity.Sit:
+                case Activity.Chair: return ("cogling_task_slack_sit", "", "");
+                case Activity.Watch: return ("cogling_task_slack_watch", "", "");
                 case Activity.Chat:
                 {
                     string name = _partner?.Zdo?.GetString(CoglingTag.NameKey) ?? "";
@@ -427,6 +549,63 @@ namespace Cogling
             }
             return best;
         }
+
+        /// <summary>
+        /// A chair, stool or bench in his area within 25 m, free (no player on it, no other Cogling's, not on a ship), the nearest, and
+        /// the top of its seat (a chair's attach point is low, at the seat's middle: straight down onto it, the lowest of its colliders'
+        /// tops, under the backrest's), or null. Seats too high for him are left.
+        /// </summary>
+        /// <summary>Why the last chair looked at wasn't taken (for `cogling slack chair`).</summary>
+        internal static string ChairWhy = "";
+
+        private Chair FreeChair(List<Antenna> network, out Vector3 seat)
+        {
+            seat = Vector3.zero;
+            ChairWhy = "no chair within 25 m in his area";
+            Vector3 here = _ai.transform.position;
+            Chair best = null;
+            float bestDistance = 25f;
+            foreach (Chair c in Object.FindObjectsByType<Chair>(FindObjectsSortMode.None))
+            {
+                if (c == null || c.m_inShip || c.m_attachPoint == null) continue;
+                if (Taken.Contains(c) || c.IsInUse()) { ChairWhy = "the chair is taken"; continue; }
+                Vector3 at = c.m_attachPoint.position;
+                float d = Vector3.Distance(here, at);
+                if (d >= bestDistance || !Antenna.InArea(network, at) || c.GetComponentInParent<Ship>() != null) continue;
+                if (!SeatTop(c, out Vector3 top)) continue;
+                best = c;
+                bestDistance = d;
+                seat = top;
+            }
+            return best;
+        }
+
+        private static bool SeatTop(Chair c, out Vector3 top)
+        {
+            top = Vector3.zero;
+            Vector3 at = c.m_attachPoint.position;
+            bool found = false;
+            foreach (RaycastHit hit in Physics.RaycastAll(at + Vector3.up * 1.6f, Vector3.down, 2.2f, LayerMask.GetMask("Default", "static_solid", "Default_small", "piece")))
+            {
+                if (hit.collider.GetComponentInParent<Chair>() != c && hit.collider.transform.root != c.transform.root) continue;
+                if (found && hit.point.y >= top.y) continue;
+                top = hit.point;
+                found = true;
+            }
+            if (!found) { ChairWhy = "found no seat on it"; return false; }
+            // (a seat from a little above the floor to about his own height; the floor under it, not the chair itself)
+            float floor = at.y - 1f;
+            foreach (RaycastHit hit in Physics.RaycastAll(top + Vector3.up * 0.05f, Vector3.down, 3f, LayerMask.GetMask("Default", "static_solid", "Default_small", "piece", "terrain")))
+            {
+                if (hit.collider.GetComponentInParent<Chair>() == c || hit.collider.transform.root == c.transform.root) continue;
+                if (hit.point.y > floor) floor = hit.point.y;
+            }
+            float height = top.y - floor;
+            if (height <= 0.15f || height >= Plugin.Height.Value * 0.9f) { ChairWhy = $"its seat is {height:F2} m up"; return false; }
+            return true;
+        }
+
+        private static float Flat2(Vector3 v) { v.y = 0f; return v.magnitude; }
 
         /// <summary>A spot near the edge of his area he can stand on, and the way out from there; null if none was found.</summary>
         private Vector3? Edge(List<Antenna> network, out Vector3 outward)
@@ -459,6 +638,6 @@ namespace Cogling
             return p;
         }
 
-        internal static void Forget() => All.Clear();
+        internal static void Forget() { All.Clear(); Taken.Clear(); }
     }
 }
