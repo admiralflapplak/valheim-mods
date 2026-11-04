@@ -22,7 +22,12 @@ namespace Cogling
     internal sealed class CoglingSlack
     {
         // (Watch and Chair: numbers of their own, past the poses below; saved as they are)
-        internal enum Activity { None = 0, Stare = 1, LookAround = 2, Bored = 3, Dance = 4, Sit = 5, Chat = 6, Watch = 14, Chair = 15 }
+        internal enum Activity { None = 0, Stare = 1, LookAround = 2, Bored = 3, Dance = 4, Sit = 5, Chat = 6, Watch = 14, Chair = 15, Cheer = 16 }
+        // (cheering on a dancer: clapping is Activity.Cheer; these two are cheering)
+        internal const int PoseCheer2 = 17, PoseCheer3 = 18;
+        private static readonly int[] CheerPoses = { (int)Activity.Cheer, PoseCheer2, PoseCheer3 };
+        internal static string CheerClip(int pose) =>
+            pose == (int)Activity.Cheer ? "social_handclap01" : pose == PoseCheer2 ? "social_cheer01" : pose == PoseCheer3 ? "social_cheer02" : null;
         // (the dance he does, saved for his body: his robot dance is Activity.Dance; these are the game's own)
         internal const int PoseHeadbang = 9, PoseVikingDance = 10;
         private int _dancePose;
@@ -62,6 +67,10 @@ namespace Cogling
         private float _stepGiveUp;
         private Player _watched;         // watching a player: who
         private bool _catchingUp;        // (watching: his body turning to catch up with his head)
+        private CoglingSlack _dancer;    // dancing along or cheering: whose dance
+        private float _nextCheerPose;
+        private List<Antenna> _network;
+        private bool _forced;   // (a break from `cogling slack`: a dance brings everyone free near, for testing)
         /// <summary>Chairs a Cogling on this game has taken (two never pick the same).</summary>
         private static readonly HashSet<Chair> Taken = new HashSet<Chair>();
 
@@ -159,6 +168,8 @@ namespace Cogling
         internal bool Start(Activity what, List<Antenna> network, bool force = false)
         {
             Stop();
+            _network = network;
+            _forced = force;
             Traits t = Me;
             Vector3 here = _ai.transform.position;
             float duration;
@@ -299,6 +310,11 @@ namespace Cogling
                         _face = _partner._ai.transform.position;
                     }
                     if (Doing == Activity.Watch) { if (!Watching) { End(); return false; } _face = _watched.transform.position; }
+                    if (_dancer != null)
+                    {
+                        if (_dancer._ai == null || _dancer.Doing != Activity.Dance) { End(); return false; }
+                        if (Doing == Activity.Cheer) _face = _dancer._ai.transform.position;
+                    }
                     if (Doing == Activity.Watch) WatchTurn(); else _ai.Face(_face);
                     if (Time.time < _stepUntil) return true;
                     if (Doing == Activity.Chair)
@@ -327,11 +343,14 @@ namespace Cogling
                         Write(PoseListen);
                         WriteLook(_partner._ai.transform.position);
                     }
+                    else if (Doing == Activity.Cheer) NextCheer();
                     else
                     {
                         if (Doing == Activity.Watch && Owner) Zdo?.Set(WatchKey, _watched.GetZDOID());
                         Write(Doing == Activity.Dance ? _dancePose : (int)Doing);
+                        if (Doing == Activity.Dance && _dancer == null) Invite();
                     }
+                    if (_dancer != null) _until = Time.time + Mathf.Max(5f, _dancer._until - Time.time);   // (till the dancer stops, about)
                     _nextCheer = Time.time + Random.Range(2f, 5f);
                     return true;
                 case Step.Doing:
@@ -349,7 +368,13 @@ namespace Cogling
                         WatchTurn();
                     }
                     else if (Doing != Activity.Sit && Doing != Activity.Chair) _ai.Face(_face);   // (seated, he stays as he sat)
-                    if (Doing == Activity.Dance && Time.time >= _nextCheer) { _nextCheer = Time.time + Random.Range(3f, 7f); _ai.Say(CoglingVoice.Line.Excited); }
+                    if (_dancer != null && (_dancer._ai == null || _dancer.Doing != Activity.Dance)) { End(); return false; }   // (the dance is over)
+                    if (Doing == Activity.Cheer)
+                    {
+                        _face = _dancer._ai.transform.position;
+                        if (Time.time >= _nextCheerPose) NextCheer();
+                    }
+                    if ((Doing == Activity.Dance || Doing == Activity.Cheer) && Time.time >= _nextCheer) { _nextCheer = Time.time + Random.Range(3f, 7f) * (Doing == Activity.Cheer ? 1.5f : 1f); _ai.Say(CoglingVoice.Line.Excited); }
                     // (in a chat, the one who asked ends it; the other goes on till then, or a minute and a half at most)
                     if (Doing == Activity.Chat && !_host && Time.time < _until + 90f) return true;
                     if (Time.time < _until && Plugin.Slacking.Value) return true;
@@ -389,6 +414,7 @@ namespace Cogling
             _asked = false;
             _watched = null;
             _catchingUp = false;
+            _dancer = null;
             Release();
         }
 
@@ -510,6 +536,73 @@ namespace Cogling
             _turnUntil = Time.time + CoglingBody.ClipLength(TalkClip(clip)) * (ask ? 1f : Random.value < 0.4f ? 2f : 1f) - 0.2f;
         }
 
+        // ---- a dance's audience
+
+        /// <summary>
+        /// Started dancing: the free Coglings near (this game runs them, in the area) may come over: a playful one to dance along beside
+        /// him, a sociable one to clap and cheer in front of him. Three at most.
+        /// </summary>
+        private void Invite()
+        {
+            if (_network == null || !Plugin.DanceAudience.Value) return;
+            Vector3 here = _ai.transform.position;
+            int came = 0;
+            foreach (CoglingSlack s in All.ToList())
+            {
+                if (came >= 3) break;
+                if (s == this || s._ai == null || s.Doing != Activity.None || !s.Owner || !s._ai.CanChat) continue;
+                Vector3 p = s._ai.transform.position;
+                if (Vector3.Distance(here, p) > 20f || !Antenna.InArea(_network, p)) continue;
+                Traits t = s.Me;
+                bool dance = Random.value < 0.1f + t.Playfulness * 0.45f;
+                if (!dance && !_forced && Random.value >= 0.1f + t.Sociability * 0.4f) continue;
+                if (s._ai.JoinDance(this, dance, came)) came++;
+            }
+            if (came > 0) _ai.Log($"{came} came to the dance");
+        }
+
+        /// <summary>Come to another's dance (his brain has said yes): beside him dancing the same, or in front of him cheering.</summary>
+        internal bool JoinDance(CoglingSlack dancer, bool dance, int index)
+        {
+            Stop();
+            if (_job.Carrying) _job.Drop(); else _job.Abandon();
+            _network = dancer._network;
+            _dancer = dancer;
+            Vector3 at = dancer._ai.transform.position, ahead = Flat(dancer._face - at), right = Vector3.Cross(Vector3.up, ahead);
+            Vector3 spot;
+            if (dance)
+            {
+                // in a row with him, facing his way: right, left, then further right
+                float side = index == 0 ? 1.4f : index == 1 ? -1.4f : 2.8f;
+                spot = at + right * side;
+                _face = spot + ahead * 5f;
+                _dancePose = dancer._dancePose;
+                Doing = Activity.Dance;
+            }
+            else
+            {
+                // in front of him, a little to one side, facing him
+                float angle = (index - 1) * 30f + Random.Range(-10f, 10f);
+                spot = at + Quaternion.Euler(0f, angle, 0f) * ahead * 2.6f;
+                _face = at;
+                Doing = Activity.Cheer;
+            }
+            spot = Floor(spot);
+            _until = 0f;
+            if (_nav.SetTarget(spot)) _step = Step.Going;
+            else { _step = Step.Facing; _stepUntil = Time.time + 0.8f; }
+            _ai.Log(dance ? "off to dance along" : "off to cheer a dance");
+            return true;
+        }
+
+        /// <summary>Cheering: the next clip (clapping or cheering), once through.</summary>
+        private void NextCheer()
+        {
+            int pose = CheerPoses[Random.Range(0, CheerPoses.Length)];
+            Write(pose);
+            _nextCheerPose = Time.time + CoglingBody.ClipLength(CheerClip(pose)) * (pose == (int)Activity.Cheer ? 2f : 1f) - 0.15f;
+        }
+
         internal (string key, string a, string b) Describe()
         {
             if (_step == Step.Going) return ("cogling_task_slack_going", "", "");
@@ -522,6 +615,7 @@ namespace Cogling
                 case Activity.Sit:
                 case Activity.Chair: return ("cogling_task_slack_sit", "", "");
                 case Activity.Watch: return ("cogling_task_slack_watch", "", "");
+                case Activity.Cheer: return ("cogling_task_slack_cheer", "", "");
                 case Activity.Chat:
                 {
                     string name = _partner?.Zdo?.GetString(CoglingTag.NameKey) ?? "";

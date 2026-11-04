@@ -188,7 +188,15 @@ The feel: peaceful, not fast. A little helper with a personality, pottering abou
   ~0.5 m in front of its seat, his back square to it, and hops up (his hips carried to the seat top, found by a ray down through
   the attach point onto the chair's lowest collider top, with an arc: Chair: hop / height / back); down again the same way.
   Seats above 0.9 of his height are left; chairs on ships too; one Cogling a chair.
-- Next: joining a dance, reacting to the player building; maybe the game's own emotes
+- Dance audience (0.21): a Cogling starting a dance invites the free ones near (20 m, same game, in the area; three at most): a
+  playful one dances along beside him (same dance, his way), a sociable one stands in front clapping and cheering (Social HandClap01,
+  Cheer01/02, a clip once through each). They stop when he does. `cogling slack dance` brings every free one (testing).
+- The antenna alive (0.21): now and then the dish turns (up to Antenna turn either way) and tips (Antenna tip), the turn first then
+  the tip, with the Ashwood door's open sound pitched up (the move lasts as long as the creak). The moves come from the world clock
+  and the antenna's id: every game shows the same without sending anything. A small lamp in the middle of the dish (a copy of the
+  wisp light's ball and a point light) in the nearest Cogling's eye colour (red frightened, yellow wary, dim powered down).
+  AntennaLife; the dish and hinge sit on cogling_turn (older antennas are moved onto it).
+- Next: reacting to the player building; maybe the game's own emotes
   (the Fuling Heckler's stagger-swap trick works on his hidden Fuling body).
 
 ## Open questions

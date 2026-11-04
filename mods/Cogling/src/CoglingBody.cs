@@ -261,6 +261,25 @@ namespace Cogling
             ShowEyes();
         }
 
+        /// <summary>The eyes of the Cogling nearest a spot within a distance: their colour now, and how lit (0: powered down).</summary>
+        internal static bool EyesNear(Vector3 at, float within, out Color colour, out float level)
+        {
+            colour = Plugin.EyeColor.Value;
+            level = 1f;
+            CoglingBody best = null;
+            float bestDistance = within;
+            foreach (CoglingBody b in Live)
+            {
+                if (b == null) continue;
+                float d = Vector3.Distance(b.transform.position, at);
+                if (d < bestDistance) { best = b; bestDistance = d; }
+            }
+            if (best == null) return false;
+            colour = best._eyeColor ?? Plugin.EyeColor.Value;
+            level = best._eyeLevel;
+            return true;
+        }
+
         private void ShowEyes()
         {
             if (Skin == null) return;
@@ -496,7 +515,7 @@ namespace Cogling
             }
             if (_slack == CoglingSlack.PoseHeadbang) return GameClip("Headbang");
             if (_slack == CoglingSlack.PoseVikingDance) return GameClip("Dance");
-            string talk = CoglingSlack.TalkClip(_slack);
+            string talk = CoglingSlack.TalkClip(_slack) ?? CoglingSlack.CheerClip(_slack);
             if (talk != null) return Clip(talk);
             if (_slack == (int)CoglingSlack.Activity.Watch) return _idle;   // (watching you: his usual idle, never the happy one)
             return null;

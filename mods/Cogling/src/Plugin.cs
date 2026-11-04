@@ -16,7 +16,7 @@ namespace Cogling
     {
         public const string Guid = "nick.Cogling";
         public const string Name = "Cogling";
-        public const string Version = "0.20.6";
+        public const string Version = "0.21.15";
 
         internal static BepInEx.Logging.ManualLogSource Log;
         internal static ServerSettings Synced;
@@ -49,12 +49,14 @@ namespace Cogling
         internal static ConfigEntry<float> RepairBelow;
         internal static ConfigEntry<bool> LogAI;
         internal static ConfigEntry<float> CarryRaise, CarryOutward, CarryTwist, CarryElbow, CarryWrist, CarryOut, CarryHeight, CarryItemSize, CarryItemTurn;
-        internal static ConfigEntry<bool> Slacking, SwingFreeze, CarryPreview, Paused, UseIdle, BendPreview, LogGround, PowerPreview, HammerPreview;
+        internal static ConfigEntry<bool> DanceAudience, Slacking, SwingFreeze, CarryPreview, Paused, UseIdle, BendPreview, LogGround, PowerPreview, HammerPreview;
         internal static ConfigEntry<float> WatchTurnAfter, ChairBlendOut, ChairStandOff, ChairChance, ChairHeight, ChairBack, ChairHop, SlackEvery, SitDownUntil, SitBlend, SitHeight, SitForward, SitStandSpeed, SwingFrozenAt, SwingRaise, SwingOut, SwingTwist, SwingHandTurn, SwingWristHigh, SwingWristLow, SwingLeftRaise, SwingLeftOut, SwingLeftElbow, SwingElbowHigh, SwingElbowLow, SwingTime;
         internal static ConfigEntry<float> HammerX, HammerY, HammerZ, HammerTurnX, HammerTurnY, HammerTurnZ, HammerSize;
         internal static ConfigEntry<float> PowerFrame, HappyIdleChance, PowerDownAfter;
         internal static ConfigEntry<float> BendSpine, BendArms;
         internal static ConfigEntry<float> EyeGlow;
+        internal static ConfigEntry<bool> AntennaMoves, AntennaLight;
+        internal static ConfigEntry<float> AntennaMoveEvery, AntennaTurn, AntennaTip, AntennaSoundVolume, AntennaSoundPitch, AntennaLightBrightness, AntennaLightRange, AntennaLightSize, AntennaLightHeight, AntennaLightForward, AntennaLightSide;
         internal static ConfigEntry<UnityEngine.Color> EyeColor;
 
         private Harmony _harmony;
@@ -85,6 +87,19 @@ namespace Cogling
                 new AcceptableValueRange<float>(0.5f, 3f));
             DishTilt = Config.Bind("3 - Looks", "Antenna dish tilt", 35f, new ConfigDescription(
                 "How far the antenna's dish leans toward its front, in degrees (each player's own look).", new AcceptableValueRange<float>(0f, 80f)));
+            AntennaMoves = Config.Bind("3 - Looks", "Antenna moves", true, "Now and then an antenna's dish turns to a new heading and tips a little, with a creak.");
+            AntennaMoveEvery = Config.Bind("3 - Looks", "Antenna moves every", 12f, new ConfigDescription("About how often an antenna moves, in seconds.", new AcceptableValueRange<float>(3f, 120f)));
+            AntennaTurn = Config.Bind("3 - Looks", "Antenna turn", 90f, new ConfigDescription("How far the dish may turn either way from where it was built facing, in degrees.", new AcceptableValueRange<float>(0f, 180f)));
+            AntennaTip = Config.Bind("3 - Looks", "Antenna tip", 12f, new ConfigDescription("How far the dish may tip up or down from its tilt, in degrees.", new AcceptableValueRange<float>(0f, 30f)));
+            AntennaSoundVolume = Config.Bind("3 - Looks", "Antenna creak volume", 0.5f, new ConfigDescription("How loud the creak is when an antenna moves (0: silent).", new AcceptableValueRange<float>(0f, 1f)));
+            AntennaSoundPitch = Config.Bind("3 - Looks", "Antenna creak pitch", 1.8f, new ConfigDescription("How high and fast the creak is (1: the Ashwood door's own). The move takes as long as the creak.", new AcceptableValueRange<float>(0.5f, 3f)));
+            AntennaLight = Config.Bind("3 - Looks", "Antenna light", true, "A small lamp in the middle of the dish, in the colour of the nearest Cogling's eyes.");
+            AntennaLightBrightness = Config.Bind("3 - Looks", "Antenna light brightness", 1.5f, new ConfigDescription("How much light the lamp gives (0: none, the bulb still glows).", new AcceptableValueRange<float>(0f, 5f)));
+            AntennaLightRange = Config.Bind("3 - Looks", "Antenna light range", 2.5f, new ConfigDescription("How far the lamp's light reaches, in metres.", new AcceptableValueRange<float>(0.5f, 10f)));
+            AntennaLightSize = Config.Bind("3 - Looks", "Antenna light size", 0.35f, new ConfigDescription("How big the bulb is (1: the wisp light's ball).", new AcceptableValueRange<float>(0.05f, 1.5f)));
+            AntennaLightHeight = Config.Bind("9 - Testing", "Antenna light: height", 0f, new ConfigDescription("The lamp moved up (+) or down (-) on the dish, in metres.", new AcceptableValueRange<float>(-0.4f, 0.4f)));
+            AntennaLightForward = Config.Bind("9 - Testing", "Antenna light: forward", 0f, new ConfigDescription("The lamp moved out of (+) or into (-) the dish, in metres.", new AcceptableValueRange<float>(-0.4f, 0.4f)));
+            AntennaLightSide = Config.Bind("9 - Testing", "Antenna light: side", 0f, new ConfigDescription("The lamp moved to one side (+) or the other (-) on the dish, in metres.", new AcceptableValueRange<float>(-0.4f, 0.4f)));
             VoicePitch = Config.Bind("4 - Voice", "Pitch", 2f, new ConfigDescription("How high his voice is (1: a Dverger's).", new AcceptableValueRange<float>(0.5f, 3f)));
             VoiceRobot = Config.Bind("4 - Voice", "Robot", 0.6f, new ConfigDescription("How much robot is in his voice (ring modulation).", new AcceptableValueRange<float>(0f, 1f)));
             VoiceRing = Config.Bind("4 - Voice", "Robot tone", 90f, new ConfigDescription("The robot effect's tone in Hz: low buzzes, high rings.", new AcceptableValueRange<float>(10f, 400f)));
@@ -141,6 +156,7 @@ namespace Cogling
             HammerSize = Config.Bind("9 - Testing", "Hammer: size", 0.624f, new ConfigDescription("The hammer's size (1: a player's).", new AcceptableValueRange<float>(0.1f, 1.5f)));
             Slacking = Config.Bind("8 - Slacking off", "Slacking off", true, "Now and then a Cogling takes a break, even with work to do: stares into the distance, looks around, is bored, dances, or sits on the ground for a while. Each has his own personality: some slack more than others. Never while frightened.");
             SlackEvery = Config.Bind("8 - Slacking off", "Every (minutes)", 4f, new ConfigDescription("How often an average Cogling takes a break, about (a lazy one more often, a hard worker less).", new AcceptableValueRange<float>(0.5f, 30f)));
+            DanceAudience = Config.Bind("8 - Slacking off", "Dance audience", true, "When a Cogling dances, others near may come over: a playful one to dance along, a sociable one to clap and cheer.");
             ChairChance = Config.Bind("8 - Slacking off", "Sit on chairs", 0.6f, new ConfigDescription("Sitting down for a break with a free chair, stool or bench in his area: how likely he hops up onto it (else he sits on the ground).", new AcceptableValueRange<float>(0f, 1f)));
             ChairStandOff = Config.Bind("9 - Testing", "Chair: stand off", 0.3f, new ConfigDescription("Sitting on a chair: how far in front of the seat's middle he stands before he hops up (and lands when he hops down), in metres.", new AcceptableValueRange<float>(0.1f, 0.8f)));
             WatchTurnAfter = Config.Bind("9 - Testing", "Watch: turn after", 55f, new ConfigDescription("Watching you: how far off to one side you get (degrees) before his body turns to catch up with his head.", new AcceptableValueRange<float>(15f, 70f)));
@@ -199,6 +215,9 @@ namespace Cogling
             EyeGlow.SettingChanged += (s, e) => CoglingBody.UpdateEyes();
             EyeColor.SettingChanged += (s, e) => CoglingBody.UpdateEyes();
             DishTilt.SettingChanged += (s, e) => Antenna.ApplyTilt();
+            AntennaLightHeight.SettingChanged += (s, e) => Antenna.ApplyLamp();
+            AntennaLightForward.SettingChanged += (s, e) => Antenna.ApplyLamp();
+            AntennaLightSide.SettingChanged += (s, e) => Antenna.ApplyLamp();
             foreach (var voice in new[] { VoicePitch, VoiceRobot, VoiceRing, VoiceCrunch, VoiceVolume }) voice.SettingChanged += (s, e) => CoglingVoice.TryNow();
 
             _harmony = Harmony.CreateAndPatchAll(typeof(Plugin).Assembly, Guid);

@@ -25,7 +25,28 @@ namespace Cogling
         {
             Player p = Player.m_localPlayer;
             string sub = a.Length > 1 ? a[1].ToLowerInvariant() : "";
-            if (p == null || (sub != "goto" && sub != "home" && sub != "items" && sub != "tidy" && sub != "status" && sub != "slack" && sub != "emotes")) { t.AddString(Usage); return; }
+            if (p == null || (sub != "goto" && sub != "home" && sub != "items" && sub != "tidy" && sub != "status" && sub != "slack" && sub != "emotes" && sub != "antenna")) { t.AddString(Usage); return; }
+            if (sub == "antenna")
+            {
+                // (testing: the nearest antenna's parts, where each is, and the lamp seen from the dish)
+                Antenna near = Antenna.Nearest(p.transform.position, 60f);
+                if (near == null) { t.AddString("No antenna near."); return; }
+                var lines = new List<string>();
+                void Dump(Transform tr, string path)
+                {
+                    path = path.Length == 0 ? tr.name : path + "/" + tr.name;
+                    if (!path.Contains("AreaMarker"))
+                        lines.Add($"{path} active {tr.gameObject.activeSelf} local {tr.localPosition:F3} rot {tr.localEulerAngles:F1} scale {tr.localScale:F2} world {tr.position:F3}"
+                                  + $" [{string.Join(",", tr.GetComponents<Component>().Select(c => c.GetType().Name))}]");
+                    foreach (Transform child in tr) Dump(child, path);
+                }
+                Dump(near.transform, "");
+                Transform dish = near.transform.Find("New/cogling_turn/cogling_dish"), lamp = dish != null ? dish.Find("cogling_lamp") : null;
+                if (dish != null && lamp != null) lines.Add($"lamp from the dish: {dish.InverseTransformPoint(lamp.position):F3}; lamp's parent {lamp.parent.name}");
+                foreach (string l in lines) Plugin.Log.LogInfo("Cogling antenna: " + l);
+                t.AddString($"{lines.Count} parts written to the log.");
+                return;
+            }
             if (sub == "emotes")
             {
                 string list = string.Join(", ", ClipPlayer.GameClips().Select(c => $"{c.name} ({c.length:F1} s{(c.isLooping ? ", loops" : "")})").OrderBy(n => n));

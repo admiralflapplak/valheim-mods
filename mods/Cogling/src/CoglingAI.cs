@@ -276,6 +276,17 @@ namespace Cogling
             return true;
         }
 
+        /// <summary>Asked to another's dance (to dance along, or cheer): what he was doing waits.</summary>
+        internal bool JoinDance(CoglingSlack dancer, bool dance, int index)
+        {
+            if (!CanChat) return false;
+            if (_mode == Mode.Working) _job.Abandon();
+            if (!_slack.JoinDance(dancer, dance, index)) return false;
+            Wake();
+            _mode = Mode.Slacking;
+            return true;
+        }
+
         internal void GoHome()
         {
             Wake();

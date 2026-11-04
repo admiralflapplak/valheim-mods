@@ -60,6 +60,8 @@ namespace Cogling
                 _view.Register<long, long>(Rebuilds.AddRpc, (sender, due, creator) => Rebuilds.RPC_Add(this, due, creator));
             }
             Shape(gameObject);   // (also an antenna built by an older copy of the mod, given this copy's code by PieceReload)
+            // its moves and lamp (an older copy's is swapped for this copy's by PieceReload: never two)
+            if (!GetComponents<MonoBehaviour>().Any(m => m != null && m.GetType().Name == nameof(AntennaLife))) gameObject.AddComponent<AntennaLife>();
         }
 
         private void OnDestroy()
@@ -239,7 +241,10 @@ namespace Cogling
 
         // ---- the shape: the wisp light's dish, tilted on its post, without the wisp (its ball, light, sparks, sound, mist clearing)
 
-        private const float DishFrom = 1.16f;   // the stand's mesh: the post below (to 1.02), the dish above (1.10 to 1.47, 0.49 m wide)
+        private const float DishFrom = 1.16f;   // the stand's mesh: the post below (to 1.02), the dish above (1.10 to 1.47, 0.49 m wide); its pivot
+        // (where the mesh is cut: in the gap between them. Cut at the pivot, the bottom of the dish's hub stayed on the post and stood
+        // still while the dish turned: the lamp, on the dish, looked to wander about the hub)
+        private const float CutAt = 1.06f;
         private static Mesh _post, _dish;
         private static Vector3 _pivot;
 
@@ -257,7 +262,16 @@ namespace Cogling
             }
             Transform stand = antenna.transform.Find("New");
             if (stand == null) return;
-            Transform dish = stand.Find("cogling_dish");
+            // what turns: the dish and its hinge, about the post (an antenna from before has them on the stand: moved onto it)
+            Transform turn = stand.Find("cogling_turn");
+            if (turn == null)
+            {
+                turn = new GameObject("cogling_turn") { layer = stand.gameObject.layer }.transform;
+                turn.SetParent(stand, false);
+            }
+            foreach (string part in new[] { "cogling_dish", "cogling_hinge" })
+                if (stand.Find(part) is Transform loose) loose.SetParent(turn, false);
+            Transform dish = turn.Find("cogling_dish");
             if (dish == null)
             {
                 var filter = stand.GetComponent<MeshFilter>();
@@ -271,22 +285,131 @@ namespace Cogling
                 stand.localScale = Vector3.one;
                 filter.sharedMesh = _post;
                 dish = new GameObject("cogling_dish") { layer = stand.gameObject.layer }.transform;
-                dish.SetParent(stand, false);
+                dish.SetParent(turn, false);
                 dish.localPosition = _pivot;
                 dish.gameObject.AddComponent<MeshFilter>().sharedMesh = _dish;
                 dish.gameObject.AddComponent<MeshRenderer>().sharedMaterials = stand.GetComponent<MeshRenderer>().sharedMaterials;
             }
+            else if (_post != null && _dish != null)
+            {
+                // (one made by an older copy: this copy's cut)
+                if (stand.GetComponent<MeshFilter>() is MeshFilter post) post.sharedMesh = _post;
+                if (dish.GetComponent<MeshFilter>() is MeshFilter bowl) bowl.sharedMesh = _dish;
+            }
             dish.localRotation = Quaternion.Euler(Plugin.DishTilt.Value, 0f, 0f);   // (its face toward the antenna's front)
-            Transform old = stand.Find("cogling_hinge");
+            Transform old = turn.Find("cogling_hinge");
             if (old != null && old.childCount != 4) { old.gameObject.SetActive(false); Destroy(old.gameObject); old = null; }   // (an older hinge)
-            if (old == null) Hinge(stand, stand.GetComponent<MeshRenderer>().sharedMaterials);
+            if (old == null) Hinge(turn, stand.GetComponent<MeshRenderer>().sharedMaterials);
+            if (dish.Find("cogling_lamp") is Transform lamp)
+            {
+                lamp.localPosition = LampAt(dish);   // (one from before: where this copy puts it)
+                if (lamp.Find("bulb") is Transform b) CentreBulb(b);
+            }
+            else Lamp(dish);
+            antenna.GetComponent<AntennaLife>()?.Find();
+        }
+
+        private static Material _bulbMaterial;
+
+        /// <summary>
+        /// The lamp in the middle of the dish: a small copy of the wisp light's ball and a point light (AntennaLife
+        /// colours them as the Coglings' eyes and keeps them to the settings).
+        /// </summary>
+        private static void Lamp(Transform dish)
+        {
+            GameObject wisp = ZNetScene.instance?.GetPrefab("dverger_demister");
+            Transform stand = wisp != null ? wisp.transform.Find("New") : null;
+            Transform ball = wisp != null ? wisp.transform.Find("_enabled/demister_ball (1)") : null;
+            if (stand == null || ball == null) return;
+            var lamp = new GameObject("cogling_lamp") { layer = dish.gameObject.layer };
+            lamp.transform.SetParent(dish, false);
+            lamp.transform.localPosition = LampAt(dish);
+            lamp.transform.localScale = Vector3.one * Plugin.AntennaLightSize.Value;
+            var light = lamp.AddComponent<Light>();
+            light.type = LightType.Point;
+            light.shadows = LightShadows.None;
+            light.range = Plugin.AntennaLightRange.Value;
+            light.intensity = Plugin.AntennaLightBrightness.Value;
+            light.color = Plugin.EyeColor.Value;
+            var bulb = new GameObject("bulb") { layer = dish.gameObject.layer };
+            bulb.transform.SetParent(lamp.transform, false);
+            bulb.transform.localScale = ball.lossyScale;
+            bulb.AddComponent<MeshFilter>().sharedMesh = ball.GetComponent<MeshFilter>().sharedMesh;
+            CentreBulb(bulb.transform);
+            var r = bulb.AddComponent<MeshRenderer>();
+            if (_bulbMaterial == null)
+            {
+                _bulbMaterial = new Material(ball.GetComponent<MeshRenderer>().sharedMaterial) { name = "cogling_bulb" };
+                _bulbMaterial.EnableKeyword("_EMISSION");
+            }
+            r.sharedMaterial = _bulbMaterial;
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        }
+
+        /// <summary>Where the lamp goes on the dish: in the middle of its bowl (its mesh's middle; the wisp's ball floated above it), moved by the settings.</summary>
+        private static Vector3 LampAt(Transform dish)
+        {
+            if (_lampCentre == null) _lampCentre = BowlCentre(dish.GetComponent<MeshFilter>()?.sharedMesh);
+            return _lampCentre.Value + new Vector3(Plugin.AntennaLightSide.Value, Plugin.AntennaLightHeight.Value, Plugin.AntennaLightForward.Value);
+        }
+
+        private static Vector3? _lampCentre;
+
+        /// <summary>The bulb's ball round the lamp's own point (the wisp's ball mesh isn't centred on its pivot: it sat off to one side).</summary>
+        private static void CentreBulb(Transform bulb)
+        {
+            Mesh m = bulb.GetComponent<MeshFilter>()?.sharedMesh;
+            if (m == null) return;
+            bulb.localPosition = -Vector3.Scale(m.bounds.center, bulb.localScale);
+        }
+
+
+        /// <summary>
+        /// The middle of the dish's bowl, on its own axis (a point off the axis seemed to wander as the dish turned): across, the middle
+        /// of its rim (its top ring of points: the bowl opens up its own y); up, the inside of the bowl there (the highest point near the
+        /// axis) and half the bulb above it.
+        /// </summary>
+        private static Vector3 BowlCentre(Mesh bowl)
+        {
+            if (bowl == null || !bowl.isReadable) return Vector3.zero;
+            Vector3[] v = bowl.vertices;
+            float top = v.Max(p => p.y), bottom = v.Min(p => p.y);
+            var rim = v.Where(p => p.y > top - (top - bottom) * 0.1f).ToList();
+            float x = rim.Average(p => p.x), z = rim.Average(p => p.z);
+            float width = rim.Max(p => Mathf.Sqrt((p.x - x) * (p.x - x) + (p.z - z) * (p.z - z)));
+            // (across: where the hub's cup is, found from pictures of a real antenna straight on and from the side; the rim's and the
+            // spokes' middle is off to one side of it, and a ball off the cup looked to wander as the dish turned. The build-menu
+            // render showed it mirrored: don't fit it there)
+            x = 0.005f;
+            z = 0.025f;
+            var middle = v.Where(p => Mathf.Sqrt((p.x - x) * (p.x - x) + (p.z - z) * (p.z - z)) < width * 0.15f).ToList();
+            float floor = middle.Count > 0 ? middle.Max(p => p.y) : (top + bottom) / 2f;
+            float lift = 0.03f;   // (just on the hub: lower, it sank into the wood and showed through behind; higher, it slid off the cup seen from the side)
+            var centre = new Vector3(x, floor + lift, z);
+            return centre;
+        }
+
+        /// <summary>The lamp's place settings, on every antenna standing (and the prefab).</summary>
+        internal static void ApplyLamp()
+        {
+            foreach (Transform dish in All.Where(a => a != null).Select(a => a.transform).Concat(Prefab != null ? new[] { Prefab.transform } : new Transform[0])
+                         .Select(t => t.Find("New/cogling_turn/cogling_dish")).Where(d => d != null))
+            {
+                Transform lamp = dish.Find("cogling_lamp");
+                if (lamp == null) continue;
+                lamp.gameObject.SetActive(false);
+                Destroy(lamp.gameObject);
+                lamp.name = "cogling_lamp_old";
+                Lamp(dish);
+                dish.GetComponentInParent<AntennaLife>()?.Find();
+            }
         }
 
         /// <summary>
         /// What holds the tilted dish to its post: a short neck from the post's top up to the pivot, and a pin across it the dish turns
         /// on (wooden cylinders, in the stand's own wood). Sizes from the stand's mesh: the post's top is 8 cm across at 0.51 m.
         /// </summary>
-        private static void Hinge(Transform stand, Material[] wood)
+        private static void Hinge(Transform stand, Material[] wood)   // (stand: what it's on, the turn)
         {
             if (_cylinder == null)
             {
@@ -328,8 +451,14 @@ namespace Cogling
             _pivot = Vector3.Scale(new Vector3(0f, DishFrom, 0f), scale);
             var post = new List<int>();
             var dish = new List<int>();
+            int moved = 0;
             for (int i = 0; i < tris.Length; i += 3)
-                ((v[tris[i]].y + v[tris[i + 1]].y + v[tris[i + 2]].y) / 3f > DishFrom ? dish : post).AddRange(new[] { tris[i], tris[i + 1], tris[i + 2] });
+            {
+                float middle = (v[tris[i]].y + v[tris[i + 1]].y + v[tris[i + 2]].y) / 3f;
+                if (middle > CutAt && middle <= DishFrom) moved++;
+                (middle > CutAt ? dish : post).AddRange(new[] { tris[i], tris[i + 1], tris[i + 2] });
+            }
+            Plugin.Log.LogInfo($"Antenna: {moved} triangle(s) of the dish's hub now turn with the dish (they stayed on the post before)");
             Mesh Part(List<int> part, Vector3 origin, string name)
             {
                 var map = new Dictionary<int, int>();
