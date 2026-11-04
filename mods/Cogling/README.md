@@ -5,6 +5,8 @@ what's lying around, putting it in the right chest, tidying your chests, repairi
 smelters going. In between, it takes breaks. Every Cogling has a personality of its own: some work hard, some are lazy, some
 chat, dance or go fishing. You won't see their traits written anywhere; you get to know them by watching.
 
+![Coglings at work in a base, around their antenna](images/base.jpg)
+
 ## Getting started
 
 1. **Build a Cogling Antenna** with the Hammer (Misc tab, at a workbench). Its area is 20 m around it; antennas whose areas overlap
@@ -29,11 +31,20 @@ Look at a Cogling and press **E** to greet it; **Shift + E** gives it a name. Th
   working on, and fuel. It never starts one. A kiln is only fed while a smelter needs coal and the chests have none left, so your
   wood isn't all turned into coal. The bars and coal they make go to the chests.
 
+![Two Coglings carrying stones to the chests](images/carrying.jpg)
+![Coglings keeping the smelter and kiln going](images/smelter.jpg)
+
 **Breaks** (now and then, even with work to do, never when frightened; a lazy one more often): staring into the distance, looking
 around, being bored, dancing (others may join in or clap), sitting on the ground or on a chair, napping, push-ups, chatting in
 groups of up to four, watching you a little too closely, tagging along after you, playing tag, creeping up on another to give it a
 fright, visiting your tame animals, admiring a treasure from a chest (it always goes back), tinkering with its antenna, looking over
 your new building, sheltering from the rain, and, now and then, going fishing (it may bring back a fish).
+
+![A Cogling fishing at the shore](images/fishing.jpg)
+![Coglings chatting in a circle](images/chat.jpg)
+![Three Coglings dancing by their antenna](images/dance.jpg)
+![Two Coglings resting on a bench](images/bench.jpg)
+![A Cogling sitting on the ground](images/sitting.jpg)
 
 **Other things**:
 - **Wave** at a Cogling (the wave emote) and it waves back.
