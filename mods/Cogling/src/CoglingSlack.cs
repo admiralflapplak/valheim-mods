@@ -59,9 +59,14 @@ namespace Cogling
         private float _until, _nextRoll, _lastEnded = -999f, _stepUntil;
         private Vector3 _face;
         private Traits? _me;
-        private CoglingSlack _partner;   // in a chat: the other one
-        private bool _host, _hostTalking, _asked;
-        private float _turnUntil;
+        private CoglingSlack _partner;   // in a chat: the one who started it (a guest's), or null (the one who started it)
+        private bool _host, _asked, _begun;
+        private float _turnUntil, _nextJoinLook;
+        private CoglingSlack _lastTalker;
+        // the one who started a chat: who else is in it (up to three more), and the middle of their circle
+        private readonly List<CoglingSlack> _guests = new List<CoglingSlack>();
+        private Vector3 _centre;
+        internal const int MostInAChat = 4;
         private Chair _chair;            // sitting on a chair: which, and the top of its seat
         private Vector3 _seat, _spot;
         private float _stepGiveUp;
@@ -252,10 +257,14 @@ namespace Cogling
                     Vector3 there = other._ai.transform.position, side = Flat(here - there), mid = (here + there) / 2f;
                     go = Floor(mid + side * 0.65f);
                     if (!other._ai.JoinChat(this, Floor(mid - side * 0.65f))) return false;
-                    _partner = other;
+                    _guests.Clear();
+                    _guests.Add(other);
+                    _centre = mid;
                     _host = true;
                     _turnUntil = 0f;
-                    _face = there;
+                    _lastTalker = null;
+                    _nextJoinLook = Time.time + Random.Range(6f, 10f);
+                    _face = mid;
                     duration = Random.Range(15f, 40f) * (0.6f + (t.Sociability + other.Me.Sociability) / 2f);
                     break;
                 }
@@ -306,8 +315,8 @@ namespace Cogling
                     _ai.Stop();
                     if (Doing == Activity.Chat)
                     {
-                        if (!PartnerHere) { End(); return false; }
-                        _face = _partner._ai.transform.position;
+                        if (!InChat()) { End(); return false; }
+                        _face = Centre;
                     }
                     if (Doing == Activity.Watch) { if (!Watching) { End(); return false; } _face = _watched.transform.position; }
                     if (_dancer != null)
@@ -330,18 +339,21 @@ namespace Cogling
                         }
                         else WriteSeat(_seat);
                     }
-                    if (Doing == Activity.Chat && _partner._step < Step.Facing)
+                    if (Doing == Activity.Chat && !_begun && (_host ? _guests.All(g => g._step < Step.Facing) : _partner._step < Step.Facing))
                     {
                         // (waiting for the other one to get there; too long, and the chat's off)
                         if (Time.time > _stepUntil + 15f) { _ai.Log("the other one never came"); End(); return false; }
                         return true;
                     }
                     _step = Step.Doing;
-                    _until += Time.time;
+                    bool first = !_begun;
+                    _begun = true;
+                    if (first) _until += Time.time;
                     if (Doing == Activity.Chat)
                     {
-                        Write(PoseListen);
-                        WriteLook(_partner._ai.transform.position);
+                        // (in place again after the circle moved: still in the chat, as he was)
+                        if (first) { Write(PoseListen); WriteLook(Centre); }
+                        return true;
                     }
                     else if (Doing == Activity.Cheer) NextCheer();
                     else
@@ -357,9 +369,13 @@ namespace Cogling
                     _ai.Stop();
                     if (Doing == Activity.Chat)
                     {
-                        if (!PartnerHere) { End(); return false; }
-                        _face = _partner._ai.transform.position;
-                        if (_host && Time.time >= _turnUntil) NextTurn();
+                        if (!InChat()) { End(); return false; }
+                        _face = Centre;
+                        if (_host)
+                        {
+                            if (Time.time >= _turnUntil) NextTurn();
+                            if (Time.time >= _nextJoinLook) MoreJoin();
+                        }
                     }
                     if (Doing == Activity.Watch)
                     {
@@ -412,6 +428,9 @@ namespace Cogling
             _partner = null;
             _host = false;
             _asked = false;
+            _begun = false;
+            _guests.Clear();
+            _lastTalker = null;
             _watched = null;
             _catchingUp = false;
             _dancer = null;
@@ -461,8 +480,83 @@ namespace Cogling
 
         // ---- chatting
 
-        /// <summary>The other one is still in this chat with him.</summary>
-        private bool PartnerHere => _partner != null && _partner._ai != null && _partner.Doing == Activity.Chat && _partner._partner == this;
+        /// <summary>Still in this chat with him: a guest, the one who started it with him in it.</summary>
+        private bool Here(CoglingSlack s) => s != null && s._ai != null && s.Doing == Activity.Chat;
+
+        /// <summary>
+        /// The chat goes on for him: a guest, while the one who started it is still in it with him; the one who started it, while anyone
+        /// is still with him (those gone are let go, and the rest spread round again).
+        /// </summary>
+        private bool InChat()
+        {
+            if (!_host) return Here(_partner) && _partner._host && _partner._guests.Contains(this);
+            int before = _guests.Count;
+            _guests.RemoveAll(g => !Here(g) || g._partner != this);
+            if (_guests.Count == 0) return false;
+            if (_guests.Count != before) { _ai.Log($"one left the chat: {_guests.Count + 1} now"); Layout(); }
+            return true;
+        }
+
+        /// <summary>The middle of his chat's circle.</summary>
+        private Vector3 Centre => _host ? _centre : _partner != null ? _partner._centre : _ai.transform.position;
+
+        /// <summary>Everyone in the chat, the one who started it first.</summary>
+        private List<CoglingSlack> Members() => new[] { this }.Concat(_guests).ToList();
+
+        /// <summary>
+        /// Everyone in the chat spread evenly round its middle, each keeping his side of it (the fewest steps), a little further out the
+        /// more there are; those not at their place walk to it, then face the middle again.
+        /// </summary>
+        private void Layout()
+        {
+            List<CoglingSlack> all = Members();
+            float radius = all.Count <= 2 ? 0.65f : all.Count == 3 ? 0.8f : 0.95f;
+            float Angle(CoglingSlack s) { Vector3 d = Flat(s._ai.transform.position - _centre); return Mathf.Atan2(d.x, d.z) * Mathf.Rad2Deg; }
+            all = all.OrderBy(s => Mathf.DeltaAngle(Angle(this), Angle(s)) < 0 ? Mathf.DeltaAngle(Angle(this), Angle(s)) + 360f : Mathf.DeltaAngle(Angle(this), Angle(s))).ToList();
+            float start = Angle(this);
+            for (int i = 0; i < all.Count; i++)
+            {
+                Vector3 dir = Quaternion.Euler(0f, start + 360f * i / all.Count, 0f) * Vector3.forward;
+                all[i].Place(Floor(_centre + dir * radius));
+            }
+        }
+
+        /// <summary>His place in the chat's circle: off to it if he isn't there.</summary>
+        private void Place(Vector3 spot)
+        {
+            if (Flat2(_ai.transform.position - spot) < 0.3f) return;
+            if (_nav.SetTarget(spot)) _step = Step.Going;
+        }
+
+        /// <summary>
+        /// Now and then, while there's room (four at most), another free Cogling near may come over and join in (more likely a sociable
+        /// one, less if he's busy); the chat goes on a while longer for him.
+        /// </summary>
+        private void MoreJoin()
+        {
+            _nextJoinLook = Time.time + Random.Range(6f, 10f);
+            if (_network == null || _guests.Count + 1 >= MostInAChat) return;
+            CoglingSlack best = null;
+            float bestDistance = 20f;
+            foreach (CoglingSlack s in All)
+            {
+                if (s == this || s._ai == null || s.Doing != Activity.None || !s.Owner || !s._ai.CanChat) continue;
+                Vector3 p = s._ai.transform.position;
+                float d = Vector3.Distance(_centre, p);
+                if (d >= bestDistance || !Antenna.InArea(_network, p)) continue;
+                best = s;
+                bestDistance = d;
+            }
+            if (best == null) return;
+            float yes = 0.35f * (0.3f + best.Me.Sociability * 0.7f);
+            if (best._ai.IsWorking) yes *= 1f - best.Me.Diligence * 0.6f;
+            if (!_forced && Random.value >= yes) return;
+            if (!best._ai.JoinChat(this, _centre)) return;
+            _guests.Add(best);
+            _until = Mathf.Max(_until, Time.time + Random.Range(12f, 20f));
+            _ai.Log($"another Cogling joined the chat: {_guests.Count + 1} now");
+            Layout();
+        }
 
         /// <summary>
         /// Another Cogling near (this game runs him, in the area, not on a break, not frightened or wary) to chat with, the nearest; with
@@ -498,7 +592,7 @@ namespace Cogling
             Doing = Activity.Chat;
             _partner = host;
             _host = false;
-            _face = host._ai.transform.position;
+            _face = host._centre;
             _until = 0f;
             if (_nav.SetTarget(spot)) _step = Step.Going;
             else { _step = Step.Facing; _stepUntil = Time.time + 0.8f; }
@@ -506,33 +600,48 @@ namespace Cogling
             return true;
         }
 
-        /// <summary>Whose turn it is to talk (mostly the other's; the more sociable talks more), and which way.</summary>
+        /// <summary>
+        /// Whose turn it is to talk, among those in their place (the one who started it first; then the more sociable more often, and
+        /// seldom the same one twice running), and which way; the others listen, look at him, and one of them now and then nods, shakes
+        /// his head or laughs. After a question, whoever talks next answers it first.
+        /// </summary>
         private void NextTurn()
         {
-            float lean = (Me.Sociability - _partner.Me.Sociability) * 0.3f;
-            bool hostTalks = _hostTalking ? Random.value < 0.3f + lean : Random.value < 0.8f + lean;
-            if (_turnUntil == 0f) hostTalks = true;   // (the one who asked starts)
-            bool answer = _asked;   // (the last turn was a question: whoever talks now starts with a nod or a shake of the head)
-            _hostTalking = hostTalks;
+            List<CoglingSlack> here = Members().Where(m => m == this || m._step == Step.Doing).ToList();
+            if (here.Count < 2) { _turnUntil = Time.time + 0.5f; return; }
+            CoglingSlack talker;
+            if (_lastTalker == null) talker = this;   // (the one who asked starts)
+            else
+            {
+                var weights = here.Select(m => (m, w: (0.4f + m.Me.Sociability) * (m == _lastTalker ? (here.Count > 2 ? 0.1f : 0.35f) : 1f))).ToList();
+                float pick = Random.value * weights.Sum(x => x.w);
+                talker = weights[weights.Count - 1].m;
+                foreach (var (m, w) in weights) { if (pick < w) { talker = m; break; } pick -= w; }
+            }
+            bool answer = _asked && talker != _lastTalker;
+            _lastTalker = talker;
             // talking mostly, now and then asking; a turn is the clip once through (they don't loop), a talk now and then twice
             bool ask = Random.value < 0.25f;
             int[] from = ask ? AskPoses : TalkPoses;
             int clip = from[Random.Range(0, from.Length)];
             _asked = ask;
-            Write(hostTalks ? clip : PoseListen);
-            _partner.Write(hostTalks ? PoseListen : clip);
-            CoglingAI talker = hostTalks ? _ai : _partner._ai, listener = hostTalks ? _partner._ai : _ai;
-            if (answer) talker.Say(Random.value < 0.65f ? CoglingVoice.Line.Nod : CoglingVoice.Line.Shake);
+            List<CoglingSlack> listeners = here.Where(m => m != talker).ToList();
+            foreach (CoglingSlack m in here)
+            {
+                m.Write(m == talker ? clip : PoseListen);
+                // (the listeners at the talker; the talker at one of them, as if speaking to him)
+                m.WriteLook(m == talker ? listeners[Random.Range(0, listeners.Count)]._ai.transform.position : talker._ai.transform.position);
+            }
+            if (answer) talker._ai.Say(Random.value < 0.65f ? CoglingVoice.Line.Nod : CoglingVoice.Line.Shake);
             else
             {
-                // the listener nods along, shakes his head, or laughs, now and then
+                // one of the listeners nods along, shakes his head, or laughs, now and then
+                CoglingAI listener = listeners[Random.Range(0, listeners.Count)]._ai;
                 float r = Random.value;
                 if (r < 0.25f) listener.Say(CoglingVoice.Line.Nod);
                 else if (r < 0.35f) listener.Say(CoglingVoice.Line.Shake);
                 else if (r < 0.5f) listener.Say(CoglingVoice.Line.Laugh);
             }
-            WriteLook(_partner._ai.transform.position);
-            _partner.WriteLook(_ai.transform.position);
             _turnUntil = Time.time + CoglingBody.ClipLength(TalkClip(clip)) * (ask ? 1f : Random.value < 0.4f ? 2f : 1f) - 0.2f;
         }
 
@@ -623,14 +732,18 @@ namespace Cogling
                 case Activity.Cheer: return ("cogling_task_slack_cheer", "", "");
                 case Activity.Chat:
                 {
-                    string name = _partner?.Zdo?.GetString(CoglingTag.NameKey) ?? "";
+                    CoglingSlack host = _host ? this : _partner;
+                    int others = (host?._guests.Count ?? 1);   // (everyone but him: the host's guests, less him, plus the host)
+                    if (others > 1) return ("cogling_task_slack_chat_group", others.ToString(), "");
+                    CoglingSlack other = _host ? _guests.FirstOrDefault() : _partner;
+                    string name = other?.Zdo?.GetString(CoglingTag.NameKey) ?? "";
                     return string.IsNullOrEmpty(name) ? ("cogling_task_slack_chat_any", "", "") : ("cogling_task_slack_chat", name, "");
                 }
             }
             return ("cogling_task_resting", "", "");
         }
 
-        internal string Status() => $"slacking {Doing} ({_step}{(_partner != null ? (_host ? ", asked a chat" : ", asked to chat") : "")}), {Me}";
+        internal string Status() => $"slacking {Doing} ({_step}{(_host ? $", started a chat of {_guests.Count + 1}" : _partner != null ? ", asked to chat" : "")}), {Me}";
 
         // ---- places
 
