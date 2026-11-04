@@ -123,6 +123,7 @@ namespace Cogling
                 return true;
             }
 
+            WaveBack();   // (first: he turns to the player while holding still for it)
             if (Time.time < _holdUntil) { StopMoving(); return true; }   // (a gesture: he stands still for it)
             LookForPlayers();
 
@@ -423,6 +424,40 @@ namespace Cogling
             }
             LookAt(close.transform.position);
             Say(CoglingVoice.Line.Welcome);
+        }
+
+        // ---- a player waved at him: he turns and waves back (a moment later: not every Cogling at once)
+
+        private float _waveAt = -1f, _faceWaverUntil, _waveGiveUp;
+        private Vector3 _waver;
+
+        /// <summary>On his owner's game: a player near waved (the player's game told every Cogling near).</summary>
+        internal void WavedAt(Vector3 at)
+        {
+            if (m_nview == null || !m_nview.IsValid() || !m_nview.IsOwner()) return;
+            if ((_danger != null && (_danger.Afraid || _danger.Wary)) || (_slack != null && _slack.Seated)) return;
+            _waver = at;
+            if (!PoweredUp) { if (_mode != Mode.Resting) return; Wake(); _restingSince = Time.time; }
+            _waveAt = Mathf.Max(Time.time, _bootUntil) + Random.Range(0.3f, 0.9f);
+            _waveGiveUp = _waveAt + 1.5f;
+            _faceWaverUntil = _waveGiveUp + CoglingBody.GestureLength("rig_waving");
+            _holdUntil = Mathf.Max(_holdUntil, _waveGiveUp);   // (he stops what he's doing and turns to the player)
+            StopMoving();
+        }
+
+        private void WaveBack()
+        {
+            // turning to the player the whole while (till he waves, and through it); he waves once he faces him (or soon anyway)
+            if (Time.time < _faceWaverUntil) LookAt(_waver);
+            if (_waveAt < 0f || Time.time < _waveAt) return;
+            Vector3 to = _waver - transform.position;
+            to.y = 0f;
+            if (Vector3.Angle(transform.forward, to) > 20f && Time.time < _waveGiveUp) return;
+            _waveAt = -1f;
+            _faceWaverUntil = Time.time + CoglingBody.GestureLength("rig_waving");
+            if (!PoweredUp || (_danger != null && (_danger.Afraid || _danger.Wary))) return;
+            LookAt(_waver);
+            Say(CoglingVoice.Line.WaveBack);
         }
 
         private const string SeenKey = "cogling_seen";

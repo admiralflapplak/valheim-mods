@@ -497,8 +497,10 @@ namespace Cogling
 
 
         /// <summary>A gesture's clip: the Social pack's (social_...) or one of the player's emotes.</summary>
-        private ClipPlayer GestureClip(string name) => name.StartsWith("social_") ? Clip(name) : GameClip(name);
-        internal static float GestureLength(string name) => name.StartsWith("social_") ? ClipLength(name) : GameClipLength(name);
+        /// <summary>A gesture's clip: one of his own (the Social pack's social_..., Rig_Medium's rig_...) or one of the player's emotes.</summary>
+        private static bool Own(string name) => name.StartsWith("social_") || name.StartsWith("rig_");
+        private ClipPlayer GestureClip(string name) => Own(name) ? Clip(name) : GameClip(name);
+        internal static float GestureLength(string name) => Own(name) ? ClipLength(name) : GameClipLength(name);
 
         internal void Gesture(string name)
         {

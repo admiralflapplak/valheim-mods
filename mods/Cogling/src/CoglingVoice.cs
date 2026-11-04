@@ -13,7 +13,7 @@ namespace Cogling
     internal sealed class CoglingVoice : MonoBehaviour
     {
         /// <summary>What he says, and when (his brain decides: CoglingAI.Say; every player's game hears it, through an RPC).</summary>
-        internal enum Line { Pickup, Stored, Tidied, Grumble, Repaired, Nervous, Relieved, Hurt, PowerDown, BootUp, Welcome, Oops, Excited, Laugh, Point, Nod, Shake }
+        internal enum Line { Pickup, Stored, Tidied, Grumble, Repaired, Nervous, Relieved, Hurt, PowerDown, BootUp, Welcome, Oops, Excited, Laugh, Point, Nod, Shake, WaveBack }
 
         /// <summary>
         /// How each line sounds: the Dverger's voice set it comes from, its pitch (times his own) from start to end (a slide: a sigh
@@ -43,13 +43,14 @@ namespace Cogling
             { Line.Laugh,     new Spec { Set = "idle",    From = 1.5f,  To = 1.6f,  Cut = 0.5f,  Chance = 1f,    Gestures = new[] { "social_laugh01" }, GestureChance = 1f } },
             { Line.Point,     new Spec { Set = null,      Chance = 1f,  Gestures = new[] { "Point" }, GestureChance = 1f } },   // (no longer said: chats use the Social pack)
             { Line.Nod,       new Spec { Set = null,      Chance = 1f,  Gestures = new[] { "social_headnod01" }, GestureChance = 1f } },
+            { Line.WaveBack,  new Spec { Set = "idle",    From = 1.35f, To = 1.45f, Cut = 0.6f,  Chance = 1f,    Gestures = new[] { "rig_waving" }, GestureChance = 1f } },   // (a player waved: Rig_Medium's wave, the game's looked off on him)
             { Line.Shake,     new Spec { Set = null,      Chance = 1f,  Gestures = new[] { "social_headshake01", "social_headshake02" }, GestureChance = 1f } },
         };
 
         /// <summary>The gestures by number (the RPC sends the number).</summary>
         internal static readonly string[] Gestures = Specs.Values.Where(s => s.Gestures != null).SelectMany(s => s.Gestures).Distinct().ToArray();
 
-        internal const string SayRpc = "cogling_say";
+        internal const string SayRpc = "cogling_say", WavedRpc = "cogling_waved";
         private static readonly Dictionary<string, AudioClip[]> Sets = new Dictionary<string, AudioClip[]>();
         private static AudioClip[] _idle, _alerted;
         private static UnityEngine.Audio.AudioMixerGroup _mixer;
@@ -66,6 +67,8 @@ namespace Cogling
             // (registered on every game, a server's too, so a line said anywhere finds its way; a hot reload's old copy let it go)
             view.Unregister(SayRpc);
             view.Register<int, int>(SayRpc, RPC_Say);
+            view.Unregister(WavedRpc);
+            view.Register<Vector3>(WavedRpc, (sender, at) => GetComponent<CoglingAI>()?.WavedAt(at));
             _view = view;
             if (SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null) { enabled = false; return; }
             if (_idle == null)
@@ -100,7 +103,7 @@ namespace Cogling
 
         private void OnDestroy()
         {
-            if (_view != null && _view.IsValid()) _view.Unregister(SayRpc);
+            if (_view != null && _view.IsValid()) { _view.Unregister(SayRpc); _view.Unregister(WavedRpc); }
             Live.Remove(this);
             if (_source != null) Destroy(_source.gameObject);   // (a hot reload gives him the new copy's voice: one mouth, not two)
         }
