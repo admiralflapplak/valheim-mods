@@ -12,7 +12,7 @@ namespace Cogling
     internal static class Commands
     {
         private const string Command = "cogling";
-        private const string Usage = "cogling slack [stare|look|bored|dance|sit|chair|watch|chat|nap|exercise|tag|follow|animal|sneak|treasure|fiddle|shelter|inspect|fishing] | cogling status";
+        private const string Usage = "cogling slack [stare|look|bored|dance|sit|chair|watch|chat|nap|exercise|tag|follow|animal|sneak|treasure|fiddle|shelter|inspect|fishing] | cogling status | cogling strays [remove]";
 
         private static readonly AccessTools.FieldRef<Dictionary<string, Terminal.ConsoleCommand>> TerminalCommands =
             AccessTools.StaticFieldRefAccess<Dictionary<string, Terminal.ConsoleCommand>>(AccessTools.Field(typeof(Terminal), "commands"));
@@ -21,11 +21,47 @@ namespace Cogling
 
         internal static void Unregister() => TerminalCommands().Remove(Command);
 
+        /// <summary>
+        /// Coglings outside every antenna's area anywhere in the world (loaded or not: from the world's saved objects), listed; with
+        /// remove, taken out of the world (only those: a Cogling with no antenna near never finds its way home, and far off, it can't
+        /// be reached with the hammer). The host's game (or single player) sees the whole world; a player on a server only what's near.
+        /// </summary>
+        private static void Strays(Terminal t, bool remove)
+        {
+            if (ZDOMan.instance == null) return;
+            List<ZDO> All(string prefab)
+            {
+                var list = new List<ZDO>();
+                int index = 0;
+                while (!ZDOMan.instance.GetAllZDOsWithPrefabIterative(prefab, list, ref index)) { }   // (a command: once)
+                return list;
+            }
+            List<Vector3> antennas = All(Antenna.Name).Select(z => z.GetPosition()).ToList();
+            List<ZDO> strays = All(CoglingPrefab.Name).Where(z => !antennas.Any(a => Utils.DistanceXZ(a, z.GetPosition()) <= Antenna.Radius)).ToList();
+            if (strays.Count == 0) { t.AddString("No Cogling outside an antenna's area."); return; }
+            foreach (ZDO z in strays)
+            {
+                Vector3 at = z.GetPosition();
+                string line = $"Cogling at {at:F0}, {antennas.Select(a => Utils.DistanceXZ(a, at)).DefaultIfEmpty(-1f).Min():F0} m from the nearest antenna";
+                t.AddString(line);
+                Plugin.Log.LogInfo("Cogling strays: " + line);
+            }
+            if (!remove) { t.AddString($"{strays.Count} stray(s). `cogling strays remove` takes them out of the world."); return; }
+            foreach (ZDO z in strays)
+            {
+                z.SetOwner(ZDOMan.GetSessionID());
+                ZDOMan.instance.DestroyZDO(z);
+            }
+            t.AddString($"Removed {strays.Count} stray Cogling(s).");
+            Plugin.Log.LogInfo($"Cogling strays: removed {strays.Count}");
+        }
+
         private static void Run(Terminal t, string[] a)
         {
             Player p = Player.m_localPlayer;
             string sub = a.Length > 1 ? a[1].ToLowerInvariant() : "";
-            if (p == null || (sub != "status" && sub != "slack")) { t.AddString(Usage); return; }
+            if (p == null || (sub != "status" && sub != "slack" && sub != "strays")) { t.AddString(Usage); return; }
+            if (sub == "strays") { Strays(t, a.Length > 2 && a[2].ToLowerInvariant() == "remove"); return; }
             if (sub == "status")
             {
                 foreach (CoglingAI c in Object.FindObjectsByType<CoglingAI>(FindObjectsSortMode.None))   // (a command: once)
