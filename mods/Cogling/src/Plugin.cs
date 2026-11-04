@@ -16,7 +16,7 @@ namespace Cogling
     {
         public const string Guid = "nick.Cogling";
         public const string Name = "Cogling";
-        public const string Version = "0.21.15";
+        public const string Version = "0.22.1";
 
         internal static BepInEx.Logging.ManualLogSource Log;
         internal static ServerSettings Synced;
@@ -54,7 +54,7 @@ namespace Cogling
         internal static ConfigEntry<float> HammerX, HammerY, HammerZ, HammerTurnX, HammerTurnY, HammerTurnZ, HammerSize;
         internal static ConfigEntry<float> PowerFrame, HappyIdleChance, PowerDownAfter;
         internal static ConfigEntry<float> BendSpine, BendArms;
-        internal static ConfigEntry<float> EyeGlow;
+        internal static ConfigEntry<float> EyeGlow, CopperShine, CopperMetal;
         internal static ConfigEntry<bool> AntennaMoves, AntennaLight;
         internal static ConfigEntry<float> AntennaMoveEvery, AntennaTurn, AntennaTip, AntennaSoundVolume, AntennaSoundPitch, AntennaLightBrightness, AntennaLightRange, AntennaLightSize, AntennaLightHeight, AntennaLightForward, AntennaLightSide;
         internal static ConfigEntry<UnityEngine.Color> EyeColor;
@@ -87,6 +87,8 @@ namespace Cogling
                 new AcceptableValueRange<float>(0.5f, 3f));
             DishTilt = Config.Bind("3 - Looks", "Antenna dish tilt", 35f, new ConfigDescription(
                 "How far the antenna's dish leans toward its front, in degrees (each player's own look).", new AcceptableValueRange<float>(0f, 80f)));
+            CopperShine = Config.Bind("3 - Looks", "Copper shine", 0.75f, new ConfigDescription("How glossy the Coglings' copper is (1: as the game's copper bar; lower: duller, a softer highlight).", new AcceptableValueRange<float>(0f, 1.5f)));
+            CopperMetal = Config.Bind("3 - Looks", "Copper metal", 1f, new ConfigDescription("How much the Coglings' copper mirrors what's around it (1: as the game's copper bar; lower: more like painted copper).", new AcceptableValueRange<float>(0f, 1.5f)));
             AntennaMoves = Config.Bind("3 - Looks", "Antenna moves", true, "Now and then an antenna's dish turns to a new heading and tips a little, with a creak.");
             AntennaMoveEvery = Config.Bind("3 - Looks", "Antenna moves every", 12f, new ConfigDescription("About how often an antenna moves, in seconds.", new AcceptableValueRange<float>(3f, 120f)));
             AntennaTurn = Config.Bind("3 - Looks", "Antenna turn", 90f, new ConfigDescription("How far the dish may turn either way from where it was built facing, in degrees.", new AcceptableValueRange<float>(0f, 180f)));
@@ -214,6 +216,8 @@ namespace Cogling
             Animations.SettingChanged += (s, e) => CoglingAnimations.Apply();
             EyeGlow.SettingChanged += (s, e) => CoglingBody.UpdateEyes();
             EyeColor.SettingChanged += (s, e) => CoglingBody.UpdateEyes();
+            CopperShine.SettingChanged += (s, e) => CoglingBody.ApplyCopper();
+            CopperMetal.SettingChanged += (s, e) => CoglingBody.ApplyCopper();
             DishTilt.SettingChanged += (s, e) => Antenna.ApplyTilt();
             AntennaLightHeight.SettingChanged += (s, e) => Antenna.ApplyLamp();
             AntennaLightForward.SettingChanged += (s, e) => Antenna.ApplyLamp();

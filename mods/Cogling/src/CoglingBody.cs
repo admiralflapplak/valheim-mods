@@ -234,6 +234,18 @@ namespace Cogling
 
         /// <summary>A copy of the game's copper (the copper bar's material: its colour, metal and shine) with the plates' shading as its
         /// texture. Null if the game has no copper bar to copy (the plates then stay in the wood material).</summary>
+        private static readonly string[] ShineProps = { "_Glossiness", "_Smoothness", "_GlossMapScale", "_Gloss" };
+        private static readonly string[] MetalProps = { "_Metallic", "_Metal" };
+        private static readonly Dictionary<string, float> _copperBase = new Dictionary<string, float>();
+
+        /// <summary>The Copper shine and Copper metal settings on the copper (live).</summary>
+        internal static void ApplyCopper()
+        {
+            if (_copper == null) return;
+            foreach (var kv in _copperBase)
+                _copper.SetFloat(kv.Key, kv.Value * (ShineProps.Contains(kv.Key) ? Plugin.CopperShine.Value : Plugin.CopperMetal.Value));
+        }
+
         private static Material Copper()
         {
             if (_copper != null) return _copper;
@@ -248,6 +260,12 @@ namespace Cogling
             _copper.DisableKeyword("_NORMALMAP");
             _copper.DisableKeyword("_METALLICGLOSSMAP");
             _copper.hideFlags = HideFlags.DontUnloadUnusedAsset;
+            // its shine and metal as the bar has them, kept: the settings scale them (Copper shine, Copper metal)
+            _copperBase.Clear();
+            foreach (string p in ShineProps.Concat(MetalProps))
+                if (_copper.HasProperty(p)) _copperBase[p] = _copper.GetFloat(p);
+            Plugin.Log.LogInfo($"Cogling copper: shader {_copper.shader.name}, " + string.Join(", ", _copperBase.Select(kv => $"{kv.Key} {kv.Value:F2}")));
+            ApplyCopper();
             return _copper;
         }
 
