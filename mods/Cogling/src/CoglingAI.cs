@@ -259,17 +259,6 @@ namespace Cogling
         }
 
         /// <summary>Testing: walk to a spot (then home, as after a stroll). False if no way there was found at all.</summary>
-        internal bool SendTo(Vector3 spot)
-        {
-            Wake();
-            if (_mode == Mode.Working) { _job.Abandon(); }
-            _slack.Stop();
-            if (!_nav.SetTarget(spot)) return false;
-            _mode = Mode.Strolling;
-            Log($"sent to {spot:F1}");
-            return true;
-        }
-
         // ---- chatting (CoglingSlack): asked by another Cogling
 
         /// <summary>Free to be asked for a chat: not frightened or wary, not on a break or greeted, in his area.</summary>
@@ -296,13 +285,6 @@ namespace Cogling
             Wake();
             _mode = Mode.Slacking;
             return true;
-        }
-
-        internal void GoHome()
-        {
-            Wake();
-            _mode = Mode.GoingHome;
-            if (_haveHome) _nav.SetTarget(_home);
         }
 
         internal string Status() =>

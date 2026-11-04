@@ -165,31 +165,6 @@ namespace Cogling
             return near;
         }
 
-        /// <summary>For `cogling items`: every item in the area and what he makes of it.</summary>
-        internal static List<string> Explain(List<Antenna> network, Vector3 from)
-        {
-            var lines = new List<string>();
-            List<Container> chests = Chests.Usable(network);
-            List<Character> enemies = Enemies();
-            foreach (ItemDrop d in Instances().Where(x => x != null && Antenna.InArea(network, x.transform.position)).OrderBy(x => Vector3.Distance(x.transform.position, from)).Take(25))
-            {
-                ZDOID id = Id(d);
-                float age = Age(d, id);
-                string fight = FightNear(d, enemies);
-                string why = Claimed.Contains(id) ? "he's on his way to it"
-                    : WhyNot(d, id, age) ?? (fight != null ? $"an enemy near it ({Localization.instance.Localize(fight)}): later" : null);
-                if (why == null)
-                {
-                    Container c = Sorting.Choose(d.m_itemData, chests, d.transform.position, out string reason);
-                    why = c == null ? "no chest has room for it" : $"will go to the chest at {c.transform.position:F1} ({reason})";
-                }
-                lines.Add($"{d.m_itemData.m_stack} {Sorting.Short(d.m_itemData)} at {d.transform.position:F1}: {why}");
-            }
-            if (lines.Count == 0) lines.Add("No items lying in his area.");
-            lines.Add($"{chests.Count} chest(s) he may use in his area.");
-            return lines;
-        }
-
         private static bool OnFurniture(ItemDrop d)
         {
             if (!Physics.Raycast(d.transform.position + Vector3.up * 0.2f, Vector3.down, out RaycastHit hit, 1.5f, Below)) return false;
