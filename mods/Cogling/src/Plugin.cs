@@ -16,7 +16,7 @@ namespace Cogling
     {
         public const string Guid = "nick.Cogling";
         public const string Name = "Cogling";
-        public const string Version = "0.26.3";
+        public const string Version = "0.27.3";
 
         internal static BepInEx.Logging.ManualLogSource Log;
         internal static ServerSettings Synced;
@@ -56,7 +56,7 @@ namespace Cogling
         internal static readonly Fixed<float> HammerTurnY = new Fixed<float>(-91.801f);   // Hammer: turn y
         internal static readonly Fixed<float> HammerTurnZ = new Fixed<float>(-6.358f);   // Hammer: turn z
         internal static readonly Fixed<float> HammerSize = new Fixed<float>(0.624f);   // Hammer: size
-        internal static readonly Fixed<float> ChairStandOff = new Fixed<float>(0.3f);   // Chair: stand off
+        internal static readonly Fixed<float> ChairStandOff = new Fixed<float>(0.4f);   // Chair: stand off
         internal static readonly Fixed<float> WatchTurnAfter = new Fixed<float>(55f);   // Watch: turn after
         internal static readonly Fixed<float> ChairBlendOut = new Fixed<float>(0.5f);   // Chair: blend out
         internal static readonly Fixed<float> ChairHeight = new Fixed<float>(0.057f);   // Chair: height

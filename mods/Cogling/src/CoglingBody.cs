@@ -538,19 +538,22 @@ namespace Cogling
             if (_slack == CoglingSlack.PoseVikingDance) return GameClip("Dance");
             string talk = CoglingSlack.TalkClip(_slack) ?? CoglingSlack.CheerClip(_slack);
             if (talk != null) return Clip(talk);
-            if (_slack == (int)CoglingSlack.Activity.Watch) return _idle;   // (watching you: his usual idle, never the happy one)
+            if (_slack == (int)CoglingSlack.Activity.Watch) return _idle;
+            if (_slack == (int)CoglingSlack.Activity.Exercise) return Clip("rig_push_ups");
+            if (_slack == CoglingSlack.PoseSitUps) return Clip("rig_sit_ups");   // (watching you: his usual idle, never the happy one)
             return null;
         }
 
         private void SlackChanged(int slack)
         {
-            bool wasSitting = _slack == (int)CoglingSlack.Activity.Sit || _slack == (int)CoglingSlack.Activity.Chair;
+            bool wasSitting = _slack == (int)CoglingSlack.Activity.Sit || _slack == (int)CoglingSlack.Activity.Chair || _slack == (int)CoglingSlack.Activity.Nap;
             _slack = slack;
             _slackStart = Time.time;
-            if (slack == (int)CoglingSlack.Activity.Sit || slack == (int)CoglingSlack.Activity.Chair)
+            if (slack == (int)CoglingSlack.Activity.Sit || slack == (int)CoglingSlack.Activity.Chair || slack == (int)CoglingSlack.Activity.Nap)
             {
                 _sitStart = Time.time;
                 _standStart = -1f;
+                _lying = slack == (int)CoglingSlack.Activity.Nap;
                 _onChair = slack == (int)CoglingSlack.Activity.Chair;
                 if (_onChair) _seat = _view != null && _view.IsValid() ? _view.GetZDO().GetVec3(CoglingSlack.SeatKey, transform.position) : transform.position;
             }
@@ -571,12 +574,14 @@ namespace Cogling
             float target = 0f;
             if (_sitStart >= 0f)
             {
-                float t = Time.time - _sitStart, cut = Plugin.SitDownUntil.Value, blend = Mathf.Max(0.05f, Plugin.SitBlend.Value);
-                ClipPlayer down = Clip("sit_floor_down"), sit = Clip("sitting");
+                ClipPlayer down = Clip(_lying ? "rig_lie_down" : "sit_floor_down"), sit = Clip(_lying ? "rig_lie_idle" : "sitting");
+                // (a nap: the lying-down clip whole, then the lying idle, looped; a sit: part of the sit-down clip, then the sitting pose)
+                float t = Time.time - _sitStart, cut = _lying && down != null ? down.Length - 0.05f : Plugin.SitDownUntil.Value;
+                float blend = _lying ? 0.4f : Mathf.Max(0.05f, Plugin.SitBlend.Value);
                 if (down != null && sit != null)
                 {
                     down.Pose(Mathf.Min(t, cut, down.Length - 0.001f), ref _sitPose);
-                    sit.Pose(0f, ref _sitPose2);
+                    sit.Pose(_lying ? Mathf.Max(0f, t - cut) : 0f, ref _sitPose2);
                     if (_sitPose.muscles != null && _sitPose2.muscles != null)
                     {
                         // (eased out, not in: the sit-down slows to a stop at its end, and an eased-in blend on top of that paused him)
@@ -584,15 +589,15 @@ namespace Cogling
                         Mix(ref _sitPose, _sitPose2, 1f - (1f - into) * (1f - into));
                         Mix(ref _idlePose, _sitPose, Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / 0.25f)));
                         // sat down: his head bobs along to his happy idle
-                        HappyHead(Time.time - _sitStart, Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(cut, cut + 0.8f, t)));
+                        if (!_lying) HappyHead(Time.time - _sitStart, Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(cut, cut + 0.8f, t)));
                     }
                 }
                 target = Mathf.Clamp01(t / Mathf.Max(0.1f, cut));
             }
             else if (_standStart >= 0f)
             {
-                float speed = Mathf.Max(0.1f, Plugin.SitStandSpeed.Value), s = (Time.time - _standStart) * speed;
-                ClipPlayer up = Clip("sit_floor_standup");
+                float speed = _lying ? 1f : Mathf.Max(0.1f, Plugin.SitStandSpeed.Value), s = (Time.time - _standStart) * speed;
+                ClipPlayer up = Clip(_lying ? "rig_lie_standup" : "sit_floor_standup");
                 if (up == null || s >= up.Length || _speed > 0.5f) _standStart = -1f;   // (up, or off and walking: his walk at once)
                 else
                 {
@@ -602,7 +607,7 @@ namespace Cogling
                         // in from the sitting pose, out into his idle over the last part
                         float w = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(up.Length, up.Length - 0.8f, s));
                         Mix(ref _idlePose, _sitPose, w);
-                        HappyHead(Time.time - _standStart, 1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(s / 0.6f)));   // (eased out as he gets up)
+                        if (!_lying) HappyHead(Time.time - _standStart, 1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(s / 0.6f)));   // (eased out as he gets up)
                     }
                     target = 1f - Mathf.Clamp01(s / (up.Length * 0.5f));
                 }
@@ -610,7 +615,11 @@ namespace Cogling
             _seatWeight = Mathf.MoveTowards(_seatWeight, target, dt * 3f);
         }
 
-        private bool _onChair;
+        private bool _onChair, _lying;
+
+        /// <summary>Napping (lain down, not yet getting up): his eyes dim, as if recharging.</summary>
+        private bool Recharging => _lying && _sitStart >= 0f && Time.time - _sitStart > ClipLength("rig_lie_down") * 0.7f;
+        internal static float LieUpSeconds => ClipLength("rig_lie_standup");
         private Vector3 _seat;
         private float _hop;   // 0: on his feet in front of the chair, 1: on its seat
         private float _leave = 1f;   // (walking off before the hop down has eased into his idle: what's left of it, faded out)
@@ -737,7 +746,7 @@ namespace Cogling
 
         private void Flicker(float dt)
         {
-            float target = _asleep ? 0f : 1f;
+            float target = _asleep ? 0f : Recharging ? 0.25f : 1f;
             if (Time.time < _flickerUntil)
             {
                 // a few uneven blinks, like a bulb catching (or failing)

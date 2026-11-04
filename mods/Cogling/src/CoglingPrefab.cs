@@ -84,7 +84,7 @@ namespace Cogling
             if (cog.GetComponent<CapsuleCollider>() is CapsuleCollider capsule)
             {
                 capsule.height *= size;
-                capsule.radius = Mathf.Min(capsule.radius * size * 1.2f, capsule.height / 2f);
+                capsule.radius = BodyRadius;
                 capsule.center = new Vector3(0f, capsule.height / 2f, 0f);
             }
             if (cog.transform.Find("EyePos") is Transform eye) eye.localPosition *= size;
@@ -162,9 +162,22 @@ namespace Cogling
         }
 
         /// <summary>The non-solid copy of the capsule the hammer finds him by (once; also for Coglings standing from before it existed).</summary>
+        /// <summary>
+        /// His capsule's radius: his body is about 0.25 m across and 0.23 deep (measured from the model at his hips and belly); a little
+        /// more for his arms. (It was the Dverger's, scaled, and 20% wider: 0.56 m across, and he was hit and bumped well outside himself.)
+        /// </summary>
+        internal const float BodyRadius = 0.16f;
+
         internal static void HammerTarget(GameObject cog)
         {
-            if (cog.transform.Find("cogling_hammer_target") != null || !(cog.GetComponent<CapsuleCollider>() is CapsuleCollider body)) return;
+            if (!(cog.GetComponent<CapsuleCollider>() is CapsuleCollider body)) return;
+            // (one built before has the old, wider capsule: this size, and his hammer target's)
+            body.radius = BodyRadius;
+            if (cog.transform.Find("cogling_hammer_target") is Transform old)
+            {
+                if (old.GetComponent<CapsuleCollider>() is CapsuleCollider t) t.radius = BodyRadius;
+                return;
+            }
             var target = new GameObject("cogling_hammer_target") { layer = LayerMask.NameToLayer("piece_nonsolid") };
             target.transform.SetParent(cog.transform, false);
             var c = target.AddComponent<CapsuleCollider>();

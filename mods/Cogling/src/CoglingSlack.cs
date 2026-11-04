@@ -22,9 +22,12 @@ namespace Cogling
     internal sealed class CoglingSlack
     {
         // (Watch and Chair: numbers of their own, past the poses below; saved as they are)
-        internal enum Activity { None = 0, Stare = 1, LookAround = 2, Bored = 3, Dance = 4, Sit = 5, Chat = 6, Watch = 14, Chair = 15, Cheer = 16 }
+        internal enum Activity { None = 0, Stare = 1, LookAround = 2, Bored = 3, Dance = 4, Sit = 5, Chat = 6, Watch = 14, Chair = 15, Cheer = 16, Nap = 19, Exercise = 20 }
         // (cheering on a dancer: clapping is Activity.Cheer; these two are cheering)
         internal const int PoseCheer2 = 17, PoseCheer3 = 18;
+        // (exercising: push-ups are Activity.Exercise; this is sit-ups)
+        internal const int PoseSitUps = 21;
+        private int _exercisePose;
         private static readonly int[] CheerPoses = { (int)Activity.Cheer, PoseCheer2, PoseCheer3 };
         internal static string CheerClip(int pose) =>
             pose == (int)Activity.Cheer ? "social_handclap01" : pose == PoseCheer2 ? "social_cheer01" : pose == PoseCheer3 ? "social_cheer02" : null;
@@ -83,7 +86,8 @@ namespace Cogling
         private static readonly List<CoglingSlack> All = new List<CoglingSlack>();
 
         internal Activity Doing { get; private set; }
-        internal bool Seated => (Doing == Activity.Sit || Doing == Activity.Chair) && (_step == Step.Doing || _step == Step.StandingUp);
+        internal bool Seated => (Doing == Activity.Sit || Doing == Activity.Chair || Doing == Activity.Nap || Doing == Activity.Exercise) && (_step == Step.Doing || _step == Step.StandingUp);
+        private bool GetsUp => Doing == Activity.Sit || Doing == Activity.Chair || Doing == Activity.Nap;
 
         internal CoglingSlack(CoglingAI ai, CoglingNavigator nav, CoglingJob job)
         {
@@ -163,6 +167,9 @@ namespace Cogling
                 (Activity.Dance, t.Playfulness < 0.15f ? 0.05f : 0.2f + t.Playfulness * 2f),   // (some never dance)
             };
             weights.Add((Activity.Sit, 0.4f + t.Restfulness * 1.8f));
+            // a nap (restful ones; more at night), exercise (hard workers: even their breaks are work)
+            weights.Add((Activity.Nap, (0.15f + t.Restfulness * 1.2f) * (EnvMan.IsNight() ? 2.5f : 1f)));
+            weights.Add((Activity.Exercise, t.Diligence < 0.3f ? 0.03f : 0.1f + t.Diligence * 0.9f));
             // watching a player, a bit too closely (a curious one more)
             Player near = Player.GetClosestPlayer(_ai.transform.position, 18f);
             if (near != null && Antenna.InArea(network, near.transform.position)) weights.Add((Activity.Watch, 0.25f + t.Curiosity * 0.9f));
@@ -223,6 +230,22 @@ namespace Cogling
                     Vector3? edge = Random.value < 0.6f ? Edge(network, out outward) : null;
                     if (edge.HasValue) { go = edge; _face = edge.Value + outward * 10f; }
                     else _face = here + Quaternion.Euler(0f, Random.Range(0f, 360f), 0f) * Vector3.forward * 10f;
+                    break;
+                case Activity.Nap:
+                {
+                    // lying down for a recharge: at the edge of his area, or where he is
+                    duration = Random.Range(25f, 60f) * (0.6f + t.Restfulness);
+                    Vector3 away = Vector3.forward;
+                    Vector3? rim = Random.value < 0.5f ? Edge(network, out away) : null;
+                    if (rim.HasValue) { go = rim; _face = rim.Value + away * 10f; }
+                    else _face = here + Quaternion.Euler(0f, Random.Range(0f, 360f), 0f) * Vector3.forward * 5f;
+                    break;
+                }
+                case Activity.Exercise:
+                    // push-ups or sit-ups, where he is (a hard worker keeps at it longer)
+                    _exercisePose = Random.value < 0.5f ? (int)Activity.Exercise : PoseSitUps;
+                    duration = Random.Range(10f, 20f) * (0.7f + t.Diligence * 0.6f);
+                    _face = here + _ai.transform.forward * 5f;
                     break;
                 case Activity.LookAround:
                     duration = CoglingBody.ClipLength("looking_around") * (t.Curiosity > 0.6f ? 2f : 1f);
@@ -362,7 +385,7 @@ namespace Cogling
                     else
                     {
                         if (Doing == Activity.Watch && Owner) Zdo?.Set(WatchKey, _watched.GetZDOID());
-                        Write(Doing == Activity.Dance ? _dancePose : (int)Doing);
+                        Write(Doing == Activity.Dance ? _dancePose : Doing == Activity.Exercise ? _exercisePose : (int)Doing);
                         if (Doing == Activity.Dance && _dancer == null) Invite();
                     }
                     if (_dancer != null) _until = Time.time + Mathf.Max(5f, _dancer._until - Time.time);   // (till the dancer stops, about)
@@ -386,7 +409,7 @@ namespace Cogling
                         _face = _watched.transform.position;
                         WatchTurn();
                     }
-                    else if (Doing != Activity.Sit && Doing != Activity.Chair) _ai.Face(_face);   // (seated, he stays as he sat)
+                    else if (!GetsUp && Doing != Activity.Exercise) _ai.Face(_face);   // (seated, lying or on the ground, he stays as he is)
                     if (_dancer != null && (_dancer._ai == null || _dancer.Doing != Activity.Dance)) { End(); return false; }   // (the dance is over)
                     if (Doing == Activity.Cheer)
                     {
@@ -397,12 +420,12 @@ namespace Cogling
                     // (in a chat, the one who asked ends it; the other goes on till then, or a minute and a half at most)
                     if (Doing == Activity.Chat && !_host && Time.time < _until + 90f) return true;
                     if (Time.time < _until && Plugin.Slacking.Value) return true;
-                    if (Doing == Activity.Sit || Doing == Activity.Chair)
+                    if (GetsUp)
                     {
                         // standing up takes a while: he's still on his break till he's up
                         Write(0);
                         _step = Step.StandingUp;
-                        _stepUntil = Time.time + (Doing == Activity.Chair ? CoglingBody.HopDownSeconds : CoglingBody.StandUpSeconds);
+                        _stepUntil = Time.time + (Doing == Activity.Chair ? CoglingBody.HopDownSeconds : Doing == Activity.Nap ? CoglingBody.LieUpSeconds : CoglingBody.StandUpSeconds);
                         return true;
                     }
                     End();
@@ -727,6 +750,8 @@ namespace Cogling
             {
                 case Activity.Stare: return ("cogling_task_slack_stare", "", "");
                 case Activity.LookAround: return ("cogling_task_slack_look", "", "");
+                case Activity.Nap: return ("cogling_task_slack_nap", "", "");
+                case Activity.Exercise: return ("cogling_task_slack_exercise", "", "");
                 case Activity.Bored: return ("cogling_task_slack_bored", "", "");
                 case Activity.Dance: return ("cogling_task_slack_dance", "", "");
                 case Activity.Sit:
