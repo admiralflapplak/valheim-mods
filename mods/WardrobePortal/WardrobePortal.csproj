@@ -12,7 +12,6 @@
 
   <!-- Unity modules beyond ../Directory.Build.props: telling the portal's swirl (particles) from its model -->
   <ItemGroup>
-    <Reference Include="UnityEngine.ImageConversionModule"><HintPath>$(ManagedDir)/UnityEngine.ImageConversionModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.ParticleSystemModule"><HintPath>$(ManagedDir)/UnityEngine.ParticleSystemModule.dll</HintPath><Private>false</Private></Reference>
   </ItemGroup>
 </Project>

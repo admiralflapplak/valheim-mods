@@ -97,9 +97,6 @@ namespace WardrobePortal
                 Plugin.Log.LogWarning($"The game has no {(portal == null ? PortalSource : WardrobeSource)} to copy: no Wardrobe Portal this session");
                 return null;
             }
-            Piece wp = wardrobe.GetComponent<Piece>();   // TEMP: the wardrobe's cost and station, for the default cost
-            if (wp != null) Plugin.Log.LogInfo("wardrobe cost: " + string.Join(", ", wp.m_resources.Select(r => $"{r.m_resItem?.name}:{r.m_amount}")) +
-                                               $"; station {wp.m_craftingStation?.name}");
 
             _holder = new GameObject("WardrobePortal_prefabs");
             _holder.SetActive(false);
@@ -123,12 +120,6 @@ namespace WardrobePortal
             try { piece.m_icon = Icon.Make(root, null, IconPose, fallback: null); }
             catch (Exception e) { Plugin.Log.LogWarning("Wardrobe Portal icon: " + e.Message); }
             if (piece.m_icon == null) piece.m_icon = wardrobe.GetComponent<Piece>()?.m_icon ?? piece.m_icon;
-            try   // TEMP: the icon to a file, to look at it
-            {
-                System.IO.File.WriteAllBytes(System.IO.Path.Combine(BepInEx.Paths.BepInExRootPath, "claude", "shots", "wardrobeportal_icon.png"),
-                    ImageConversion.EncodeToPNG(piece.m_icon.texture));
-            }
-            catch (Exception e) { Plugin.Log.LogWarning("icon dump: " + e.Message); }
             return root;
         }
 
@@ -208,7 +199,6 @@ namespace WardrobePortal
             // the wear look (new, worn, broken) is the wardrobe's model throughout: it has no worn copy of its own
             GameObject model = root.transform.Find("wardrobe")?.gameObject;
             mine.m_new = model; mine.m_worn = model; mine.m_broken = model;
-            Plugin.Log.LogInfo($"wardrobe breaks: health {theirs.m_health}, material {theirs.m_materialType}, its fragments {(theirs.m_autoCreateFragments ? "made by the game" : (theirs.m_fragmentRoots?.Length ?? 0) + " ready-made")}");   // TEMP
         }
 
         /// <summary>
