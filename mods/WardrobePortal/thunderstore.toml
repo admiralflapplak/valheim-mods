@@ -1,0 +1,35 @@
+# Thunderstore package for this mod, read by the Thunderstore CLI (tcli build, tcli publish). Made by Claude Tools' modkit package,
+# which keeps versionNumber and the dependencies up to date from the DLL; everything else is yours to edit.
+[config]
+schemaVersion = "0.0.1"
+
+[package]
+namespace = "Flap"
+name = "Wardrobe_Portal"
+versionNumber = "1.0.0"
+description = "Wardrobe portal: a teleport portal built as the Deep North wardrobe (closet, armoire). Its doors swing open as you walk up, the portal swirling inside; close them to switch the portal off. Pairs with any portal by tag. Nine languages."
+websiteUrl = "https://github.com/admiralflapplak/valheim-mods"
+containsNsfwContent = false
+
+[package.dependencies]
+denikson-BepInExPack_Valheim = "5.4.2360"
+
+[build]
+icon = "./thunderstore/icon.png"
+readme = "./thunderstore-build/README.md"
+outdir = "./thunderstore-build"
+
+[[build.copy]]
+source = "./bin/Release/net48/WardrobePortal.dll"
+target = "plugins/WardrobePortal.dll"
+
+[[build.copy]]
+source = "./thunderstore-build/CHANGELOG.md"
+target = "CHANGELOG.md"
+
+[publish]
+repository = "https://thunderstore.io"
+communities = [ "valheim" ]
+
+[publish.categories]
+valheim = [ "mods", "building", "transportation", "client-side", "server-side", "deep-north-update", "ai-generated" ]

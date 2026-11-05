@@ -1,0 +1,7 @@
+{
+  "wardrobeportal_piece": "衣柜传送门",
+  "wardrobeportal_desc": "一个通往别处的衣柜。有人靠近时柜门会自动打开；关上柜门即可让传送门休眠。",
+  "wardrobeportal_close": "关上柜门",
+  "wardrobeportal_open": "打开柜门",
+  "wardrobeportal_closed": "柜门已关闭"
+}
