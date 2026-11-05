@@ -1,0 +1,1 @@
+Shift+E opens and shuts the doors, E sets the tag as on any portal. Coming through to a shut wardrobe opens it for a moment to let you out.
