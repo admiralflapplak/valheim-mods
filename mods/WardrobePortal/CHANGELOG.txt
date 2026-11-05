@@ -1,3 +1,1 @@
-Translations into Chinese, French, German, Polish, Brazilian Portuguese, Russian, Spanish and Turkish.
-
-Shift+E opens and shuts the doors, E sets the tag as on any portal. Coming through to a shut wardrobe opens it for a moment to let you out.
+1.0.0: First release: a portal built as the Deep North wardrobe. Its two doors swing open as you walk up, with the portal swirling inside; Shift+E shuts them and puts the portal to sleep, and someone arriving at a shut wardrobe is let out. Breaks like a wardrobe, pairs with any portal by tag. Nine languages.

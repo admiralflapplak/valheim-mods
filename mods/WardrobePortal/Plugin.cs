@@ -15,7 +15,7 @@ namespace WardrobePortal
     {
         public const string Guid = "nick.valheim.wardrobeportal";
         public const string Name = "WardrobePortal";
-        public const string Version = "0.4.0";
+        public const string Version = "1.0.0";
 
         internal static Plugin Instance;
         internal static BepInEx.Logging.ManualLogSource Log;
